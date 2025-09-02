@@ -244,7 +244,15 @@ class EvolutionAPIService {
 // Export singleton instance
 export const evolutionAPI = new EvolutionAPIService()
 
+// Interface para configuração do cliente Evolution
+export interface EvolutionClientConfig {
+  baseUrl?: string
+  masterKey?: string
+  instanceName?: string
+  apiKey?: string
+}
+
 // Função para criar cliente Evolution (para compatibilidade)
-export function createEvolutionClient(config?: { baseUrl?: string; masterKey?: string }) {
+export function createEvolutionClient(config?: EvolutionClientConfig) {
   return new EvolutionAPIService()
 }
