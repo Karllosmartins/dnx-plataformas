@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Verificar status atual
-    const currentStatus = await evolutionClient.getConnectionStatus(instancia.instancia)
+    const currentStatus = await evolutionClient.getConnectionState(instancia.instancia)
     
     if (currentStatus.status === 'connected') {
       return NextResponse.json({

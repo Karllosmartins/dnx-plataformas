@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
           apiKey: config.apikey
         })
 
-        const instanceStatus = await evolutionClient.getConnectionStatus(config.instancia)
+        const instanceStatus = await evolutionClient.getConnectionState(config.instancia)
         
         // Se conectado, retornar status
         if (instanceStatus.status === 'connected') {

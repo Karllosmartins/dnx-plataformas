@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
 
     try {
       const [connectionStatus, instanceInfo, profileInfo] = await Promise.all([
-        evolutionClient.getConnectionStatus(instancia.instancia),
-        evolutionClient.getInstanceInfo(instancia.instancia),
+        evolutionClient.getConnectionState(instancia.instancia),
+        evolutionClient.getConnectionState(instancia.instancia),
         evolutionClient.getProfileInfo(instancia.instancia).catch(() => null)
       ])
 
@@ -201,8 +201,8 @@ export async function POST(request: NextRequest) {
           })
 
           const [connectionStatus, instanceInfo] = await Promise.all([
-            evolutionClient.getConnectionStatus(instancia.instancia),
-            evolutionClient.getInstanceInfo(instancia.instancia).catch(() => null)
+            evolutionClient.getConnectionState(instancia.instancia),
+            evolutionClient.getConnectionState(instancia.instancia).catch(() => null)
           ])
 
           // Atualizar status no banco

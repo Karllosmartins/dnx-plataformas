@@ -53,13 +53,11 @@ export async function GET(request: NextRequest) {
             apiKey: config?.apikey
           })
 
-          const status = await evolutionClient.getConnectionStatus(instancia.instancia)
-          const instanceInfo = await evolutionClient.getInstanceInfo(instancia.instancia)
+          const status = await evolutionClient.getConnectionState(instancia.instancia)
 
           return {
             ...instancia,
-            status_conexao_real: status.status,
-            instance_info: instanceInfo
+            status_conexao_real: status.success ? status.data?.state : 'unknown'
           }
         } catch (error) {
           return {
@@ -146,7 +144,7 @@ export async function POST(request: NextRequest) {
     })
 
     try {
-      const existingInstance = await evolutionClient.getInstanceInfo(instanciaNome)
+      const existingInstance = await evolutionClient.getConnectionState(instanciaNome)
       if (existingInstance) {
         return NextResponse.json(
           { error: 'Nome da instância já existe na Evolution API' },
