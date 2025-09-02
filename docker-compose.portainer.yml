@@ -11,11 +11,13 @@ services:
     image: node:18-alpine
     working_dir: /app
     command: sh -c "
-      apk add --no-cache git &&
-      if [ ! -f package.json ]; then
-        git clone https://github.com/Karllosmartins/dnx-plataformas-crm.git . &&
-        chmod +x /app;
-      fi &&
+      apk add --no-cache git curl &&
+      rm -rf /tmp/repo &&
+      mkdir -p /tmp/repo &&
+      cd /tmp/repo &&
+      curl -L https://github.com/Karllosmartins/dnx-plataformas-crm/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 &&
+      cp -r . /app/ &&
+      cd /app &&
       npm ci &&
       npm run build &&
       npm start
