@@ -10,16 +10,19 @@ services:
   dnx-plataformas-app:
     image: node:18-alpine
     working_dir: /app
+    volumes:
+      - app-data:/app
     command: sh -c "
-      apk add --no-cache git curl &&
-      rm -rf /tmp/repo &&
-      mkdir -p /tmp/repo &&
-      cd /tmp/repo &&
-      curl -L https://github.com/Karllosmartins/dnx-plataformas-crm/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 &&
-      cp -r . /app/ &&
-      cd /app &&
-      npm ci &&
-      npm run build &&
+      if [ ! -f /app/package.json ]; then
+        echo 'Downloading source code...' &&
+        apk add --no-cache curl &&
+        curl -L https://github.com/Karllosmartins/dnx-plataformas-crm/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C /app &&
+        echo 'Installing dependencies...' &&
+        npm ci &&
+        echo 'Building application...' &&
+        npm run build;
+      fi &&
+      echo 'Starting application...' &&
       npm start
       "
     
@@ -56,6 +59,10 @@ services:
         - traefik.http.routers.dnx-plataformas.service=dnx-plataformas
         - traefik.http.services.dnx-plataformas.loadbalancer.server.port=3000
         - traefik.http.services.dnx-plataformas.loadbalancer.passHostHeader=true
+
+volumes:
+  app-data:
+    driver: local
 
 networks:
   dnnet:
