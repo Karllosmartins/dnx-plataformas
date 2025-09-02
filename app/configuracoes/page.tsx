@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/components/AuthWrapper'
-import { authService, User } from '@/lib/auth'
-import { supabase, ConfiguracaoCredenciais, AgenteIA } from '@/lib/supabase'
+import { useAuth } from '../../components/AuthWrapper'
+import { authService, User } from '../../lib/auth'
+import { supabase, ConfiguracaoCredenciais, AgenteIA } from '../../lib/supabase'
 import { 
   Plus, 
   Edit2, 

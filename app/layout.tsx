@@ -1,5 +1,5 @@
 import './globals.css'
-import AuthWrapper from '@/components/AuthWrapper'
+import AuthWrapper from '../components/AuthWrapper'
 
 export const metadata = {
   title: 'DNX Plataformas - CRM Limpa Nome',

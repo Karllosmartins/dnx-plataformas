@@ -4,8 +4,8 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '@/lib/evolution-api'
+import { supabase, supabaseAdmin } from '../../../../lib/supabase'
+import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 
 // =====================================================
 // GET - Verificar status de uma instância

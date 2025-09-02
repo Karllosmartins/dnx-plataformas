@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/components/AuthWrapper'
-import { supabase, AgenteIA } from '@/lib/supabase'
+import { useAuth } from '../../components/AuthWrapper'
+import { supabase, AgenteIA } from '../../lib/supabase'
 import { Upload, Bot, FileText, Users, Calendar, Sparkles } from 'lucide-react'
 
 interface CsvContact {

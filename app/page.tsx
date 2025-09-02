@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { supabase, Lead } from '@/lib/supabase'
-import { useAuth } from '@/components/AuthWrapper'
-import MetricCard from '@/components/MetricCard'
+import { supabase, Lead } from '../lib/supabase'
+import { useAuth } from '../components/AuthWrapper'
+import MetricCard from '../components/MetricCard'
 import { 
   Settings, 
   Users, 

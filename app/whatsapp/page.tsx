@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/components/AuthWrapper'
-import { supabase } from '@/lib/supabase'
-import { evolutionAPI } from '@/lib/evolution-api'
+import { useAuth } from '../../components/AuthWrapper'
+import { supabase } from '../../lib/supabase'
+import { evolutionAPI } from '../../lib/evolution-api'
 import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw } from 'lucide-react'
 
 interface WhatsAppInstance {

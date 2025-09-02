@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase, Lead } from '@/lib/supabase'
-import { useAuth } from '@/components/AuthWrapper'
+import { supabase, Lead } from '../../lib/supabase'
+import { useAuth } from '../../components/AuthWrapper'
 import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter } from 'lucide-react'
 
 const STATUS_CONFIG = {

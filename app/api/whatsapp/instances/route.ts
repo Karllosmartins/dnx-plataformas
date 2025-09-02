@@ -4,9 +4,9 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '@/lib/evolution-api'
-import type { ConfiguracaoCredenciais, InstanciaWhatsapp, User } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '../../../../lib/supabase'
+import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
+import type { ConfiguracaoCredenciais, InstanciaWhatsapp, User } from '../../../../lib/supabase'
 
 // =====================================================
 // GET - Listar instâncias do usuário

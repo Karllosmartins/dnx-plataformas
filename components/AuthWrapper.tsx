@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { authService, User } from '@/lib/auth'
+import { authService, User } from '../lib/auth'
 import Sidebar from './Sidebar'
 import LoginForm from './LoginForm'
 

@@ -4,8 +4,8 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '@/lib/evolution-api'
+import { supabaseAdmin } from '../../../../lib/supabase'
+import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 
 // =====================================================
 // POST - Criar instância WhatsApp simples
