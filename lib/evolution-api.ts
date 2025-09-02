@@ -3,6 +3,13 @@ const EVOLUTION_API_BASE_URL = 'https://wsapi.dnmarketing.com.br'
 const EVOLUTION_API_KEY = '767cfac9-68c6-4d67-aff1-21d6c482c715'
 const WEBHOOK_URL = 'https://webhooks.dnmarketing.com.br/webhook/c05a8122-fb58-4a3a-a2c1-73f492b95f11'
 
+// Configuração padrão da Evolution API
+export const DEFAULT_EVOLUTION_CONFIG = {
+  baseUrl: EVOLUTION_API_BASE_URL,
+  masterKey: EVOLUTION_API_KEY,
+  webhookUrl: WEBHOOK_URL
+}
+
 export interface CreateInstancePayload {
   instanceName: string
   token: string
@@ -236,3 +243,8 @@ class EvolutionAPIService {
 
 // Export singleton instance
 export const evolutionAPI = new EvolutionAPIService()
+
+// Função para criar cliente Evolution (para compatibilidade)
+export function createEvolutionClient(config?: { baseUrl?: string; masterKey?: string }) {
+  return new EvolutionAPIService()
+}
