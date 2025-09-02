@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
         const instanceStatus = await evolutionClient.getConnectionState(config.instancia)
         
         // Se conectado, retornar status
-        if (instanceStatus.status === 'connected') {
+        if (instanceStatus.success && instanceStatus.data?.state === 'open') {
           return NextResponse.json({
             success: true,
             hasInstance: true,

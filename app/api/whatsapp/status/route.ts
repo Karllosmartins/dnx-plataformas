@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       ])
 
       // Atualizar status no banco se diferente
-      const newStatus = connectionStatus.status === 'connected' ? 'conectado' : 'desconectado'
+      const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
       if (instancia.status_conexao !== newStatus) {
         await supabaseAdmin
           .from('instancias_whatsapp')
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
           ])
 
           // Atualizar status no banco
-          const newStatus = connectionStatus.status === 'connected' ? 'conectado' : 'desconectado'
+          const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
           if (instancia.status_conexao !== newStatus) {
             await supabaseAdmin
               .from('instancias_whatsapp')
