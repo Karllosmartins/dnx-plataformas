@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Configuração para deploy em VPS
@@ -7,6 +9,12 @@ const nextConfig = {
   
   // Output standalone para Docker
   output: 'standalone',
+  
+  // Webpack config para resolver @ alias
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname, '.')
+    return config
+  },
   
   // Configurações de imagem
   images: {
