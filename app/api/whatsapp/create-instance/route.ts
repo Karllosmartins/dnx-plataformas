@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
               instanceName: config.instancia,
               baseurl: config.baseurl,
               status: 'disconnected',
-              qrCode: connectResult.qrCode,
+              qrCode: connectResult.data?.qrCode || connectResult.data?.qr,
               created_at: config.created_at
             }
           })

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Processo de conexão iniciado',
       data: {
-        qrCode: connectionResult.qrCode,
+        qrCode: connectionResult.data?.qrCode || connectionResult.data?.qr,
         instanceName: instancia.instancia,
         status: 'connecting'
       }
