@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  zattar-dashboard:
+    image: node:18-alpine
+    container_name: zattar-dashboard
+    working_dir: /app
+    command: |
+      sh -c "
+        npm install &&
+        npm run build &&
+        npm start
+      "
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zattar.rule=Host(\`dashzattar.mysellers.com.br\`)"
+      - "traefik.http.routers.zattar.tls=true"
+      - "traefik.http.routers.zattar.tls.certresolver=letsencrypt"
+      - "traefik.http.services.zattar.loadbalancer.server.port=3000"
+    networks:
+      - web
+      - zattar-network
+    volumes:
+      - ./:/app
+
+networks:
+  web:
+    external: true
+  zattar-network:
+    driver: bridge

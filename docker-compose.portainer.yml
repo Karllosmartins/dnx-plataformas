@@ -1,0 +1,52 @@
+# =====================================================
+# DOCKER COMPOSE - PORTAINER - DNX PLATAFORMAS CRM
+# Deploy específico para Docker Swarm com Traefik
+# =====================================================
+
+version: "3.7"
+
+services:
+  # Aplicação DNX Plataformas CRM
+  dnx-plataformas-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    networks:
+      - dnnet ## Usando a mesma rede do seu ambiente
+    
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Supabase Configuration
+      - NEXT_PUBLIC_SUPABASE_URL=https://enwxbkyvnrjderqdygtl.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNjMwMzQsImV4cCI6MjA3MTYzOTAzNH0.xr39krGQYM6HC64cNFmjtpbj2IsDn2BEyhviBiTooCY
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjA2MzAzNCwiZXhwIjoyMDcxNjM5MDM0fQ.BxADhNw1F84N_YVV7EQC8OHJlE6StJx0lqjZxjHRRD8
+      - DATABASE_URL=postgresql://postgres:8W0KemHchTqSBcgi@enwxbkyvnrjderqdygtl.supabase.co:5432/postgres
+    
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      labels:
+        # Traefik Labels seguindo o padrão do seu ambiente
+        - traefik.enable=1
+        - traefik.http.routers.dnx-plataformas.rule=Host(`app.dnxplataformas.com.br`)
+        - traefik.http.routers.dnx-plataformas.entrypoints=websecure
+        - traefik.http.routers.dnx-plataformas.priority=1
+        - traefik.http.routers.dnx-plataformas.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.dnx-plataformas.service=dnx-plataformas
+        - traefik.http.services.dnx-plataformas.loadbalancer.server.port=3000
+        - traefik.http.services.dnx-plataformas.loadbalancer.passHostHeader=true
+
+networks:
+  dnnet: ## Usando a mesma rede do seu ambiente
+    external: true
+    name: dnnet
