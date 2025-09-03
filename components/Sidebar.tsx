@@ -122,7 +122,7 @@ function SidebarContent({
   onCollapseChange
 }: { 
   pathname: string
-  user?: { name: string; email: string; role: string; plano: PlanType }
+  user?: { name: string; email: string; role: string; plano?: PlanType }
   onLogout?: () => void 
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
