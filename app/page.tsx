@@ -87,6 +87,7 @@ export default function HomePage() {
 
     if (startDate) {
       filtered = filtered.filter(lead => {
+        if (!lead.created_at) return false
         const leadDate = new Date(lead.created_at)
         const filterStartDate = new Date(startDate)
         return leadDate >= filterStartDate
@@ -95,6 +96,7 @@ export default function HomePage() {
 
     if (endDate) {
       filtered = filtered.filter(lead => {
+        if (!lead.created_at) return false
         const leadDate = new Date(lead.created_at)
         const filterEndDate = new Date(endDate + 'T23:59:59')
         return leadDate <= filterEndDate

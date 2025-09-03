@@ -13,17 +13,18 @@ services:
     command: sh -c "
       echo 'Checking app directory...' &&
       ls -la /app/ || echo 'App directory empty' &&
-      echo 'Downloading source code...' &&
-      apk add --no-cache curl &&
-      curl -L https://github.com/Karllosmartins/dnx-plataformas-crm/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C /app &&
+      echo 'Installing git...' &&
+      apk add --no-cache git &&
+      echo 'Cloning repository...' &&
+      git clone https://github.com/Karllosmartins/dnx-plataformas-crm.git /tmp/repo &&
+      echo 'Copying files to app directory...' &&
+      cp -r /tmp/repo/* /app/ &&
+      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
+      rm -rf /tmp/repo &&
       echo 'Files after download:' &&
       ls -la /app/ &&
-      echo 'Checking tsconfig.json:' &&
-      cat /app/tsconfig.json &&
-      echo 'Checking components directory:' &&
-      ls -la /app/components/ &&
-      echo 'Checking lib directory:' &&
-      ls -la /app/lib/ &&
+      echo 'Checking package.json:' &&
+      cat /app/package.json &&
       echo 'Installing dependencies...' &&
       npm ci &&
       echo 'Building application...' &&

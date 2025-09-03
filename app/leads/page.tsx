@@ -366,12 +366,12 @@ export default function LeadsPage() {
     
     // Filtro por data
     let dateMatch = true
-    if (startDate) {
+    if (startDate && lead.created_at) {
       const leadDate = new Date(lead.created_at)
       const filterStartDate = new Date(startDate)
       dateMatch = dateMatch && leadDate >= filterStartDate
     }
-    if (endDate) {
+    if (endDate && lead.created_at) {
       const leadDate = new Date(lead.created_at)
       const filterEndDate = new Date(endDate + 'T23:59:59')
       dateMatch = dateMatch && leadDate <= filterEndDate
