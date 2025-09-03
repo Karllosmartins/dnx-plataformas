@@ -3,6 +3,8 @@
 import { useAuth } from './AuthWrapper'
 import { hasFeatureAccess, getPlanDisplayName, PlanType } from '../lib/plans'
 import { Lock, ArrowUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 interface PlanProtectionProps {
   feature: 'dashboard' | 'crm' | 'whatsapp' | 'agentesIA' | 'disparoSimples' | 'disparoIA' | 'extracaoLeads' | 'configuracoes'
@@ -11,6 +13,32 @@ interface PlanProtectionProps {
 
 export default function PlanProtection({ feature, children }: PlanProtectionProps) {
   const { user } = useAuth()
+  const [userPlan, setUserPlan] = useState<PlanType>('basico')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchUserPlan() {
+      if (!user?.id) return
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('plano')
+          .eq('id', user.id)
+          .single()
+
+        if (!error && data) {
+          setUserPlan(data.plano || 'basico')
+        }
+      } catch (error) {
+        console.error('Erro ao carregar plano do usuário:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserPlan()
+  }, [user?.id])
 
   if (!user) {
     return (
@@ -23,7 +51,14 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
     )
   }
 
-  const userPlan = (user.plano as PlanType) || 'basico'
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
   const hasAccess = hasFeatureAccess(userPlan, feature)
 
   if (!hasAccess) {
