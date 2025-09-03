@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase, AgenteIA } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
-import { Upload, Bot, FileText, Users, Calendar, Sparkles } from 'lucide-react'
+import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -18,10 +18,16 @@ interface Campaign {
   origem: string
 }
 
+interface WhatsAppInstance {
+  id: number
+  instancia: string
+}
+
 export default function DisparoIAPage() {
   const { user } = useAuth()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [agentes, setAgentes] = useState<AgenteIA[]>([])
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([])
   
   // Debug: log quando agentes mudarem
   useEffect(() => {
@@ -34,6 +40,7 @@ export default function DisparoIAPage() {
   const [mensagem, setMensagem] = useState('')
   const [contextoIA, setContextoIA] = useState('')
   const [agenteSelected, setAgenteSelected] = useState('')
+  const [selectedInstance, setSelectedInstance] = useState('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvContacts, setCsvContacts] = useState<CsvContact[]>([])
   const [sending, setSending] = useState(false)
@@ -43,6 +50,7 @@ export default function DisparoIAPage() {
     if (user) {
       fetchCampaigns()
       fetchAgentes()
+      fetchInstances()
     }
   }, [user])
 
@@ -121,6 +129,28 @@ export default function DisparoIAPage() {
     }
   }
 
+  const fetchInstances = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('instancia_whtats')
+        .select('id, instancia')
+        .eq('user_id', parseInt(user.id || '0'))
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      
+      setInstances(data || [])
+      // Selecionar automaticamente a primeira instância se houver apenas uma
+      if (data && data.length === 1) {
+        setSelectedInstance(data[0].instancia)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar instâncias:', error)
+    }
+  }
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -159,8 +189,8 @@ export default function DisparoIAPage() {
   }
 
   const executeCampaign = async () => {
-    if (!nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || csvContacts.length === 0) {
-      alert('Preencha todos os campos e faça upload do CSV')
+    if (!nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0) {
+      alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
       return
     }
 
@@ -205,6 +235,7 @@ export default function DisparoIAPage() {
         formData.append('total_contatos', csvContacts.length.toString())
         formData.append('mensagem', mensagem)
         formData.append('agente_id', agenteSelected || '')
+        formData.append('instancia', selectedInstance)
 
         const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e9dr1', {
           method: 'POST',
@@ -230,6 +261,7 @@ export default function DisparoIAPage() {
       setMensagem('')
       setContextoIA('')
       setAgenteSelected('')
+      setSelectedInstance('')
       setCsvFile(null)
       setCsvContacts([])
       
@@ -347,6 +379,32 @@ export default function DisparoIAPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <MessageCircle className="inline h-4 w-4 mr-1" />
+                  Instância WhatsApp
+                </label>
+                <select
+                  value={selectedInstance}
+                  onChange={(e) => setSelectedInstance(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isDisabled}
+                  required
+                >
+                  <option value="">Selecione uma instância</option>
+                  {instances.map((instance) => (
+                    <option key={instance.id} value={instance.instancia}>
+                      {instance.instancia}
+                    </option>
+                  ))}
+                </select>
+                {instances.length === 0 && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Nenhuma instância WhatsApp encontrada. Configure uma instância primeiro.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lista de Contatos (CSV)
                 </label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-purple-300 border-dashed rounded-md">
@@ -417,7 +475,7 @@ export default function DisparoIAPage() {
 
               <button
                 onClick={executeCampaign}
-                disabled={isDisabled || !nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || csvContacts.length === 0}
+                disabled={isDisabled || !nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0}
                 className="w-full flex items-center justify-center bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
               >
                 {sending ? (

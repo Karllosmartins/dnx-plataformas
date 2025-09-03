@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase } from '../../lib/supabase'
-import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot } from 'lucide-react'
+import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -17,14 +17,21 @@ interface Campaign {
   origem: string
 }
 
+interface WhatsAppInstance {
+  id: number
+  instancia: string
+}
+
 export default function DisparoSimplesPage() {
   const { user } = useAuth()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([])
   const [loading, setLoading] = useState(true)
   
   // Formulário
   const [nomeCampanha, setNomeCampanha] = useState('')
   const [mensagem, setMensagem] = useState('')
+  const [selectedInstance, setSelectedInstance] = useState('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvContacts, setCsvContacts] = useState<CsvContact[]>([])
   const [sending, setSending] = useState(false)
@@ -33,6 +40,7 @@ export default function DisparoSimplesPage() {
   useEffect(() => {
     if (user) {
       fetchCampaigns()
+      fetchInstances()
     }
   }, [user])
 
@@ -76,6 +84,28 @@ export default function DisparoSimplesPage() {
     }
   }
 
+  const fetchInstances = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('instancia_whtats')
+        .select('id, instancia')
+        .eq('user_id', parseInt(user.id || '0'))
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      
+      setInstances(data || [])
+      // Selecionar automaticamente a primeira instância se houver apenas uma
+      if (data && data.length === 1) {
+        setSelectedInstance(data[0].instancia)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar instâncias:', error)
+    }
+  }
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -106,8 +136,8 @@ export default function DisparoSimplesPage() {
   }
 
   const executeCampaign = async () => {
-    if (!nomeCampanha.trim() || !mensagem.trim() || csvContacts.length === 0) {
-      alert('Preencha todos os campos e faça upload do CSV')
+    if (!nomeCampanha.trim() || !mensagem.trim() || !selectedInstance || csvContacts.length === 0) {
+      alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
       return
     }
 
@@ -234,6 +264,32 @@ export default function DisparoSimplesPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <MessageCircle className="inline h-4 w-4 mr-1" />
+                  Instância WhatsApp
+                </label>
+                <select
+                  value={selectedInstance}
+                  onChange={(e) => setSelectedInstance(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={sending}
+                  required
+                >
+                  <option value="">Selecione uma instância</option>
+                  {instances.map((instance) => (
+                    <option key={instance.id} value={instance.instancia}>
+                      {instance.instancia}
+                    </option>
+                  ))}
+                </select>
+                {instances.length === 0 && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Nenhuma instância WhatsApp encontrada. Configure uma instância primeiro.
+                  </p>
+                )}
               </div>
 
               <div>

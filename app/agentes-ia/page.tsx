@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase, AgenteIA } from '../../lib/supabase'
+import { supabase, AgenteIA, Tool, UserTool } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
 import { 
   Plus, 
   Edit2, 
   Trash2, 
   Bot,
-  Settings
+  Settings,
+  Wrench
 } from 'lucide-react'
 
 export default function AgentesIAPage() {
@@ -17,10 +18,15 @@ export default function AgentesIAPage() {
   const [agentes, setAgentes] = useState<AgenteIA[]>([])
   const [loading, setLoading] = useState(true)
   const [editingAgent, setEditingAgent] = useState<AgenteIA | null>(null)
+  const [tools, setTools] = useState<Tool[]>([])
+  const [userTools, setUserTools] = useState<UserTool[]>([])
+  const [showTools, setShowTools] = useState(false)
 
   useEffect(() => {
     if (currentUser) {
       loadAgentes()
+      loadTools()
+      loadUserTools()
     }
   }, [currentUser])
 
@@ -42,6 +48,94 @@ export default function AgentesIAPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadTools = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tools')
+        .select('*')
+        .order('nome')
+
+      if (error) throw error
+      if (data) {
+        setTools(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tools:', error)
+    }
+  }
+
+  const loadUserTools = async () => {
+    if (!currentUser) return
+
+    try {
+      const { data, error } = await supabase
+        .from('user_tools')
+        .select('*')
+        .eq('user_id', currentUser.id)
+
+      if (error) throw error
+      if (data) {
+        setUserTools(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar user_tools:', error)
+    }
+  }
+
+  const toggleUserTool = async (toolId: number, currentState: boolean) => {
+    if (!currentUser) return
+
+    try {
+      if (currentState) {
+        // Desativar - atualizar is_active para false
+        const { error } = await supabase
+          .from('user_tools')
+          .update({ is_active: false })
+          .eq('user_id', currentUser.id)
+          .eq('tool_id', toolId)
+
+        if (error) throw error
+      } else {
+        // Ativar - inserir ou atualizar
+        const existingUserTool = userTools.find(ut => ut.tool_id === toolId)
+        
+        if (existingUserTool) {
+          // Atualizar existente
+          const { error } = await supabase
+            .from('user_tools')
+            .update({ is_active: true })
+            .eq('user_id', currentUser.id)
+            .eq('tool_id', toolId)
+
+          if (error) throw error
+        } else {
+          // Inserir novo
+          const { error } = await supabase
+            .from('user_tools')
+            .insert([{
+              user_id: parseInt(currentUser.id),
+              tool_id: toolId,
+              is_active: true,
+              agente_id: '1' // ID padrão do agente
+            }])
+
+          if (error) throw error
+        }
+      }
+
+      // Recarregar user_tools
+      loadUserTools()
+    } catch (error) {
+      console.error('Erro ao alterar status da tool:', error)
+      alert('Erro ao alterar status da ferramenta')
+    }
+  }
+
+  const isToolActive = (toolId: number): boolean => {
+    const userTool = userTools.find(ut => ut.tool_id === toolId)
+    return userTool?.is_active === true
   }
 
   const saveAgent = async (agentData: Partial<AgenteIA>) => {
@@ -225,6 +319,82 @@ export default function AgentesIAPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Seção de Tools */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex items-center">
+            <Wrench className="h-6 w-6 mr-3 text-blue-600" />
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Ferramentas dos Agentes</h3>
+              <p className="text-sm text-gray-500">Ative ou desative ferramentas disponíveis para seus agentes</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowTools(!showTools)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            {showTools ? 'Ocultar Tools' : 'Mostrar Tools'}
+          </button>
+        </div>
+
+        {showTools && (
+          <div className="p-6">
+            {tools.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {tools.map((tool) => {
+                  const isActive = isToolActive(tool.id)
+                  return (
+                    <div key={tool.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-blue-100 rounded">
+                              <Wrench className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <h4 className="text-sm font-semibold text-gray-900">{tool.nome}</h4>
+                          </div>
+                          
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                            {tool.descricao || 'Sem descrição disponível'}
+                          </p>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                              {tool.type}
+                            </span>
+                            
+                            <label className="flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isActive}
+                                onChange={() => toggleUserTool(tool.id, isActive)}
+                                className="sr-only"
+                              />
+                              <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                isActive ? 'bg-blue-600' : 'bg-gray-300'
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                  isActive ? 'translate-x-5' : 'translate-x-1'
+                                }`} />
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-sm text-gray-500">Nenhuma ferramenta disponível</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal de Edição de Agente */}

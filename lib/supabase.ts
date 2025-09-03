@@ -132,6 +132,26 @@ export interface AgenteIA {
   user_id: number
 }
 
+// Interface para a tabela tools
+export interface Tool {
+  id: number
+  type: string
+  nome: string
+  descricao?: string
+  tool: any // JSON object
+  created_at: string
+}
+
+// Interface para a tabela user_tools
+export interface UserTool {
+  id: number
+  user_id: number
+  tool_id: number
+  agente_id?: string
+  is_active: boolean
+  created_at: string
+}
+
 export interface PagamentoConsulta {
   id: number
   lead_id: number
