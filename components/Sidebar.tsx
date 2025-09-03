@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { hasFeatureAccess, PlanType } from '../lib/plans'
+import { supabase } from '../lib/supabase'
 import { 
   BarChart3, 
   Users, 
@@ -39,6 +40,7 @@ interface SidebarProps {
     name: string
     email: string
     role: string
+    id: string
     plano?: PlanType
   }
   onLogout?: () => void
@@ -122,16 +124,48 @@ function SidebarContent({
   onCollapseChange
 }: { 
   pathname: string
-  user?: { name: string; email: string; role: string; plano?: PlanType }
+  user?: { name: string; email: string; role: string; id: string; plano?: PlanType }
   onLogout?: () => void 
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
   onCollapseChange?: (collapsed: boolean) => void
 }) {
+  const [userPlan, setUserPlan] = useState<PlanType>('basico')
+
+  useEffect(() => {
+    async function fetchUserPlan() {
+      if (!user?.id) {
+        console.log('Sidebar: user.id não encontrado')
+        return
+      }
+
+      console.log('Sidebar: Buscando plano para user.id:', user.id)
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('plano')
+          .eq('id', parseInt(user.id || '0'))
+          .single()
+
+        console.log('Sidebar: Resultado da busca:', { data, error })
+
+        if (!error && data) {
+          console.log('Sidebar: Plano encontrado:', data.plano)
+          setUserPlan(data.plano || 'basico')
+        }
+      } catch (error) {
+        console.error('Sidebar: Erro ao carregar plano:', error)
+      }
+    }
+
+    fetchUserPlan()
+  }, [user?.id])
+
   // Filtrar navegação baseada no plano do usuário
   const filteredNavigation = navigation.filter(item => {
     if (!user) return false
-    return hasFeatureAccess(user.plano || 'basico', item.feature)
+    return hasFeatureAccess(userPlan, item.feature)
   })
   return (
     <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
