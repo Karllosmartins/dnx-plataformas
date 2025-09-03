@@ -69,7 +69,7 @@ export default function HomePage() {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', parseInt(user.id))
 
       if (error) throw error
       
