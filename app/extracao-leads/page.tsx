@@ -159,8 +159,8 @@ export default function ExtracaoLeadsPage() {
     apiKey: string
     token?: string
   }>({
-    baseUrl: 'https://api.example.com', // Substitua pela URL real da API
-    apiKey: ''
+    baseUrl: 'https://apiprofile.infinititi.com.br/api',
+    apiKey: '043d2754-cd7f-47ba-b83b-0dbbb3877f36'
   })
 
   // Estados da interface
@@ -207,7 +207,7 @@ export default function ExtracaoLeadsPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`${apiConfig.baseUrl}/api/Auth`, {
+      const response = await fetch(`${apiConfig.baseUrl}/Auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiConfig.apiKey })
@@ -238,7 +238,7 @@ export default function ExtracaoLeadsPage() {
 
     try {
       const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-      const response = await fetch(`${apiConfig.baseUrl}/api/${endpoint}/ListarUfs`, {
+      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/ListarUfs`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
       
@@ -258,7 +258,7 @@ export default function ExtracaoLeadsPage() {
     try {
       const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
       const queryString = idsUfs.map(id => `idsUfs=${id}`).join('&')
-      const response = await fetch(`${apiConfig.baseUrl}/api/${endpoint}/ListarMunicipios?${queryString}`, {
+      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/ListarMunicipios?${queryString}`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
       
@@ -295,7 +295,7 @@ export default function ExtracaoLeadsPage() {
         contagemPj: formPj
       } as NovaContagemApiPjVM
 
-      const response = await fetch(`${apiConfig.baseUrl}/api/${endpoint}/CriarContagem`, {
+      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/CriarContagem`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`,
@@ -327,7 +327,7 @@ export default function ExtracaoLeadsPage() {
     const poll = async () => {
       try {
         const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-        const response = await fetch(`${apiConfig.baseUrl}/api/${endpoint}/BuscarContagem?idContagem=${idContagem}`, {
+        const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/BuscarContagem?idContagem=${idContagem}`, {
           headers: { 'Authorization': `Bearer ${apiConfig.token}` }
         })
 
@@ -363,7 +363,7 @@ export default function ExtracaoLeadsPage() {
         removerRegistrosExtraidos: true
       }
 
-      const response = await fetch(`${apiConfig.baseUrl}/api/Extracao/CriarExtracao`, {
+      const response = await fetch(`${apiConfig.baseUrl}/Extracao/CriarExtracao`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`,
@@ -393,7 +393,7 @@ export default function ExtracaoLeadsPage() {
     
     const poll = async () => {
       try {
-        const response = await fetch(`${apiConfig.baseUrl}/api/Extracao/BuscarDetalhesExtracao?idExtracao=${idExtracao}`, {
+        const response = await fetch(`${apiConfig.baseUrl}/Extracao/BuscarDetalhesExtracao?idExtracao=${idExtracao}`, {
           headers: { 'Authorization': `Bearer ${apiConfig.token}` }
         })
 
@@ -420,7 +420,7 @@ export default function ExtracaoLeadsPage() {
     if (!apiConfig.token) return
 
     try {
-      const response = await fetch(`${apiConfig.baseUrl}/api/Extracao/DownloadExtracao?idExtracao=${idExtracao}`, {
+      const response = await fetch(`${apiConfig.baseUrl}/Extracao/DownloadExtracao?idExtracao=${idExtracao}`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
 
@@ -628,7 +628,7 @@ function ConfigurationStep({
             value={apiConfig.baseUrl}
             onChange={(e) => setApiConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="https://api.example.com"
+            placeholder="https://apiprofile.infinititi.com.br/api"
           />
         </div>
 
