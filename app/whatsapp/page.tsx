@@ -511,6 +511,29 @@ export default function WhatsAppPage() {
                         </button>
                       </>
                     )}
+
+                    {instance.status === 'disconnected' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedInstance(instance)
+                            generateQrCode(instance)
+                          }}
+                          disabled={connecting}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          {connecting ? 'Reconectando...' : 'Reconectar'}
+                        </button>
+                        <button
+                          onClick={() => deleteInstance(instance)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deletar
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
