@@ -207,6 +207,34 @@ class EvolutionAPIService {
     }
   }
 
+  async getQrCode(instanceName: string): Promise<EvolutionResponse> {
+    try {
+      const response = await fetch(`${EVOLUTION_API_BASE_URL}/instance/qrcode/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY
+        }
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao obter QR Code')
+      }
+
+      return {
+        success: true,
+        data: result
+      }
+    } catch (error) {
+      console.error('Erro ao obter QR Code:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      }
+    }
+  }
+
   async logoutInstance(instanceName: string): Promise<EvolutionResponse> {
     try {
       const response = await fetch(`${EVOLUTION_API_BASE_URL}/instance/logout/${instanceName}`, {

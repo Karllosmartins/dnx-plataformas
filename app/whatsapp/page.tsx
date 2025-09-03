@@ -240,16 +240,39 @@ export default function WhatsAppPage() {
         qrCodeData = connectResponse.data.qr || connectResponse.data.qrcode
       }
       
-      // Se não obteve QR Code na resposta, tentar buscar o status
+      // Se não obteve QR Code na resposta, tentar várias abordagens
       if (!qrCodeData) {
-        console.log('QR Code não encontrado na resposta, verificando status...')
+        console.log('QR Code não encontrado na resposta, tentando obter...')
         
-        // Aguardar um pouco e tentar obter QR Code
+        // Tentativa 1: Aguardar e verificar status
         await new Promise(resolve => setTimeout(resolve, 2000))
         
         const newStatusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
         if (newStatusResponse.success && newStatusResponse.data?.qr) {
           qrCodeData = newStatusResponse.data.qr
+          console.log('QR Code obtido via status')
+        }
+        
+        // Tentativa 2: Endpoint específico para QR Code
+        if (!qrCodeData) {
+          console.log('Tentando endpoint específico de QR Code...')
+          const qrResponse = await evolutionAPI.getQrCode(instance.instanceName)
+          if (qrResponse.success && (qrResponse.data?.qr || qrResponse.data?.qrcode)) {
+            qrCodeData = qrResponse.data.qr || qrResponse.data.qrcode
+            console.log('QR Code obtido via endpoint específico')
+          }
+        }
+        
+        // Tentativa 3: Aguardar mais tempo e tentar novamente
+        if (!qrCodeData) {
+          console.log('Aguardando mais tempo para QR Code aparecer...')
+          await new Promise(resolve => setTimeout(resolve, 3000))
+          
+          const finalStatusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+          if (finalStatusResponse.success && finalStatusResponse.data?.qr) {
+            qrCodeData = finalStatusResponse.data.qr
+            console.log('QR Code obtido após aguardar')
+          }
         }
       }
       
