@@ -12,6 +12,7 @@ export interface PlanConfig {
     disparoIA: boolean
     extracaoLeads: boolean
     configuracoes: boolean
+    usuarios: boolean
   }
 }
 
@@ -26,7 +27,8 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
       disparoSimples: true,
       disparoIA: false,      // Não tem acesso
       extracaoLeads: false,  // Não tem acesso
-      configuracoes: true
+      configuracoes: true,
+      usuarios: false        // Apenas admin
     }
   },
   premium: {
@@ -39,7 +41,8 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
       disparoSimples: true,
       disparoIA: false,      // Não tem acesso
       extracaoLeads: true,
-      configuracoes: true
+      configuracoes: true,
+      usuarios: false        // Apenas admin
     }
   },
   enterprise: {
@@ -52,7 +55,8 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
       disparoSimples: true,
       disparoIA: true,       // Acesso completo
       extracaoLeads: true,
-      configuracoes: true
+      configuracoes: true,
+      usuarios: true         // Admin tem acesso
     }
   }
 }

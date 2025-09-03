@@ -21,7 +21,8 @@ import {
   MessageCircle,
   Bot,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserCog
 } from 'lucide-react'
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
+  { name: 'Usuários', href: '/usuarios', icon: UserCog, feature: 'usuarios' as const, adminOnly: true },
   { name: 'Configurações', href: '/configuracoes', icon: Settings, feature: 'configuracoes' as const },
 ]
 
@@ -165,6 +167,12 @@ function SidebarContent({
   // Filtrar navegação baseada no plano do usuário
   const filteredNavigation = navigation.filter(item => {
     if (!user) return false
+    
+    // Se é um item apenas para admin, verificar se o usuário é admin
+    if (item.adminOnly && user.role !== 'admin') {
+      return false
+    }
+    
     return hasFeatureAccess(userPlan, item.feature)
   })
   return (
