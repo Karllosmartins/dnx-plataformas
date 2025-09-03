@@ -36,6 +36,13 @@ export default function UsuariosPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showUserTools, setShowUserTools] = useState<{[key: number]: boolean}>({})
 
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      loadUsers()
+      loadTools()
+    }
+  }, [currentUser])
+
   // Verificar se o usuário atual é admin
   if (currentUser?.role !== 'admin') {
     return (
@@ -48,13 +55,6 @@ export default function UsuariosPage() {
       </div>
     )
   }
-
-  useEffect(() => {
-    if (currentUser) {
-      loadUsers()
-      loadTools()
-    }
-  }, [currentUser])
 
   const loadUsers = async () => {
     try {
