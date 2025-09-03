@@ -49,7 +49,7 @@ export default function WhatsAppPage() {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('numero_instancias')
-        .eq('id', parseInt(user?.id))
+        .eq('id', parseInt(user?.id || '0'))
         .single()
 
       if (userError) {
@@ -65,7 +65,7 @@ export default function WhatsAppPage() {
       const { data: instancesData, error: instancesError } = await supabase
         .from('instancia_whtats')
         .select('*')
-        .eq('user_id', parseInt(user?.id))
+        .eq('user_id', parseInt(user?.id || '0'))
         .order('created_at', { ascending: false })
 
       console.log('Instâncias encontradas:', instancesData)
@@ -122,7 +122,7 @@ export default function WhatsAppPage() {
       const { data: newInstance, error: saveError } = await supabase
         .from('instancia_whtats')
         .insert({
-          user_id: parseInt(user?.id),
+          user_id: parseInt(user?.id || '0'),
           instancia: instanceName,
           apikey: '767cfac9-68c6-4d67-aff1-21d6c482c715',
           baseurl: 'https://wsapi.dnmarketing.com.br'

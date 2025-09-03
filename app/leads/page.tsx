@@ -42,7 +42,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
     setLoading(true)
     try {
       const leadData = {
-        user_id: parseInt(userId),
+        user_id: parseInt(userId || '0'),
         nome_cliente: formData.nome_cliente,
         cpf: formData.cpf || null,
         telefone: formData.telefone,
@@ -245,7 +245,7 @@ export default function LeadsPage() {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', parseInt(user.id))
+        .eq('user_id', parseInt(user.id || '0'))
         .order('created_at', { ascending: false })
       
       if (error) throw error

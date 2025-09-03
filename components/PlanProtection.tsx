@@ -24,7 +24,7 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
         const { data, error } = await supabase
           .from('users')
           .select('plano')
-          .eq('id', parseInt(user.id))
+          .eq('id', parseInt(user.id || '0'))
           .single()
 
         if (!error && data) {
