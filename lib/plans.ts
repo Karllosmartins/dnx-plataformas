@@ -62,7 +62,9 @@ export function getPlanConfig(planType: PlanType): PlanConfig {
 }
 
 export function hasFeatureAccess(planType: PlanType, feature: keyof PlanConfig['features']): boolean {
-  return getPlanConfig(planType).features[feature]
+  const hasAccess = getPlanConfig(planType).features[feature]
+  console.log(`hasFeatureAccess: plano=${planType}, feature=${feature}, hasAccess=${hasAccess}`)
+  return hasAccess
 }
 
 export function getMaxInstances(planType: PlanType): number {

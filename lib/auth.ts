@@ -45,7 +45,7 @@ export const authService = {
 
       // Criar sessão local
       const user: User = {
-        id: userData.id,
+        id: userData.id.toString(),
         email: userData.email,
         name: userData.name,
         role: userData.role,

@@ -18,7 +18,12 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
 
   useEffect(() => {
     async function fetchUserPlan() {
-      if (!user?.id) return
+      if (!user?.id) {
+        console.log('PlanProtection: user.id não encontrado')
+        return
+      }
+
+      console.log('PlanProtection: Buscando plano para user.id:', user.id, 'convertido para:', parseInt(user.id || '0'))
 
       try {
         const { data, error } = await supabase
@@ -27,8 +32,13 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
           .eq('id', parseInt(user.id || '0'))
           .single()
 
+        console.log('PlanProtection: Resultado da busca:', { data, error })
+
         if (!error && data) {
+          console.log('PlanProtection: Plano encontrado:', data.plano)
           setUserPlan(data.plano || 'basico')
+        } else {
+          console.log('PlanProtection: Erro ou sem dados, usando plano básico')
         }
       } catch (error) {
         console.error('Erro ao carregar plano do usuário:', error)
