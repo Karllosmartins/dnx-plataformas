@@ -51,15 +51,39 @@ export default function AgentesIAPage() {
   }
 
   const loadTools = async () => {
+    if (!currentUser) return
+
     try {
+      // Buscar apenas as tools que o usuário tem acesso na tabela user_tools
       const { data, error } = await supabase
-        .from('tools')
-        .select('*')
-        .order('nome')
+        .from('user_tools')
+        .select(`
+          tool_id,
+          tools (
+            id,
+            type,
+            nome,
+            descricao,
+            created_at
+          )
+        `)
+        .eq('user_id', currentUser.id)
 
       if (error) throw error
       if (data) {
-        setTools(data)
+        // Extrair as tools dos resultados do JOIN
+        const userTools: Tool[] = data
+          .map(userTool => userTool.tools)
+          .filter((tool): tool is any => tool !== null)
+          .map(tool => ({
+            id: tool.id,
+            type: tool.type,
+            nome: tool.nome,
+            descricao: tool.descricao,
+            tool: {}, // Campo JSON vazio pois não precisamos dele na UI
+            created_at: tool.created_at
+          }))
+        setTools(userTools)
       }
     } catch (error) {
       console.error('Erro ao carregar tools:', error)
@@ -88,42 +112,14 @@ export default function AgentesIAPage() {
     if (!currentUser) return
 
     try {
-      if (currentState) {
-        // Desativar - atualizar is_active para false
-        const { error } = await supabase
-          .from('user_tools')
-          .update({ is_active: false })
-          .eq('user_id', currentUser.id)
-          .eq('tool_id', toolId)
+      // Como a tool só aparece se o usuário tem acesso, apenas alterar is_active
+      const { error } = await supabase
+        .from('user_tools')
+        .update({ is_active: !currentState })
+        .eq('user_id', currentUser.id)
+        .eq('tool_id', toolId)
 
-        if (error) throw error
-      } else {
-        // Ativar - inserir ou atualizar
-        const existingUserTool = userTools.find(ut => ut.tool_id === toolId)
-        
-        if (existingUserTool) {
-          // Atualizar existente
-          const { error } = await supabase
-            .from('user_tools')
-            .update({ is_active: true })
-            .eq('user_id', currentUser.id)
-            .eq('tool_id', toolId)
-
-          if (error) throw error
-        } else {
-          // Inserir novo
-          const { error } = await supabase
-            .from('user_tools')
-            .insert([{
-              user_id: parseInt(currentUser.id),
-              tool_id: toolId,
-              is_active: true,
-              agente_id: '1' // ID padrão do agente
-            }])
-
-          if (error) throw error
-        }
-      }
+      if (error) throw error
 
       // Recarregar user_tools
       loadUserTools()
