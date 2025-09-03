@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
+import { hasFeatureAccess, PlanType } from '../lib/plans'
 import { 
   BarChart3, 
   Users, 
@@ -23,13 +24,14 @@ import {
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'CRM', href: '/leads', icon: Users },
-  { name: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
-  { name: 'Disparo Simples', href: '/disparo-simples', icon: Send },
-  { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot },
-  { name: 'Extração Leads', href: '/extracao-leads', icon: Target },
-  { name: 'Configurações', href: '/configuracoes', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: Home, feature: 'dashboard' as const },
+  { name: 'CRM', href: '/leads', icon: Users, feature: 'crm' as const },
+  { name: 'WhatsApp', href: '/whatsapp', icon: MessageCircle, feature: 'whatsapp' as const },
+  { name: 'Agentes IA', href: '/agentes-ia', icon: Bot, feature: 'agentesIA' as const },
+  { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },
+  { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
+  { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
+  { name: 'Configurações', href: '/configuracoes', icon: Settings, feature: 'configuracoes' as const },
 ]
 
 interface SidebarProps {
@@ -37,6 +39,7 @@ interface SidebarProps {
     name: string
     email: string
     role: string
+    plano: PlanType
   }
   onLogout?: () => void
   onCollapseChange?: (collapsed: boolean) => void
@@ -119,12 +122,17 @@ function SidebarContent({
   onCollapseChange
 }: { 
   pathname: string
-  user?: { name: string; email: string; role: string }
+  user?: { name: string; email: string; role: string; plano: PlanType }
   onLogout?: () => void 
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
   onCollapseChange?: (collapsed: boolean) => void
 }) {
+  // Filtrar navegação baseada no plano do usuário
+  const filteredNavigation = navigation.filter(item => {
+    if (!user) return false
+    return hasFeatureAccess(user.plano || 'basico', item.feature)
+  })
   return (
     <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
       isCollapsed ? 'px-2' : 'px-6'
@@ -177,7 +185,7 @@ function SidebarContent({
         <ul className="flex flex-1 flex-col gap-y-7">
           <li>
             <ul className={`space-y-1 ${isCollapsed ? '-mx-1' : '-mx-2'}`}>
-              {navigation.map((item) => {
+              {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <li key={item.name}>

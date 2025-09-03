@@ -1,10 +1,12 @@
 'use client'
 
 import { Target, Search, Users, Globe, Database, Wrench } from 'lucide-react'
+import PlanProtection from '../../components/PlanProtection'
 
 export default function ExtracaoLeadsPage() {
   return (
-    <div className="space-y-8">
+    <PlanProtection feature="extracaoLeads">
+      <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center">
           <Target className="h-8 w-8 mr-3 text-blue-600" />
@@ -51,6 +53,7 @@ export default function ExtracaoLeadsPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PlanProtection>
   )
 }

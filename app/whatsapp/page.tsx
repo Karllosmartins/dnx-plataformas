@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase } from '../../lib/supabase'
+import { supabase, InstanciaWhats, User } from '../../lib/supabase'
+import { getPlanDisplayName, PlanType } from '../../lib/plans'
 import { evolutionAPI } from '../../lib/evolution-api'
-import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw } from 'lucide-react'
+import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw, Plus } from 'lucide-react'
 
 interface WhatsAppInstance {
-  id: string
+  id: number
   instanceName: string
   nome: string
   telefone: string
@@ -19,11 +20,13 @@ interface WhatsAppInstance {
 
 export default function WhatsAppPage() {
   const { user } = useAuth()
-  const [instance, setInstance] = useState<WhatsAppInstance | null>(null)
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([])
+  const [userInfo, setUserInfo] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [showQrCode, setShowQrCode] = useState(false)
+  const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null)
   
   // Formulário
   const [nome, setNome] = useState('')
@@ -34,44 +37,52 @@ export default function WhatsAppPage() {
 
   useEffect(() => {
     if (user) {
-      checkExistingInstance()
+      loadUserInstances()
     }
   }, [user])
 
-  const checkExistingInstance = async () => {
+  const loadUserInstances = async () => {
     try {
-      console.log('Verificando instância existente para user_id:', user?.id)
+      console.log('Carregando instâncias para user_id:', user?.id)
       
-      const { data, error } = await supabase
-        .from('configuracoes_credenciais')
-        .select('baseurl, instancia, apikey')
-        .eq('user_id', user?.id)
-        .maybeSingle() // Use maybeSingle ao invés de single para não dar erro se não encontrar
+      // Carregar informações do usuário (incluindo limite de instâncias)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('numero_instancias')
+        .eq('id', user?.id)
+        .single()
 
-      console.log('Resultado da consulta Supabase:', { data, error })
-
-      if (error) {
-        console.error('Erro ao consultar Supabase:', error)
+      if (userError) {
+        console.error('Erro ao carregar dados do usuário:', userError)
+      } else {
+        setUserInfo({ ...user, numero_instancias: userData?.numero_instancias } as User)
       }
 
-      if (data && data.instancia && data.baseurl && data.apikey) {
-        console.log('Instância existente encontrada:', data.instancia)
-        
-        // Já tem uma instância configurada
-        setInstance({
-          id: data.instancia,
-          instanceName: data.instancia,
+      // Carregar instâncias existentes
+      const { data: instancesData, error: instancesError } = await supabase
+        .from('instancia_whtats')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+
+      console.log('Instâncias encontradas:', instancesData)
+
+      if (instancesError) {
+        console.error('Erro ao carregar instâncias:', instancesError)
+      } else if (instancesData) {
+        const mappedInstances = instancesData.map(inst => ({
+          id: inst.id,
+          instanceName: inst.instancia || '',
           nome: '',
           telefone: '',
-          status: 'connected',
-          baseUrl: data.baseurl,
-          apiKey: data.apikey
-        })
-      } else {
-        console.log('Nenhuma instância configurada encontrada')
+          status: 'created' as const,
+          baseUrl: inst.baseurl,
+          apiKey: inst.apikey
+        }))
+        setInstances(mappedInstances)
       }
     } catch (error) {
-      console.error('Erro ao verificar instância existente:', error)
+      console.error('Erro ao carregar dados:', error)
     } finally {
       setLoading(false)
     }
@@ -92,7 +103,7 @@ export default function WhatsAppPage() {
 
       console.log('Criando instância na Evolution API:', instanceName)
       
-      // Criar instância na Evolution API real
+      // Criar instância na Evolution API
       const evolutionResponse = await evolutionAPI.createInstance({
         instanceName,
         token: senha,
@@ -102,81 +113,45 @@ export default function WhatsAppPage() {
 
       console.log('Resposta da Evolution API:', evolutionResponse)
 
-      // Se a Evolution API retornou sucesso, continuamos
-      // Se retornou erro mas a instância foi criada (como você observou), também continuamos
-      let evolutionSuccessful = evolutionResponse.success
+      // Salvar na nova tabela instancia_whtats
+      console.log('Salvando instância no banco para user_id:', user?.id)
       
-      if (!evolutionSuccessful) {
-        console.warn('Evolution API retornou erro, mas vamos continuar pois você mencionou que a instância foi criada:', evolutionResponse.error)
-        // Não vamos interromper o processo, apenas logar o aviso
+      const { data: newInstance, error: saveError } = await supabase
+        .from('instancia_whtats')
+        .insert({
+          user_id: user?.id,
+          instancia: instanceName,
+          apikey: '767cfac9-68c6-4d67-aff1-21d6c482c715',
+          baseurl: 'https://wsapi.dnmarketing.com.br'
+        })
+        .select()
+        .single()
+
+      if (saveError) {
+        console.error('Erro ao salvar instância:', saveError)
+        throw new Error(`Erro ao salvar instância: ${saveError.message}`)
       }
 
-      // Salvar credenciais no banco
-      console.log('Salvando credenciais no banco para user_id:', user?.id)
-      
-      const { data: existingData, error: checkError } = await supabase
-        .from('configuracoes_credenciais')
-        .select('id')
-        .eq('user_id', user?.id)
-        .maybeSingle()
-
-      console.log('Verificação de registro existente:', { existingData, checkError })
-
-      let saveResult
-      if (existingData) {
-        // Update existing record
-        saveResult = await supabase
-          .from('configuracoes_credenciais')
-          .update({
-            instancia: instanceName,
-            apikey: '767cfac9-68c6-4d67-aff1-21d6c482c715',
-            baseurl: 'https://wsapi.dnmarketing.com.br'
-          })
-          .eq('user_id', user?.id)
-      } else {
-        // Insert new record
-        saveResult = await supabase
-          .from('configuracoes_credenciais')
-          .insert({
-            user_id: user?.id,
-            instancia: instanceName,
-            apikey: '767cfac9-68c6-4d67-aff1-21d6c482c715',
-            baseurl: 'https://wsapi.dnmarketing.com.br',
-            // Campos obrigatórios da tabela
-            model: 'gpt-3.5-turbo',
-            type_tool_supabase: 'none',
-            delay_entre_mensagens_em_segundos: 5,
-            delay_apos_intervencao_humana_minutos: 30,
-            inicio_expediente: 8,
-            fim_expediente: 18,
-            cliente: 'WhatsApp Instance'
-          })
-      }
-
-      console.log('Resultado do salvamento:', saveResult)
-
-      if (saveResult.error) {
-        console.error('Erro ao salvar no Supabase:', saveResult.error)
-        throw new Error(`Erro ao salvar credenciais: ${saveResult.error.message}`)
-      }
-
-      setInstance({
-        id: instanceName,
+      // Adicionar à lista local
+      const newInstanceObj = {
+        id: newInstance.id,
         instanceName,
         nome,
         telefone,
-        status: 'created',
+        status: 'created' as const,
         baseUrl: 'https://wsapi.dnmarketing.com.br',
         apiKey: '767cfac9-68c6-4d67-aff1-21d6c482c715'
-      })
+      }
 
+      setInstances(prev => [newInstanceObj, ...prev])
       setShowCreateForm(false)
       
-      if (evolutionSuccessful) {
-        alert('✅ Instância criada com sucesso na Evolution API e salva no banco de dados! Agora você pode gerar o QR Code para conectar.')
-      } else {
-        alert('⚠️ Instância criada na Evolution API (verificado), credenciais salvas no banco! Agora você pode gerar o QR Code para conectar.')
-      }
+      // Limpar formulário
+      setNome('')
+      setTelefone('')
+      setSenha('')
+      
+      alert('✅ Instância criada com sucesso! Agora você pode gerar o QR Code para conectar.')
 
     } catch (error) {
       console.error('Erro ao criar instância:', error)
@@ -186,7 +161,7 @@ export default function WhatsAppPage() {
     }
   }
 
-  const generateQrCode = async () => {
+  const generateQrCode = async (instance: WhatsAppInstance) => {
     if (!instance) return
 
     setConnecting(true)
@@ -207,7 +182,14 @@ export default function WhatsAppPage() {
         qrCodeData = connectResponse.data.qrcode
       }
       
-      setInstance(prev => prev ? {
+      // Atualizar instância local
+      setInstances(prev => prev.map(inst => 
+        inst.id === instance.id 
+          ? { ...inst, status: 'connecting', qrCode: qrCodeData || undefined }
+          : inst
+      ))
+      
+      setSelectedInstance(prev => prev ? {
         ...prev,
         status: 'connecting',
         qrCode: qrCodeData || undefined
@@ -216,7 +198,7 @@ export default function WhatsAppPage() {
       setShowQrCode(true)
       
       // Iniciar polling do status de conexão
-      startConnectionPolling()
+      startConnectionPolling(instance)
       
     } catch (error) {
       console.error('Erro ao gerar QR Code:', error)
@@ -261,7 +243,7 @@ export default function WhatsAppPage() {
     }
   }
 
-  const startConnectionPolling = () => {
+  const startConnectionPolling = (instance: WhatsAppInstance) => {
     const pollInterval = setInterval(async () => {
       if (!instance || instance.status === 'connected') {
         clearInterval(pollInterval)
@@ -275,10 +257,17 @@ export default function WhatsAppPage() {
           const connectionState = statusResponse.data?.state || statusResponse.data?.instance?.state
           
           if (connectionState === 'open') {
-            setInstance(prev => prev ? {
-              ...prev,
-              status: 'connected'
-            } : null)
+            // Atualizar instância local
+            setInstances(prev => prev.map(inst => 
+              inst.id === instance.id 
+                ? { ...inst, status: 'connected' }
+                : inst
+            ))
+            
+            if (selectedInstance?.id === instance.id) {
+              setSelectedInstance(prev => prev ? { ...prev, status: 'connected' } : null)
+            }
+            
             setShowQrCode(false)
             alert('WhatsApp conectado automaticamente!')
             clearInterval(pollInterval)
@@ -347,7 +336,7 @@ export default function WhatsAppPage() {
     }
   }
 
-  const deleteInstance = async () => {
+  const deleteInstance = async (instance: WhatsAppInstance) => {
     if (!instance) return
 
     if (!confirm('Tem certeza que deseja deletar completamente esta instância? Esta ação não pode ser desfeita.')) return
@@ -361,17 +350,24 @@ export default function WhatsAppPage() {
         throw new Error(deleteResponse.error || 'Erro ao deletar instância')
       }
 
-      // Remover credenciais do banco
-      await supabase
-        .from('configuracoes_credenciais')
-        .update({
-          instancia: null,
-          apikey: null,
-          baseurl: null
-        })
-        .eq('user_id', user?.id)
+      // Remover da tabela instancia_whtats
+      const { error: deleteError } = await supabase
+        .from('instancia_whtats')
+        .delete()
+        .eq('id', instance.id)
 
-      setInstance(null)
+      if (deleteError) {
+        throw new Error(`Erro ao remover do banco: ${deleteError.message}`)
+      }
+
+      // Remover da lista local
+      setInstances(prev => prev.filter(inst => inst.id !== instance.id))
+      
+      if (selectedInstance?.id === instance.id) {
+        setSelectedInstance(null)
+        setShowQrCode(false)
+      }
+
       alert('Instância deletada com sucesso!')
 
     } catch (error) {
@@ -388,155 +384,186 @@ export default function WhatsAppPage() {
     )
   }
 
+  // Verificar se pode criar mais instâncias
+  const canCreateMore = () => {
+    const maxInstances = userInfo?.numero_instancias || 0
+    return instances.length < maxInstances
+  }
+
   return (
     <div className="space-y-8">
-      <div className="sm:flex sm:items-center">
+      <div className="sm:flex sm:items-center sm:justify-between">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center">
             <MessageCircle className="h-8 w-8 mr-3 text-green-600" />
             WhatsApp
           </h1>
           <p className="mt-2 text-sm text-gray-700">
-            Configure sua conexão WhatsApp com Evolution API
+            Configure suas conexões WhatsApp com Evolution API
           </p>
+          {userInfo && (
+            <p className="mt-1 text-xs text-gray-500">
+              Instâncias: {instances.length} / {userInfo.numero_instancias || 0} (Plano: {getPlanDisplayName(userInfo.plano as PlanType)})
+            </p>
+          )}
         </div>
+        
+        {canCreateMore() && (
+          <div className="mt-4 sm:mt-0">
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Nova Instância
+            </button>
+          </div>
+        )}
       </div>
 
-      {!instance ? (
-        // Estado inicial - Mostrar botão para criar primeira instância
+      {instances.length === 0 ? (
+        // Estado inicial - Nenhuma instância
         <div className="text-center py-12">
           <MessageCircle className="h-16 w-16 text-green-400 mx-auto mb-6" />
-          <h3 className="text-xl font-medium text-gray-900 mb-4">Configure seu WhatsApp</h3>
+          <h3 className="text-xl font-medium text-gray-900 mb-4">Configure seu primeiro WhatsApp</h3>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Crie sua instância WhatsApp para começar a enviar mensagens automatizadas através da Evolution API
+            {userInfo?.numero_instancias ? 
+              `Você pode criar até ${userInfo.numero_instancias} instâncias WhatsApp com seu plano ${getPlanDisplayName(userInfo.plano as PlanType)}.` :
+              'Crie sua primeira instância WhatsApp para começar.'
+            }
           </p>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
-          >
-            <MessageCircle className="h-5 w-5 mr-2" />
-            Criar Instância WhatsApp
-          </button>
+          {canCreateMore() && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
+            >
+              <MessageCircle className="h-5 w-5 mr-2" />
+              Criar Instância WhatsApp
+            </button>
+          )}
         </div>
       ) : (
-        // Mostrar instância existente
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="sm:flex sm:items-start sm:justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Smartphone className="h-12 w-12 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">{instance.instanceName}</h3>
-                  <div className="mt-1 flex items-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      instance.status === 'connected' 
-                        ? 'bg-green-100 text-green-800' 
-                        : instance.status === 'connecting'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : instance.status === 'created'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {instance.status === 'connected' && <><CheckCircle className="h-3 w-3 mr-1" /> Conectado</>}
-                      {instance.status === 'connecting' && <><AlertCircle className="h-3 w-3 mr-1" /> Conectando...</>}
-                      {instance.status === 'created' && <><Smartphone className="h-3 w-3 mr-1" /> Criado</>}
-                      {instance.status === 'disconnected' && <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>}
-                    </span>
+        // Mostrar lista de instâncias
+        <div className="grid gap-6">
+          {instances.map((instance) => (
+            <div key={instance.id} className="bg-white shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="sm:flex sm:items-start sm:justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Smartphone className="h-12 w-12 text-green-600" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-lg font-medium text-gray-900">{instance.instanceName}</h3>
+                      <div className="mt-1 flex items-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          instance.status === 'connected' 
+                            ? 'bg-green-100 text-green-800' 
+                            : instance.status === 'connecting'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : instance.status === 'created'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {instance.status === 'connected' && <><CheckCircle className="h-3 w-3 mr-1" /> Conectado</>}
+                          {instance.status === 'connecting' && <><AlertCircle className="h-3 w-3 mr-1" /> Conectando...</>}
+                          {instance.status === 'created' && <><Smartphone className="h-3 w-3 mr-1" /> Criado</>}
+                          {instance.status === 'disconnected' && <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 sm:mt-0 sm:ml-6 sm:flex-shrink-0 sm:flex sm:items-center space-x-3">
+                    {instance.status === 'created' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedInstance(instance)
+                            generateQrCode(instance)
+                          }}
+                          disabled={connecting}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                        >
+                          <QrCode className="h-4 w-4 mr-2" />
+                          {connecting ? 'Gerando...' : 'Gerar QR Code'}
+                        </button>
+                        <button
+                          onClick={() => deleteInstance(instance)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deletar
+                        </button>
+                      </>
+                    )}
+                    
+                    {instance.status === 'connecting' && (
+                      <>
+                        <button
+                          onClick={() => checkConnection()}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Verificar Conexão
+                        </button>
+                        <button
+                          onClick={() => restartInstance()}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Reiniciar
+                        </button>
+                      </>
+                    )}
+
+                    {instance.status === 'connected' && (
+                      <>
+                        <button
+                          onClick={() => logoutInstance()}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
+                        >
+                          <WifiOff className="h-4 w-4 mr-2" />
+                          Desconectar
+                        </button>
+                        <button
+                          onClick={() => restartInstance()}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Reiniciar
+                        </button>
+                        <button
+                          onClick={() => deleteInstance(instance)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deletar
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              <div className="mt-5 sm:mt-0 sm:ml-6 sm:flex-shrink-0 sm:flex sm:items-center space-x-3">
-                {instance.status === 'created' && (
-                  <>
-                    <button
-                      onClick={generateQrCode}
-                      disabled={connecting}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      {connecting ? 'Gerando...' : 'Gerar QR Code'}
-                    </button>
-                    <button
-                      onClick={deleteInstance}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Deletar
-                    </button>
-                  </>
-                )}
-                
-                {instance.status === 'connecting' && instance.qrCode && (
-                  <>
-                    <button
-                      onClick={checkConnection}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Verificar Conexão
-                    </button>
-                    <button
-                      onClick={restartInstance}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reiniciar
-                    </button>
-                  </>
-                )}
 
                 {instance.status === 'connected' && (
-                  <>
-                    <button
-                      onClick={logoutInstance}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
-                    >
-                      <WifiOff className="h-4 w-4 mr-2" />
-                      Desconectar
-                    </button>
-                    <button
-                      onClick={restartInstance}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reiniciar
-                    </button>
-                    <button
-                      onClick={deleteInstance}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Deletar
-                    </button>
-                  </>
+                  <div className="mt-6 border-t border-gray-200 pt-6">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Informações da Instância</h4>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <dt className="text-sm text-gray-500">Nome da Instância</dt>
+                        <dd className="mt-1 text-sm text-gray-900">{instance.instanceName}</dd>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-
-            {instance.status === 'connected' && (
-              <div className="mt-6 border-t border-gray-200 pt-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Informações da Instância</h4>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm text-gray-500">Nome da Instância</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{instance.instanceName}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">Base URL</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{instance.baseUrl}</dd>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       )}
 
       {/* Modal QR Code */}
-      {showQrCode && instance?.qrCode && (
+      {showQrCode && selectedInstance?.qrCode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowQrCode(false)}></div>
           <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10">
@@ -544,7 +571,7 @@ export default function WhatsAppPage() {
             <div className="text-center">
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                 <img 
-                  src={instance.qrCode} 
+                  src={selectedInstance.qrCode} 
                   alt="QR Code WhatsApp" 
                   className="mx-auto w-48 h-48 border border-gray-200"
                 />

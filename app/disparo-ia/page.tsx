@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase, AgenteIA } from '../../lib/supabase'
+import PlanProtection from '../../components/PlanProtection'
 import { Upload, Bot, FileText, Users, Calendar, Sparkles } from 'lucide-react'
 
 interface CsvContact {
@@ -247,7 +248,8 @@ export default function DisparoIAPage() {
   const isDisabled = sending
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <PlanProtection feature="disparoIA">
+      <div className="max-w-7xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center">
           <Bot className="h-8 w-8 mr-3 text-purple-600" />
@@ -478,6 +480,7 @@ export default function DisparoIAPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PlanProtection>
   )
 }

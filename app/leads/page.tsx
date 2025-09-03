@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
-import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter } from 'lucide-react'
+import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X } from 'lucide-react'
 
 const STATUS_CONFIG = {
   'novo_lead': { label: 'Novo Lead', color: 'bg-blue-100 text-blue-800', icon: Users },
@@ -14,6 +14,208 @@ const STATUS_CONFIG = {
   'consta_divida': { label: 'Consta Dívida', color: 'bg-orange-100 text-orange-800', icon: FileText },
   'enviado_para_negociacao': { label: 'Em Negociação', color: 'bg-indigo-100 text-indigo-800', icon: User },
   'cliente_fechado': { label: 'Cliente Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle }
+}
+
+interface CreateLeadModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onLeadCreated: () => void
+  userId?: string
+}
+
+function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadModalProps) {
+  const [formData, setFormData] = useState({
+    nome_cliente: '',
+    cpf: '',
+    telefone: '',
+    origem: 'WhatsApp',
+    tipo_consulta_interesse: 'Consulta Rating',
+    valor_estimado_divida: '',
+    tempo_negativado: ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!userId) return
+
+    setLoading(true)
+    try {
+      const leadData = {
+        user_id: userId,
+        nome_cliente: formData.nome_cliente,
+        cpf: formData.cpf || null,
+        telefone: formData.telefone,
+        origem: formData.origem,
+        tipo_consulta_interesse: formData.tipo_consulta_interesse,
+        valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
+        tempo_negativado: formData.tempo_negativado || null,
+        status_limpa_nome: 'novo_lead'
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .insert([leadData])
+
+      if (error) throw error
+
+      onLeadCreated()
+      onClose()
+      setFormData({
+        nome_cliente: '',
+        cpf: '',
+        telefone: '',
+        origem: 'WhatsApp',
+        tipo_consulta_interesse: 'Consulta Rating',
+        valor_estimado_divida: '',
+        tempo_negativado: ''
+      })
+    } catch (error) {
+      console.error('Erro ao criar lead:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-medium">Criar Novo Lead</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nome do Cliente *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.nome_cliente}
+              onChange={(e) => setFormData(prev => ({ ...prev, nome_cliente: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              CPF
+            </label>
+            <input
+              type="text"
+              placeholder="000.000.000-00"
+              value={formData.cpf}
+              onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Telefone *
+            </label>
+            <input
+              type="tel"
+              required
+              placeholder="(11) 99999-9999"
+              value={formData.telefone}
+              onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Origem
+            </label>
+            <select
+              value={formData.origem}
+              onChange={(e) => setFormData(prev => ({ ...prev, origem: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Site">Site</option>
+              <option value="Indicação">Indicação</option>
+              <option value="Telefone">Telefone</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Google">Google</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Consulta de Interesse
+            </label>
+            <select
+              value={formData.tipo_consulta_interesse}
+              onChange={(e) => setFormData(prev => ({ ...prev, tipo_consulta_interesse: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Consulta Rating">Consulta Rating</option>
+              <option value="Consulta Completa">Consulta Completa</option>
+              <option value="Análise de Crédito">Análise de Crédito</option>
+              <option value="Limpa Nome">Limpa Nome</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Estimado da Dívida
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.valor_estimado_divida}
+              onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tempo Negativado
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: 2 anos, 6 meses"
+              value={formData.tempo_negativado}
+              onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Criando...' : 'Criar Lead'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 export default function LeadsPage() {
@@ -27,6 +229,8 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [tipoConsultaFilter, setTipoConsultaFilter] = useState('todos')
   const [showFilters, setShowFilters] = useState(false)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -160,7 +364,20 @@ export default function LeadsPage() {
       (lead.telefone && lead.telefone.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase()))
     
-    return statusMatch && tipoConsultaMatch && searchMatch
+    // Filtro por data
+    let dateMatch = true
+    if (startDate) {
+      const leadDate = new Date(lead.created_at)
+      const filterStartDate = new Date(startDate)
+      dateMatch = dateMatch && leadDate >= filterStartDate
+    }
+    if (endDate) {
+      const leadDate = new Date(lead.created_at)
+      const filterEndDate = new Date(endDate + 'T23:59:59')
+      dateMatch = dateMatch && leadDate <= filterEndDate
+    }
+    
+    return statusMatch && tipoConsultaMatch && searchMatch && dateMatch
   })
 
   const getUniqueConsultaTypes = () => {
@@ -377,11 +594,33 @@ export default function LeadsPage() {
                 </select>
               </div>
 
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Data início:</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Data fim:</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <button
                 onClick={() => {
                   setSearchTerm('')
                   setStatusFilter('todos')
                   setTipoConsultaFilter('todos')
+                  setStartDate('')
+                  setEndDate('')
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
@@ -708,20 +947,12 @@ export default function LeadsPage() {
 
       {/* Modal de criar lead */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium mb-4">Novo Lead</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Funcionalidade de criação será implementada em breve.
-            </p>
-            <button
-              onClick={() => setShowCreateForm(false)}
-              className="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
+        <CreateLeadModal 
+          isOpen={showCreateForm}
+          onClose={() => setShowCreateForm(false)}
+          onLeadCreated={fetchLeads}
+          userId={user?.id}
+        />
       )}
     </div>
   )

@@ -35,6 +35,9 @@ interface DashboardMetrics {
 export default function HomePage() {
   const { user } = useAuth()
   const [leads, setLeads] = useState<Lead[]>([])
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalLeads: 0,
     novosLeads: 0,
@@ -55,6 +58,10 @@ export default function HomePage() {
     }
   }, [user])
 
+  useEffect(() => {
+    filterLeadsByDate()
+  }, [leads, startDate, endDate])
+
   const fetchDashboardData = async () => {
     if (!user) return
 
@@ -67,12 +74,42 @@ export default function HomePage() {
       if (error) throw error
       
       setLeads(data || [])
-      calculateMetrics(data || [])
+      setFilteredLeads(data || [])
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const filterLeadsByDate = () => {
+    let filtered = leads
+
+    if (startDate) {
+      filtered = filtered.filter(lead => {
+        const leadDate = new Date(lead.created_at)
+        const filterStartDate = new Date(startDate)
+        return leadDate >= filterStartDate
+      })
+    }
+
+    if (endDate) {
+      filtered = filtered.filter(lead => {
+        const leadDate = new Date(lead.created_at)
+        const filterEndDate = new Date(endDate + 'T23:59:59')
+        return leadDate <= filterEndDate
+      })
+    }
+
+    setFilteredLeads(filtered)
+    calculateMetrics(filtered)
+  }
+
+  const clearDateFilter = () => {
+    setStartDate('')
+    setEndDate('')
+    setFilteredLeads(leads)
+    calculateMetrics(leads)
   }
 
   const calculateMetrics = (leadsData: Lead[]) => {
@@ -121,7 +158,7 @@ export default function HomePage() {
     }).format(value)
   }
 
-  const recentLeads = leads.slice(0, 5)
+  const recentLeads = filteredLeads.slice(0, 5)
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Carregando dashboard...</div>
@@ -129,20 +166,57 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Image
-          src="/sublogo.png"
-          alt="DNX Plataformas"
-          width={48}
-          height={48}
-          className="h-12 w-12"
-        />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">DNX Plataformas - CRM Limpa Nome</h1>
-          <p className="text-gray-600 mt-2">
-            Dashboard de recuperação de crédito - Bem-vindo, {user?.name}
-          </p>
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900">DNX Plataformas</h1>
+        <p className="text-gray-600 mt-2">
+          Dashboard de recuperação de crédito - Bem-vindo, {user?.name}
+        </p>
+      </div>
+
+      {/* Filtro de Data */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
+          {(startDate || endDate) && (
+            <button
+              onClick={clearDateFilter}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data início
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data fim
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        {(startDate || endDate) && (
+          <div className="mt-3 text-sm text-gray-600">
+            Mostrando dados de {filteredLeads.length} leads 
+            {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
+            {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
+          </div>
+        )}
       </div>
 
       {/* Métricas principais */}

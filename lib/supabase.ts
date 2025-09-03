@@ -32,6 +32,7 @@ export interface User {
   plano: 'basico' | 'premium' | 'enterprise'
   limite_leads: number
   limite_consultas: number
+  numero_instancias?: number
   created_at: string
   updated_at: string
 }
@@ -91,6 +92,16 @@ export interface ConfiguracaoCredenciais {
   cliente: string
   created_at: string
   updated_at: string
+}
+
+// Nova interface para instâncias WhatsApp (tabela instancia_whtats)
+export interface InstanciaWhats {
+  id: number
+  user_id: number
+  apikey?: string
+  instancia?: string
+  baseurl?: string
+  created_at: string
 }
 
 export interface InstanciaWhatsapp {
