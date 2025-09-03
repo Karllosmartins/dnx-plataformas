@@ -93,6 +93,23 @@ export interface ConfiguracaoCredenciais {
   updated_at: string
 }
 
+export interface InstanciaWhatsapp {
+  id: number
+  user_id: number
+  config_id: number
+  nome_instancia: string
+  instancia: string
+  apikey?: string
+  baseurl?: string
+  status_conexao: 'conectado' | 'desconectado' | 'erro'
+  ultimo_ping?: string
+  ativo: boolean
+  configuracoes_credenciais?: ConfiguracaoCredenciais
+  users?: User
+  created_at: string
+  updated_at?: string
+}
+
 export interface AgenteIA {
   id: number
   created_at: string

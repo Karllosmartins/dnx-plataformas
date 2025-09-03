@@ -153,7 +153,9 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       // Se erro 404, significa que não existe, pode prosseguir
-      if (!(error as any)?.response?.status === 404) {
+      if ((error as any)?.response?.status !== 404) {
+        console.log('Erro diferente de 404:', error)
+      } else {
         console.log('Instância não existe, pode criar')
       }
     }
@@ -173,7 +175,7 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         baseurl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
         instancia: instanciaNome,
-        apikey: apikey || evolutionInstance.apikey,
+        apikey: apikey || evolutionInstance.data?.apikey,
         cliente: user.name,
         model: 'gpt-4o',
         type_tool_supabase: 'OpenAi',
@@ -197,7 +199,7 @@ export async function POST(request: NextRequest) {
         config_id: configData.id,
         nome_instancia: nomeInstancia,
         instancia: instanciaNome,
-        apikey: apikey || evolutionInstance.apikey,
+        apikey: apikey || evolutionInstance.data?.apikey,
         baseurl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
         status_conexao: 'desconectado',
         ativo: true

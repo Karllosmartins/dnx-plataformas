@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
           
           // Configurações
           baseurl: config?.baseurl,
-          webhook_configured: !!instanceInfo?.webhook?.url
+          webhook_configured: !!instanceInfo?.data?.webhook?.url
         }
       })
 

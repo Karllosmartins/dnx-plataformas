@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         .from('configuracoes_credenciais')
         .update({
           instancia: instanceName,
-          apikey: evolutionResponse.apikey || 'api-key-gerada',
+          apikey: evolutionResponse.data?.apikey || 'api-key-gerada',
           baseurl: DEFAULT_EVOLUTION_CONFIG.baseUrl
         })
         .eq('id', existingConfig.id)
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
           user_id: userId,
           baseurl: DEFAULT_EVOLUTION_CONFIG.baseUrl,
           instancia: instanceName,
-          apikey: evolutionResponse.apikey || 'api-key-gerada',
+          apikey: evolutionResponse.data?.apikey || 'api-key-gerada',
           cliente: user.name,
           model: 'gpt-4o',
           type_tool_supabase: 'OpenAi',

@@ -202,7 +202,7 @@ export default function WhatsAppPage() {
       }
 
       // Verificar se o QR Code está na resposta
-      let qrCodeData = null
+      let qrCodeData: string | null = null
       if (connectResponse.data?.qrcode) {
         qrCodeData = connectResponse.data.qrcode
       }
@@ -210,7 +210,7 @@ export default function WhatsAppPage() {
       setInstance(prev => prev ? {
         ...prev,
         status: 'connecting',
-        qrCode: qrCodeData
+        qrCode: qrCodeData || undefined
       } : null)
       
       setShowQrCode(true)

@@ -87,8 +87,6 @@ export default function HomePage() {
     const dividasEncontradas = leadsData.filter(l => l.status_limpa_nome === 'consta_divida').length
     const clientesFechados = leadsData.filter(l => l.status_limpa_nome === 'cliente_fechado').length
     const leadsPerdidos = leadsData.filter(l => 
-      l.status_limpa_nome === 'lead_perdido' || 
-      l.status_limpa_nome === 'descartado' || 
       l.status_limpa_nome === 'desqualificado'
     ).length
     

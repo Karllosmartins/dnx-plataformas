@@ -406,7 +406,7 @@ export default function ConfiguracoesPage() {
                 funcao: '',
                 prompt: '',
                 estagio: 'ativo',
-                user_id: currentUser?.id || 0,
+                user_id: Number(currentUser?.id) || 0,
                 created_at: new Date().toISOString()
               })}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
@@ -468,7 +468,7 @@ export default function ConfiguracoesPage() {
                     funcao: '',
                     prompt: '',
                     estagio: 'ativo',
-                    user_id: currentUser?.id || 0,
+                    user_id: Number(currentUser?.id) || 0,
                     created_at: new Date().toISOString()
                   })}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"

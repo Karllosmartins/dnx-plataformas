@@ -12,9 +12,27 @@ export const DEFAULT_EVOLUTION_CONFIG = {
 
 export interface CreateInstancePayload {
   instanceName: string
-  token: string
+  token?: string
   nome?: string
   telefone?: string
+  integration?: string
+  qrcode?: boolean
+  webhook?: {
+    url: string
+    events: string[]
+    webhook_by_events?: boolean
+  }
+  groups_ignore?: boolean
+  read_messages?: boolean
+  reject_call?: boolean
+  always_online?: boolean
+  read_status?: boolean
+  proxy?: {
+    host: string
+    port: number
+    username: string
+    password: string
+  }
 }
 
 export interface EvolutionResponse {
@@ -38,21 +56,26 @@ class EvolutionAPIService {
     try {
       const requestBody = {
         instanceName: payload.instanceName,
-        integration: 'WHATSAPP-BAILEYS',
-        token: payload.token,
-        qrcode: true,
-        groupsIgnore: true,
-        alwaysOnline: false,
-        readMessages: true,
-        proxyHost: 'p.webshare.io',
-        webhook: {
+        integration: payload.integration || 'WHATSAPP-BAILEYS',
+        qrcode: payload.qrcode !== undefined ? payload.qrcode : true,
+        groupsIgnore: payload.groups_ignore !== undefined ? payload.groups_ignore : true,
+        alwaysOnline: payload.always_online !== undefined ? payload.always_online : false,
+        readMessages: payload.read_messages !== undefined ? payload.read_messages : true,
+        rejectCall: payload.reject_call !== undefined ? payload.reject_call : false,
+        readStatus: payload.read_status !== undefined ? payload.read_status : false,
+        webhook: payload.webhook || {
           url: WEBHOOK_URL,
-          events: ['MESSAGES_UPSERT']
+          events: ['CONNECTION_UPDATE', 'QRCODE_UPDATED', 'MESSAGES_UPSERT'],
+          webhook_by_events: true
         },
-        proxyPort: '80',
-        proxyProtocol: 'http',
-        proxyUsername: 'dpaulflz-rotate',
-        proxyPassword: 'mq45cez0q5vx'
+        ...(payload.proxy && {
+          proxyHost: payload.proxy.host,
+          proxyPort: payload.proxy.port.toString(),
+          proxyProtocol: 'http',
+          proxyUsername: payload.proxy.username,
+          proxyPassword: payload.proxy.password
+        }),
+        ...(payload.token && { token: payload.token })
       }
 
       console.log('Evolution API Request:', {
@@ -233,6 +256,34 @@ class EvolutionAPIService {
       }
     } catch (error) {
       console.error('Erro ao deletar instância:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      }
+    }
+  }
+
+  async getProfileInfo(instanceName: string): Promise<EvolutionResponse> {
+    try {
+      const response = await fetch(`${EVOLUTION_API_BASE_URL}/instance/profileInfo/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY
+        }
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao obter informações do perfil')
+      }
+
+      return {
+        success: true,
+        data: result
+      }
+    } catch (error) {
+      console.error('Erro ao obter informações do perfil:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro desconhecido'
