@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase, InstanciaWhats, User } from '../../lib/supabase'
-import { getPlanDisplayName, PlanType } from '../../lib/plans'
+import { supabase, InstanciaWhats } from '../../lib/supabase'
+import { User } from '../../lib/auth'
 import { evolutionAPI } from '../../lib/evolution-api'
 import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw, Plus } from 'lucide-react'
 
@@ -21,7 +21,7 @@ interface WhatsAppInstance {
 export default function WhatsAppPage() {
   const { user } = useAuth()
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
-  const [userInfo, setUserInfo] = useState<User | null>(null)
+  const [userInfo, setUserInfo] = useState<(User & { numero_instancias?: number }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [connecting, setConnecting] = useState(false)
@@ -406,7 +406,7 @@ export default function WhatsAppPage() {
           </p>
           {userInfo && (
             <p className="mt-1 text-xs text-gray-500">
-              Instâncias: {instances.length} / {userInfo.numero_instancias || 0} (Plano: {getPlanDisplayName(userInfo.plano as PlanType)})
+              Instâncias: {instances.length} / {userInfo.numero_instancias || 0}
             </p>
           )}
         </div>
@@ -431,7 +431,7 @@ export default function WhatsAppPage() {
           <h3 className="text-xl font-medium text-gray-900 mb-4">Configure seu primeiro WhatsApp</h3>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
             {userInfo?.numero_instancias ? 
-              `Você pode criar até ${userInfo.numero_instancias} instâncias WhatsApp com seu plano ${getPlanDisplayName(userInfo.plano as PlanType)}.` :
+              `Você pode criar até ${userInfo.numero_instancias} instâncias WhatsApp.` :
               'Crie sua primeira instância WhatsApp para começar.'
             }
           </p>
