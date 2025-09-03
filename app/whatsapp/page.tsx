@@ -234,44 +234,42 @@ export default function WhatsAppPage() {
         throw new Error(connectResponse.error || 'Erro ao conectar instância')
       }
 
-      // Verificar se o QR Code está na resposta
+      // QR Code é gerado via webhook/polling, então precisamos aguardar e verificar o status
       let qrCodeData: string | null = null
-      if (connectResponse.data?.qr || connectResponse.data?.qrcode) {
-        qrCodeData = connectResponse.data.qr || connectResponse.data.qrcode
-      }
       
-      // Se não obteve QR Code na resposta, tentar várias abordagens
-      if (!qrCodeData) {
-        console.log('QR Code não encontrado na resposta, tentando obter...')
-        
-        // Tentativa 1: Aguardar e verificar status
+      console.log('Aguardando QR Code ser gerado...')
+      
+      // Polling para obter QR Code - baseado nos logs, o campo é 'base64'
+      for (let attempt = 0; attempt < 6; attempt++) {
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        const newStatusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-        if (newStatusResponse.success && newStatusResponse.data?.qr) {
-          qrCodeData = newStatusResponse.data.qr
-          console.log('QR Code obtido via status')
-        }
+        const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+        console.log(`Tentativa ${attempt + 1} - Status:`, statusResponse.data)
         
-        // Tentativa 2: Endpoint específico para QR Code
-        if (!qrCodeData) {
-          console.log('Tentando endpoint específico de QR Code...')
-          const qrResponse = await evolutionAPI.getQrCode(instance.instanceName)
-          if (qrResponse.success && (qrResponse.data?.qr || qrResponse.data?.qrcode)) {
-            qrCodeData = qrResponse.data.qr || qrResponse.data.qrcode
-            console.log('QR Code obtido via endpoint específico')
-          }
-        }
-        
-        // Tentativa 3: Aguardar mais tempo e tentar novamente
-        if (!qrCodeData) {
-          console.log('Aguardando mais tempo para QR Code aparecer...')
-          await new Promise(resolve => setTimeout(resolve, 3000))
+        if (statusResponse.success && statusResponse.data) {
+          // Verificar múltiplos campos possíveis baseado nos logs
+          const possibleQrFields = [
+            statusResponse.data.base64,  // Campo principal baseado nos logs
+            statusResponse.data.qr,
+            statusResponse.data.qrcode,
+            statusResponse.data.data?.base64,
+            statusResponse.data.data?.qr
+          ]
           
-          const finalStatusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-          if (finalStatusResponse.success && finalStatusResponse.data?.qr) {
-            qrCodeData = finalStatusResponse.data.qr
-            console.log('QR Code obtido após aguardar')
+          for (const field of possibleQrFields) {
+            if (field && typeof field === 'string' && field.includes('data:image')) {
+              qrCodeData = field
+              console.log('QR Code encontrado no campo:', field.substring(0, 50) + '...')
+              break
+            }
+          }
+          
+          if (qrCodeData) break
+          
+          // Se estado já é 'open', a conexão foi feita
+          if (statusResponse.data.state === 'open') {
+            console.log('Instância conectou automaticamente')
+            break
           }
         }
       }
@@ -319,9 +317,43 @@ export default function WhatsAppPage() {
       try {
         const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
         
-        if (statusResponse.success) {
-          const connectionState = statusResponse.data?.state || statusResponse.data?.instance?.state
+        if (statusResponse.success && statusResponse.data) {
+          const connectionState = statusResponse.data.state || statusResponse.data.instance?.state
           
+          // Verificar se há QR Code disponível durante o polling
+          if (connectionState === 'connecting' || connectionState === 'close') {
+            const possibleQrFields = [
+              statusResponse.data.base64,
+              statusResponse.data.qr,
+              statusResponse.data.qrcode,
+              statusResponse.data.data?.base64,
+              statusResponse.data.data?.qr
+            ]
+            
+            for (const field of possibleQrFields) {
+              if (field && typeof field === 'string' && field.includes('data:image')) {
+                console.log('QR Code atualizado via polling')
+                
+                // Atualizar instância com novo QR Code
+                setInstances(prev => prev.map(inst => 
+                  inst.id === instance.id 
+                    ? { ...inst, qrCode: field, status: 'connecting' }
+                    : inst
+                ))
+                
+                if (selectedInstance?.id === instance.id) {
+                  setSelectedInstance(prev => prev ? { ...prev, qrCode: field, status: 'connecting' } : null)
+                }
+                
+                if (!showQrCode) {
+                  setShowQrCode(true)
+                }
+                break
+              }
+            }
+          }
+          
+          // Verificar se conectou
           if (connectionState === 'open') {
             // Atualizar instância local
             setInstances(prev => prev.map(inst => 
@@ -335,18 +367,19 @@ export default function WhatsAppPage() {
             }
             
             setShowQrCode(false)
-            alert('WhatsApp conectado automaticamente!')
+            alert('✅ WhatsApp conectado com sucesso!')
             clearInterval(pollInterval)
           }
         }
       } catch (error) {
         console.log('Erro no polling de conexão:', error)
       }
-    }, 5000) // Verificar a cada 5 segundos
+    }, 3000) // Verificar a cada 3 segundos para capturar QR Code mais rapidamente
 
     // Limpar polling após 5 minutos para evitar loops infinitos
     setTimeout(() => {
       clearInterval(pollInterval)
+      console.log('Polling de conexão finalizado após timeout')
     }, 300000)
   }
 
