@@ -165,7 +165,7 @@ export default function ExtracaoLeadsPage() {
 
   // Estados da interface
   const [activeTab, setActiveTab] = useState<'pf' | 'pj'>('pf')
-  const [currentStep, setCurrentStep] = useState<'config' | 'filtros' | 'contagem' | 'extracao' | 'historico'>('config')
+  const [currentStep, setCurrentStep] = useState<'config' | 'filtros' | 'contagem' | 'extracao' | 'historico'>('filtros')
   
   // Estados dos dados
   const [ufs, setUfs] = useState<Uf[]>([])
@@ -207,7 +207,7 @@ export default function ExtracaoLeadsPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`${apiConfig.baseUrl}/Auth`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/Auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiConfig.apiKey })
@@ -238,7 +238,7 @@ export default function ExtracaoLeadsPage() {
 
     try {
       const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/ListarUfs`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/ListarUfs`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
       
@@ -258,7 +258,7 @@ export default function ExtracaoLeadsPage() {
     try {
       const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
       const queryString = idsUfs.map(id => `idsUfs=${id}`).join('&')
-      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/ListarMunicipios?${queryString}`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/ListarMunicipios?${queryString}`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
       
@@ -295,7 +295,7 @@ export default function ExtracaoLeadsPage() {
         contagemPj: formPj
       } as NovaContagemApiPjVM
 
-      const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/CriarContagem`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/CriarContagem`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`,
@@ -327,7 +327,7 @@ export default function ExtracaoLeadsPage() {
     const poll = async () => {
       try {
         const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-        const response = await fetch(`${apiConfig.baseUrl}/${endpoint}/BuscarContagem?idContagem=${idContagem}`, {
+        const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/BuscarContagem?idContagem=${idContagem}`, {
           headers: { 'Authorization': `Bearer ${apiConfig.token}` }
         })
 
@@ -363,7 +363,7 @@ export default function ExtracaoLeadsPage() {
         removerRegistrosExtraidos: true
       }
 
-      const response = await fetch(`${apiConfig.baseUrl}/Extracao/CriarExtracao`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/CriarExtracao`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`,
@@ -393,7 +393,7 @@ export default function ExtracaoLeadsPage() {
     
     const poll = async () => {
       try {
-        const response = await fetch(`${apiConfig.baseUrl}/Extracao/BuscarDetalhesExtracao?idExtracao=${idExtracao}`, {
+        const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/BuscarDetalhesExtracao?idExtracao=${idExtracao}`, {
           headers: { 'Authorization': `Bearer ${apiConfig.token}` }
         })
 
@@ -420,7 +420,7 @@ export default function ExtracaoLeadsPage() {
     if (!apiConfig.token) return
 
     try {
-      const response = await fetch(`${apiConfig.baseUrl}/Extracao/DownloadExtracao?idExtracao=${idExtracao}`, {
+      const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/DownloadExtracao?idExtracao=${idExtracao}`, {
         headers: { 'Authorization': `Bearer ${apiConfig.token}` }
       })
 
@@ -478,6 +478,13 @@ export default function ExtracaoLeadsPage() {
     }
   }, [selectedUfs])
 
+  // Auto-autenticar quando carrega o componente
+  useEffect(() => {
+    if (apiConfig.apiKey && !apiConfig.token && !loading) {
+      authenticateAPI()
+    }
+  }, [apiConfig.apiKey])
+
   // =================== RENDER ===================
 
   return (
@@ -524,7 +531,6 @@ export default function ExtracaoLeadsPage() {
         {/* Steps */}
         <div className="flex items-center space-x-4">
           {[
-            { key: 'config', label: 'Configuração', icon: Settings },
             { key: 'filtros', label: 'Filtros', icon: Filter },
             { key: 'contagem', label: 'Contagem', icon: Search },
             { key: 'extracao', label: 'Extração', icon: Database },
@@ -541,14 +547,6 @@ export default function ExtracaoLeadsPage() {
 
         {/* Conteúdo baseado no step */}
         <div className="bg-white shadow rounded-lg">
-          {currentStep === 'config' && (
-            <ConfigurationStep 
-              apiConfig={apiConfig}
-              setApiConfig={setApiConfig}
-              onAuthenticate={authenticateAPI}
-              loading={loading}
-            />
-          )}
 
           {currentStep === 'filtros' && (
             <FiltersStep 
