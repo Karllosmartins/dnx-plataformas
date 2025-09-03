@@ -41,6 +41,36 @@ export default function WhatsAppPage() {
     }
   }, [user])
 
+  const checkInstancesStatus = async (instancesToCheck: WhatsAppInstance[]) => {
+    for (const instance of instancesToCheck) {
+      try {
+        const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+        
+        if (statusResponse.success && statusResponse.data) {
+          let status: 'created' | 'connecting' | 'connected' | 'disconnected' = 'disconnected'
+          
+          // Mapear estados da Evolution API para nossos estados
+          if (statusResponse.data.state === 'open') {
+            status = 'connected'
+          } else if (statusResponse.data.state === 'connecting') {
+            status = 'connecting'
+          } else if (statusResponse.data.state === 'close') {
+            status = 'disconnected'
+          }
+          
+          // Atualizar estado local
+          setInstances(prev => prev.map(inst => 
+            inst.instanceName === instance.instanceName 
+              ? { ...inst, status }
+              : inst
+          ))
+        }
+      } catch (error) {
+        console.error(`Erro ao verificar status da instância ${instance.instanceName}:`, error)
+      }
+    }
+  }
+
   const loadUserInstances = async () => {
     try {
       console.log('Carregando instâncias para user_id:', user?.id)
@@ -83,6 +113,9 @@ export default function WhatsAppPage() {
           apiKey: inst.apikey
         }))
         setInstances(mappedInstances)
+        
+        // Verificar status real de cada instância
+        checkInstancesStatus(mappedInstances)
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
@@ -124,7 +157,7 @@ export default function WhatsAppPage() {
         .insert({
           user_id: parseInt(user?.id || '0'),
           instancia: instanceName,
-          apikey: '767cfac9-68c6-4d67-aff1-21d6c482c715',
+          apikey: senha, // Usar a senha/token fornecida pelo usuário
           baseurl: 'https://wsapi.dnmarketing.com.br'
         })
         .select()
@@ -143,7 +176,7 @@ export default function WhatsAppPage() {
         telefone,
         status: 'created' as const,
         baseUrl: 'https://wsapi.dnmarketing.com.br',
-        apiKey: '767cfac9-68c6-4d67-aff1-21d6c482c715'
+        apiKey: senha // Usar a senha/token fornecida pelo usuário
       }
 
       setInstances(prev => [newInstanceObj, ...prev])
@@ -170,6 +203,28 @@ export default function WhatsAppPage() {
     setConnecting(true)
     
     try {
+      console.log('Verificando status atual da instância:', instance.instanceName)
+      
+      // Primeiro verificar se já está conectado
+      const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+      
+      if (statusResponse.success && statusResponse.data?.state === 'open') {
+        // Já está conectado
+        setInstances(prev => prev.map(inst => 
+          inst.id === instance.id 
+            ? { ...inst, status: 'connected' }
+            : inst
+        ))
+        
+        setSelectedInstance(prev => prev ? {
+          ...prev,
+          status: 'connected'
+        } : null)
+        
+        alert('✅ Instância já está conectada!')
+        return
+      }
+      
       console.log('Conectando instância para gerar QR Code:', instance.instanceName)
       
       // Conectar instância na Evolution API para gerar QR Code
@@ -181,8 +236,21 @@ export default function WhatsAppPage() {
 
       // Verificar se o QR Code está na resposta
       let qrCodeData: string | null = null
-      if (connectResponse.data?.qrcode) {
-        qrCodeData = connectResponse.data.qrcode
+      if (connectResponse.data?.qr || connectResponse.data?.qrcode) {
+        qrCodeData = connectResponse.data.qr || connectResponse.data.qrcode
+      }
+      
+      // Se não obteve QR Code na resposta, tentar buscar o status
+      if (!qrCodeData) {
+        console.log('QR Code não encontrado na resposta, verificando status...')
+        
+        // Aguardar um pouco e tentar obter QR Code
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        const newStatusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+        if (newStatusResponse.success && newStatusResponse.data?.qr) {
+          qrCodeData = newStatusResponse.data.qr
+        }
       }
       
       // Atualizar instância local
@@ -198,7 +266,13 @@ export default function WhatsAppPage() {
         qrCode: qrCodeData || undefined
       } : null)
       
-      setShowQrCode(true)
+      if (qrCodeData) {
+        setShowQrCode(true)
+        console.log('QR Code obtido com sucesso')
+      } else {
+        console.warn('QR Code não foi obtido')
+        alert('⚠️ QR Code não foi gerado. Tente novamente em alguns segundos.')
+      }
       
       // Iniciar polling do status de conexão
       startConnectionPolling(instance)
