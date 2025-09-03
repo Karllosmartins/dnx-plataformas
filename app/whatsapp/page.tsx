@@ -54,8 +54,11 @@ export default function WhatsAppPage() {
 
       if (userError) {
         console.error('Erro ao carregar dados do usuário:', userError)
-      } else {
-        setUserInfo({ ...user, numero_instancias: userData?.numero_instancias } as User)
+      } else if (user) {
+        setUserInfo({
+          ...user,
+          numero_instancias: userData?.numero_instancias
+        })
       }
 
       // Carregar instâncias existentes
