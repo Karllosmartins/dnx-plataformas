@@ -211,40 +211,6 @@ export default function WhatsAppPage() {
     }
   }
 
-  const checkConnection = async () => {
-    if (!instance) return
-
-    try {
-      console.log('Verificando status de conexão:', instance.instanceName)
-      
-      const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-      
-      if (!statusResponse.success) {
-        throw new Error(statusResponse.error || 'Erro ao verificar status')
-      }
-
-      const connectionState = statusResponse.data?.state || statusResponse.data?.instance?.state
-
-      console.log('Status atual da conexão:', connectionState)
-
-      if (connectionState === 'open') {
-        setInstance(prev => prev ? {
-          ...prev,
-          status: 'connected'
-        } : null)
-        setShowQrCode(false)
-        alert('WhatsApp conectado com sucesso!')
-      } else if (connectionState === 'close') {
-        alert('WhatsApp ainda não foi conectado. Escaneie o QR Code com seu celular.')
-      } else {
-        alert(`Status da conexão: ${connectionState}`)
-      }
-
-    } catch (error) {
-      console.error('Erro ao verificar conexão:', error)
-      alert(`Erro ao verificar conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-    }
-  }
 
   const startConnectionPolling = (instance: WhatsAppInstance) => {
     const pollInterval = setInterval(async () => {
@@ -287,57 +253,7 @@ export default function WhatsAppPage() {
     }, 300000)
   }
 
-  const restartInstance = async () => {
-    if (!instance) return
 
-    try {
-      console.log('Reiniciando instância:', instance.instanceName)
-      
-      const restartResponse = await evolutionAPI.restartInstance(instance.instanceName)
-      
-      if (!restartResponse.success) {
-        throw new Error(restartResponse.error || 'Erro ao reiniciar instância')
-      }
-
-      setInstance(prev => prev ? {
-        ...prev,
-        status: 'created'
-      } : null)
-
-      alert('Instância reiniciada com sucesso!')
-
-    } catch (error) {
-      console.error('Erro ao reiniciar instância:', error)
-      alert(`Erro ao reiniciar instância: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-    }
-  }
-
-  const logoutInstance = async () => {
-    if (!instance) return
-
-    if (!confirm('Tem certeza que deseja desconectar o WhatsApp?')) return
-
-    try {
-      console.log('Desconectando instância:', instance.instanceName)
-      
-      const logoutResponse = await evolutionAPI.logoutInstance(instance.instanceName)
-      
-      if (!logoutResponse.success) {
-        throw new Error(logoutResponse.error || 'Erro ao desconectar instância')
-      }
-
-      setInstance(prev => prev ? {
-        ...prev,
-        status: 'created'
-      } : null)
-
-      alert('WhatsApp desconectado com sucesso!')
-
-    } catch (error) {
-      console.error('Erro ao desconectar instância:', error)
-      alert(`Erro ao desconectar instância: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-    }
-  }
 
   const deleteInstance = async (instance: WhatsAppInstance) => {
     if (!instance) return
@@ -502,40 +418,16 @@ export default function WhatsAppPage() {
                     )}
                     
                     {instance.status === 'connecting' && (
-                      <>
-                        <button
-                          onClick={() => checkConnection()}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Verificar Conexão
-                        </button>
-                        <button
-                          onClick={() => restartInstance()}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Reiniciar
-                        </button>
-                      </>
+                      <div className="text-sm text-blue-600">
+                        Conectando... Escaneie o QR Code no seu celular.
+                      </div>
                     )}
 
                     {instance.status === 'connected' && (
                       <>
-                        <button
-                          onClick={() => logoutInstance()}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
-                        >
-                          <WifiOff className="h-4 w-4 mr-2" />
-                          Desconectar
-                        </button>
-                        <button
-                          onClick={() => restartInstance()}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Reiniciar
-                        </button>
+                        <div className="text-sm text-green-600 font-medium">
+                          Conectado ✓
+                        </div>
                         <button
                           onClick={() => deleteInstance(instance)}
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
