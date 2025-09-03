@@ -39,7 +39,7 @@ interface SidebarProps {
     name: string
     email: string
     role: string
-    plano: PlanType
+    plano?: PlanType
   }
   onLogout?: () => void
   onCollapseChange?: (collapsed: boolean) => void
