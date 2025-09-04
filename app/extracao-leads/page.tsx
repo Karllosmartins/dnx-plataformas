@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
 import { 
   Target, 
@@ -21,7 +20,11 @@ import {
   Settings,
   History,
   X,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Minus,
+  FileText,
+  Upload
 } from 'lucide-react'
 
 // =================== INTERFACES API ===================
@@ -45,11 +48,57 @@ interface Cidade {
   uf: string
 }
 
+interface Sexo {
+  tipo: string
+  sexo1: string
+}
+
+interface ClasseSocialVM {
+  codigo: string
+  descricao: string
+}
+
+interface TbEstadoCivil {
+  cdEstadoCivil: string
+  dsEstadoCivil: string
+}
+
+interface TbCbo {
+  cdCbo: string
+  dsCbo: string
+}
+
+interface TbOperadorasNew {
+  nomeOperadora: string
+}
+
+interface DddRegioesVM {
+  estados: DddRegioesVMEstado[]
+}
+
+interface DddRegioesVMEstado {
+  siglaUf: string
+  nome: string
+  ddds: DddRegioesVMDdd[]
+}
+
+interface DddRegioesVMDdd {
+  prefixo: number
+  nome: string
+  alternativo: string
+}
+
+interface Tbcnae {
+  cnae: string
+  descricaoCnae: string
+}
+
 interface EstadoMunicipiosVM {
   idsUfs: number[]
   idsMunicipios: number[]
 }
 
+// Pessoa Física
 interface ContagemPf {
   idadeMinima?: number
   idadeMaxima?: number
@@ -62,6 +111,7 @@ interface ContagemPf {
   possuiCelular?: boolean
   sexos?: string[]
   classesSociais?: string[]
+  classesSociaisSiglas?: string[]
   estadosCivis?: string[]
   profissoes?: string[]
   scores?: string[]
@@ -69,6 +119,15 @@ interface ContagemPf {
   dddsCelular?: string[]
 }
 
+interface NovaContagemApiPfVM {
+  nomeContagem: string
+  estadosMunicipios: EstadoMunicipiosVM
+  arquivoCepsBase64?: string
+  arquivoCepsComNumero?: boolean
+  contagemPf: ContagemPf
+}
+
+// Pessoa Jurídica
 interface ContagemPj {
   dataAberturaMinima?: string
   dataAberturaMaxima?: string
@@ -91,211 +150,318 @@ interface ContagemPj {
   dddsCelular?: string[]
 }
 
-interface NovaContagemApiPfVM {
-  nomeContagem: string
-  estadosMunicipios: EstadoMunicipiosVM
-  contagemPf: ContagemPf
-}
-
 interface NovaContagemApiPjVM {
   nomeContagem: string
   estadosMunicipios: EstadoMunicipiosVM
+  arquivoCepsBase64?: string
+  arquivoCepsComNumero?: boolean
   contagemPj: ContagemPj
+}
+
+interface ResumoContagemVM {
+  sucesso: boolean
+  msg: string
+  limiteContagem: string
+  total: string
+  permitido: boolean
 }
 
 interface ContagemRetornoVM {
   sucesso: boolean
   msg: string
   idContagem: number
-  quantidades?: Array<{
-    descricao: string
-    total: number
-  }>
+  quantidades: any[]
 }
-
-interface CriarExtracaoVM {
-  idContagem: number
-  idTipoAcesso: number
-  qtdeSolicitada: number
-  removerRegistrosExtraidos: boolean
-}
-
-interface CriarExtracaoRetornoVM {
-  sucesso: boolean
-  msg: string
-  idExtracao: number
-}
-
-interface DetalhesExtracaoVM {
-  sucesso: boolean
-  msg: string
-  idExtracao: number
-  idContagem: number
-  status: string
-  nomeContagem: string
-  tipoPessoa: string
-  qtdeSolicitada: number
-  qtdeRetorno?: number
-  dataFinalizacao?: string
-  tipoExtracao: string
-}
-
-interface ResultadoExtracaoVM {
-  idExtracao: number
-  tipoExtracao: string
-  tipoPessoa: string
-  data: string
-  status: string
-  usuario: string
-  qtdeSolicitada: number
-}
-
-// =================== COMPONENTE PRINCIPAL ===================
 
 export default function ExtracaoLeadsPage() {
   const { user } = useAuth()
-  const [apiConfig, setApiConfig] = useState<{
-    baseUrl: string
-    apiKey: string
-    token?: string
-  }>({
-    baseUrl: 'https://apiprofile.infinititi.com.br/api',
-    apiKey: '043d2754-cd7f-47ba-b83b-0dbbb3877f36'
-  })
-
-  // Estados da interface
-  const [activeTab, setActiveTab] = useState<'pf' | 'pj'>('pf')
-  const [currentStep, setCurrentStep] = useState<'config' | 'filtros' | 'contagem' | 'extracao' | 'historico'>('filtros')
   
-  // Estados dos dados
+  // Estados da API
+  const [apiConfig, setApiConfig] = useState({
+    token: '',
+    authenticated: false
+  })
+  const [loading, setLoading] = useState(false)
+
+  // Tipo de pessoa selecionado
+  const [tipoPessoa, setTipoPessoa] = useState<'pf' | 'pj'>('pf')
+  
+  // Nome da contagem
+  const [nomeContagem, setNomeContagem] = useState('')
+
+  // Estados e Municípios
   const [ufs, setUfs] = useState<Uf[]>([])
   const [cidades, setCidades] = useState<Cidade[]>([])
   const [selectedUfs, setSelectedUfs] = useState<number[]>([])
   const [selectedCidades, setSelectedCidades] = useState<number[]>([])
-
-  // Estados do formulário PF
-  const [formPf, setFormPf] = useState<ContagemPf>({
-    possuiEmail: true,
-    possuiCelular: true
-  })
-
-  // Estados do formulário PJ
-  const [formPj, setFormPj] = useState<ContagemPj>({
-    possuiEmail: true,
-    possuiCelular: true
-  })
-
-  // Estados do processo
-  const [nomeContagem, setNomeContagem] = useState('')
-  const [contagemAtual, setContagemAtual] = useState<ContagemRetornoVM | null>(null)
-  const [extracaoAtual, setExtracaoAtual] = useState<DetalhesExtracaoVM | null>(null)
-  const [qtdeSolicitada, setQtdeSolicitada] = useState(100)
   
-  // Estados de controle
-  const [loading, setLoading] = useState(false)
-  const [pollingContagem, setPollingContagem] = useState(false)
-  const [pollingExtracao, setPollingExtracao] = useState(false)
-  const [historico, setHistorico] = useState<ResultadoExtracaoVM[]>([])
+  // Filtros Pessoa Física
+  const [sexos, setSexos] = useState<Sexo[]>([])
+  const [classesSociais, setClassesSociais] = useState<ClasseSocialVM[]>([])
+  const [estadosCivis, setEstadosCivis] = useState<TbEstadoCivil[]>([])
+  const [profissoes, setProfissoes] = useState<TbCbo[]>([])
+  const [scoresPf, setScoresPf] = useState<string[]>([])
+  const [operadoras, setOperadoras] = useState<TbOperadorasNew[]>([])
+  const [ddds, setDdds] = useState<DddRegioesVM>({ estados: [] })
 
-  // =================== FUNÇÕES DA API ===================
+  // Filtros Pessoa Jurídica
+  const [cnaes, setCnaes] = useState<Tbcnae[]>([])
+  const [portes, setPortes] = useState<string[]>([])
+  const [tiposEmpresa, setTiposEmpresa] = useState<string[]>([])
+  const [scoresPj, setScoresPj] = useState<string[]>([])
 
-  const authenticateAPI = async (): Promise<boolean> => {
-    if (!apiConfig.apiKey.trim()) {
-      alert('Configure sua API Key primeiro')
-      return false
-    }
+  // Valores dos filtros
+  const [filtrosPf, setFiltrosPf] = useState<ContagemPf>({})
+  const [filtrosPj, setFiltrosPj] = useState<ContagemPj>({})
 
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/profile-proxy?endpoint=/Auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: apiConfig.apiKey })
-      })
+  // Estados de contagem
+  const [resumoContagem, setResumoContagem] = useState<ResumoContagemVM | null>(null)
+  const [contagemRealizada, setContagemRealizada] = useState(false)
 
-      const data: LoginResponse = await response.json()
-      
-      if (data.token) {
-        setApiConfig(prev => ({ ...prev, token: data.token }))
-        alert('Autenticado com sucesso!')
-        setCurrentStep('filtros')
-        return true
-      } else {
-        alert('Erro na autenticação: ' + data.msg)
-        return false
-      }
-    } catch (error) {
-      console.error('Erro na autenticação:', error)
-      alert('Erro ao conectar com a API')
-      return false
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Carregar UFs
   const loadUfs = async () => {
     if (!apiConfig.token) return
 
     try {
-      const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/ListarUfs`, {
-        headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ListarUfs' : '/ContagemPj/ListarUfs'
+      const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
+        headers: {
+          'Authorization': `Bearer ${apiConfig.token}`
+        }
       })
-      
-      const data: Uf[] = await response.json()
-      setUfs(data)
+      const data = await response.json()
+      setUfs(data || [])
     } catch (error) {
       console.error('Erro ao carregar UFs:', error)
     }
   }
 
-  const loadCidades = async (idsUfs: number[]) => {
-    if (!apiConfig.token || idsUfs.length === 0) {
+  // Carregar cidades baseado nas UFs selecionadas
+  const loadCidades = async () => {
+    if (!apiConfig.token || selectedUfs.length === 0) {
       setCidades([])
       return
     }
 
     try {
-      const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-      const queryString = idsUfs.map(id => `idsUfs=${id}`).join('&')
-      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/ListarMunicipios?${queryString}`, {
-        headers: { 'Authorization': `Bearer ${apiConfig.token}` }
-      })
+      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ListarMunicipios' : '/ContagemPj/ListarMunicipios'
+      const params = new URLSearchParams()
+      selectedUfs.forEach(uf => params.append('idsUfs', uf.toString()))
       
-      const data: Cidade[] = await response.json()
-      setCidades(data)
+      const response = await fetch(`/api/profile-proxy?endpoint=${endpoint}&${params}`, {
+        headers: {
+          'Authorization': `Bearer ${apiConfig.token}`
+        }
+      })
+      const data = await response.json()
+      setCidades(data || [])
     } catch (error) {
       console.error('Erro ao carregar cidades:', error)
     }
   }
 
-  const criarContagem = async () => {
-    if (!apiConfig.token || !nomeContagem.trim()) {
-      alert('Configure o nome da contagem')
-      return
-    }
+  // Carregar dados específicos para Pessoa Física
+  const loadDadosPf = async () => {
+    if (!apiConfig.token) return
 
     try {
-      setLoading(true)
-      const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-      
-      const payload = activeTab === 'pf' ? {
-        nomeContagem,
-        estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
-        },
-        contagemPf: formPf
-      } as NovaContagemApiPfVM : {
-        nomeContagem,
-        estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
-        },
-        contagemPj: formPj
-      } as NovaContagemApiPjVM
+      const requests = [
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarSexos', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarClassesSociais', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarEstadosCivis', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarProfissoes', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarScores', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarOperadoras', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPf/ListarDds', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        })
+      ]
 
-      const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/CriarContagem`, {
+      const responses = await Promise.all(requests)
+      const [sexosData, classesSociaisData, estadosCivisData, profissoesData, scoresData, operadorasData, dddsData] = 
+        await Promise.all(responses.map(r => r.json()))
+
+      setSexos(sexosData || [])
+      setClassesSociais(classesSociaisData || [])
+      setEstadosCivis(estadosCivisData || [])
+      setProfissoes(profissoesData || [])
+      setScoresPf(scoresData || [])
+      setOperadoras(operadorasData || [])
+      setDdds(dddsData || { estados: [] })
+
+    } catch (error) {
+      console.error('Erro ao carregar dados PF:', error)
+    }
+  }
+
+  // Carregar dados específicos para Pessoa Jurídica
+  const loadDadosPj = async () => {
+    if (!apiConfig.token) return
+
+    try {
+      const requests = [
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarCNAEs', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarPortes', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarTiposEmpresa', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarScores', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarOperadoras', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        }),
+        fetch('/api/profile-proxy?endpoint=/ContagemPj/ListarDds', {
+          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
+        })
+      ]
+
+      const responses = await Promise.all(requests)
+      const [cnaesData, portesData, tiposEmpresaData, scoresData, operadorasData, dddsData] = 
+        await Promise.all(responses.map(r => r.json()))
+
+      setCnaes(cnaesData || [])
+      setPortes(portesData || [])
+      setTiposEmpresa(tiposEmpresaData || [])
+      setScoresPj(scoresData || [])
+      setOperadoras(operadorasData || [])
+      setDdds(dddsData || { estados: [] })
+
+    } catch (error) {
+      console.error('Erro ao carregar dados PJ:', error)
+    }
+  }
+
+  // Autenticar na API Profile
+  const authenticateAPI = async () => {
+    if (!user) return
+
+    setLoading(true)
+    try {
+      const credenciais = await supabase
+        .from('credenciais_api')
+        .select('api_key')
+        .eq('user_id', user.id)
+        .eq('nome', 'profile')
+        .single()
+
+      if (!credenciais.data?.api_key) {
+        throw new Error('API Key não encontrada')
+      }
+
+      const response = await fetch('/api/profile-proxy?endpoint=/Auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          apiKey: credenciais.data.api_key
+        })
+      })
+
+      const data: LoginResponse = await response.json()
+
+      if (data.token) {
+        setApiConfig({
+          token: data.token,
+          authenticated: true
+        })
+      } else {
+        throw new Error(data.msg || 'Erro na autenticação')
+      }
+    } catch (error) {
+      console.error('Erro na autenticação:', error)
+      alert('Erro na autenticação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Realizar contagem resumida
+  const realizarResumo = async () => {
+    if (!apiConfig.token || !nomeContagem) return
+
+    setLoading(true)
+    try {
+      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ResumirContagem' : '/ContagemPj/ResumirContagem'
+      
+      const payload = tipoPessoa === 'pf' ? {
+        nomeContagem,
+        estadosMunicipios: {
+          idsUfs: selectedUfs,
+          idsMunicipios: selectedCidades
+        },
+        contagemPf: filtrosPf
+      } : {
+        nomeContagem,
+        estadosMunicipios: {
+          idsUfs: selectedUfs,
+          idsMunicipios: selectedCidades
+        },
+        contagemPj: filtrosPj
+      }
+
+      const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiConfig.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const data: ResumoContagemVM = await response.json()
+      setResumoContagem(data)
+
+    } catch (error) {
+      console.error('Erro ao realizar resumo:', error)
+      alert('Erro ao realizar resumo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Realizar contagem completa
+  const criarContagem = async () => {
+    if (!apiConfig.token || !nomeContagem || !resumoContagem?.permitido) return
+
+    setLoading(true)
+    try {
+      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/CriarContagem' : '/ContagemPj/CriarContagem'
+      
+      const payload = tipoPessoa === 'pf' ? {
+        nomeContagem,
+        estadosMunicipios: {
+          idsUfs: selectedUfs,
+          idsMunicipios: selectedCidades
+        },
+        contagemPf: filtrosPf
+      } : {
+        nomeContagem,
+        estadosMunicipios: {
+          idsUfs: selectedUfs,
+          idsMunicipios: selectedCidades
+        },
+        contagemPj: filtrosPj
+      }
+
+      const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`,
@@ -307,929 +473,882 @@ export default function ExtracaoLeadsPage() {
       const data: ContagemRetornoVM = await response.json()
       
       if (data.sucesso) {
-        setContagemAtual(data)
-        setCurrentStep('contagem')
-        startPollingContagem(data.idContagem)
+        setContagemRealizada(true)
+        alert('✅ Contagem criada com sucesso!')
       } else {
-        alert('Erro ao criar contagem: ' + data.msg)
+        throw new Error(data.msg)
       }
+
     } catch (error) {
       console.error('Erro ao criar contagem:', error)
-      alert('Erro ao criar contagem')
+      alert('Erro ao criar contagem: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
     } finally {
       setLoading(false)
     }
   }
 
-  const startPollingContagem = async (idContagem: number) => {
-    setPollingContagem(true)
-    
-    const poll = async () => {
-      try {
-        const endpoint = activeTab === 'pf' ? 'ContagemPf' : 'ContagemPj'
-        const response = await fetch(`/api/profile-proxy?endpoint=/${endpoint}/BuscarContagem?idContagem=${idContagem}`, {
-          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
-        })
-
-        const data: ContagemRetornoVM = await response.json()
-        setContagemAtual(data)
-
-        if (data.quantidades && data.quantidades.length > 0) {
-          setPollingContagem(false)
-          return
-        }
-        
-        // Continuar polling se ainda não terminou
-        setTimeout(poll, 3000)
-      } catch (error) {
-        console.error('Erro no polling da contagem:', error)
-        setPollingContagem(false)
-      }
-    }
-
-    poll()
-  }
-
-  const criarExtracao = async () => {
-    if (!contagemAtual || !apiConfig.token) return
-
-    try {
-      setLoading(true)
-      
-      const payload: CriarExtracaoVM = {
-        idContagem: contagemAtual.idContagem,
-        idTipoAcesso: 1, // Tipo padrão
-        qtdeSolicitada: qtdeSolicitada,
-        removerRegistrosExtraidos: true
-      }
-
-      const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/CriarExtracao`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiConfig.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
-
-      const data: CriarExtracaoRetornoVM = await response.json()
-      
-      if (data.sucesso) {
-        setCurrentStep('extracao')
-        startPollingExtracao(data.idExtracao)
-      } else {
-        alert('Erro ao criar extração: ' + data.msg)
-      }
-    } catch (error) {
-      console.error('Erro ao criar extração:', error)
-      alert('Erro ao criar extração')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const startPollingExtracao = async (idExtracao: number) => {
-    setPollingExtracao(true)
-    
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/BuscarDetalhesExtracao?idExtracao=${idExtracao}`, {
-          headers: { 'Authorization': `Bearer ${apiConfig.token}` }
-        })
-
-        const data: DetalhesExtracaoVM = await response.json()
-        setExtracaoAtual(data)
-
-        if (data.status === 'FINALIZADA') {
-          setPollingExtracao(false)
-          return
-        }
-        
-        // Continuar polling
-        setTimeout(poll, 5000)
-      } catch (error) {
-        console.error('Erro no polling da extração:', error)
-        setPollingExtracao(false)
-      }
-    }
-
-    poll()
-  }
-
-  const downloadExtracao = async (idExtracao: number) => {
-    if (!apiConfig.token) return
-
-    try {
-      const response = await fetch(`/api/profile-proxy?endpoint=/Extracao/DownloadExtracao?idExtracao=${idExtracao}`, {
-        headers: { 'Authorization': `Bearer ${apiConfig.token}` }
-      })
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `extracao_${idExtracao}.csv`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-      // Salvar no histórico do usuário
-      await salvarHistoricoExtracao(idExtracao)
-    } catch (error) {
-      console.error('Erro no download:', error)
-      alert('Erro ao fazer download')
-    }
-  }
-
-  const salvarHistoricoExtracao = async (idExtracao: number) => {
-    if (!user || !extracaoAtual) return
-
-    try {
-      const { error } = await supabase
-        .from('leads')
-        .insert([{
-          user_id: user.id,
-          nome_cliente: `Extração ${idExtracao}`,
-          origem: 'API Profile',
-          nome_campanha: extracaoAtual.nomeContagem,
-          status_limpa_nome: 'novo_lead',
-          observacoes_limpa_nome: `${extracaoAtual.tipoPessoa} - ${extracaoAtual.qtdeRetorno} registros`,
-          created_at: new Date().toISOString()
-        }])
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Erro ao salvar histórico:', error)
-    }
-  }
-
-  // =================== EFFECTS ===================
-
+  // Effects
   useEffect(() => {
-    if (apiConfig.token && currentStep === 'filtros') {
+    if (apiConfig.authenticated && !loading) {
       loadUfs()
     }
-  }, [apiConfig.token, currentStep, activeTab])
+  }, [apiConfig.token, tipoPessoa])
 
   useEffect(() => {
-    if (selectedUfs.length > 0) {
-      loadCidades(selectedUfs)
+    if (apiConfig.authenticated && !loading) {
+      loadCidades()
     }
-  }, [selectedUfs])
+  }, [selectedUfs, apiConfig.token, tipoPessoa])
 
-  // Auto-autenticar quando carrega o componente
   useEffect(() => {
-    if (apiConfig.apiKey && !apiConfig.token && !loading) {
-      authenticateAPI()
+    if (apiConfig.authenticated && !loading) {
+      if (tipoPessoa === 'pf') {
+        loadDadosPf()
+      } else {
+        loadDadosPj()
+      }
     }
-  }, [apiConfig.apiKey])
-
-  // =================== RENDER ===================
+  }, [apiConfig.token, tipoPessoa])
 
   return (
-    <PlanProtection feature="extracaoLeads">
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Target className="h-8 w-8 mr-3 text-blue-600" />
-            Extração de Leads
-          </h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Extraia leads qualificados de pessoa física e jurídica com filtros avançados
-          </p>
+    <PlanProtection requiredPlan="enterprise">
+      <div className="p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Extração de Leads</h1>
+          <p className="text-gray-600">Sistema completo de extração de leads com filtros avançados da API Profile</p>
         </div>
 
-        {/* Tabs PF/PJ */}
-        <div className="border-b border-gray-200">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('pf')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'pf'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <User className="h-4 w-4 inline mr-2" />
-              Pessoa Física
-            </button>
-            <button
-              onClick={() => setActiveTab('pj')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'pj'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Building className="h-4 w-4 inline mr-2" />
-              Pessoa Jurídica
-            </button>
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div className="flex items-center space-x-4">
-          {[
-            { key: 'filtros', label: 'Filtros', icon: Filter },
-            { key: 'contagem', label: 'Contagem', icon: Search },
-            { key: 'extracao', label: 'Extração', icon: Database },
-            { key: 'historico', label: 'Histórico', icon: History }
-          ].map(({ key, label, icon: Icon }) => (
-            <div key={key} className={`flex items-center ${
-              currentStep === key ? 'text-blue-600' : 'text-gray-400'
-            }`}>
-              <Icon className="h-5 w-5 mr-2" />
-              <span className="text-sm font-medium">{label}</span>
+        {/* Autenticação */}
+        {!apiConfig.authenticated ? (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="text-center">
+              <Database className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Conectar à API Profile</h2>
+              <p className="text-gray-600 mb-6">Faça a autenticação para acessar os dados de leads</p>
+              
+              <button
+                onClick={authenticateAPI}
+                disabled={loading}
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+              >
+                {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Settings className="h-5 w-5" />}
+                {loading ? 'Conectando...' : 'Conectar API'}
+              </button>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <>
+            {/* Seleção do tipo de pessoa */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Tipo de Pessoa
+              </h3>
+              
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setTipoPessoa('pf')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 transition-all ${
+                    tipoPessoa === 'pf' 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <User className="h-5 w-5" />
+                  Pessoa Física
+                </button>
+                
+                <button
+                  onClick={() => setTipoPessoa('pj')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 transition-all ${
+                    tipoPessoa === 'pj' 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Building className="h-5 w-5" />
+                  Pessoa Jurídica
+                </button>
+              </div>
+            </div>
 
-        {/* Conteúdo baseado no step */}
-        <div className="bg-white shadow rounded-lg">
+            {/* Nome da contagem */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Nome da Contagem
+              </h3>
+              
+              <input
+                type="text"
+                value={nomeContagem}
+                onChange={(e) => setNomeContagem(e.target.value)}
+                placeholder="Digite um nome para identificar esta contagem"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
 
-          {currentStep === 'filtros' && (
-            <FiltersStep 
-              activeTab={activeTab}
-              ufs={ufs}
-              cidades={cidades}
-              selectedUfs={selectedUfs}
-              setSelectedUfs={setSelectedUfs}
-              selectedCidades={selectedCidades}
-              setSelectedCidades={setSelectedCidades}
-              formPf={formPf}
-              setFormPf={setFormPf}
-              formPj={formPj}
-              setFormPj={setFormPj}
-              nomeContagem={nomeContagem}
-              setNomeContagem={setNomeContagem}
-              onCreateContagem={criarContagem}
-              loading={loading}
-            />
-          )}
+            {/* Filtros de Localização */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Localização
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Estados */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estados</label>
+                  <select
+                    multiple
+                    value={selectedUfs.map(String)}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions, option => Number(option.value))
+                      setSelectedUfs(values)
+                      setSelectedCidades([]) // Reset cidades
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
+                  >
+                    {ufs.map(uf => (
+                      <option key={uf.idUf} value={uf.idUf}>
+                        {uf.uf1} - {uf.ufDescricao}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Segure Ctrl/Cmd para selecionar múltiplos</p>
+                </div>
 
-          {currentStep === 'contagem' && (
-            <CountingStep 
-              contagem={contagemAtual}
-              polling={pollingContagem}
-              onCreateExtracao={criarExtracao}
-              qtdeSolicitada={qtdeSolicitada}
-              setQtdeSolicitada={setQtdeSolicitada}
-              loading={loading}
-            />
-          )}
+                {/* Cidades */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cidades</label>
+                  <select
+                    multiple
+                    value={selectedCidades.map(String)}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions, option => Number(option.value))
+                      setSelectedCidades(values)
+                    }}
+                    disabled={selectedUfs.length === 0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32 disabled:bg-gray-50"
+                  >
+                    {cidades.map(cidade => (
+                      <option key={cidade.idcidade} value={cidade.idcidade}>
+                        {cidade.cidade1} - {cidade.uf}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedUfs.length === 0 ? 'Selecione estados primeiro' : 'Segure Ctrl/Cmd para selecionar múltiplos'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          {currentStep === 'extracao' && (
-            <ExtractionStep 
-              extracao={extracaoAtual}
-              polling={pollingExtracao}
-              onDownload={downloadExtracao}
-              onNewExtraction={() => setCurrentStep('filtros')}
-            />
-          )}
+            {/* Filtros específicos por tipo de pessoa */}
+            {tipoPessoa === 'pf' ? (
+              <PessoaFisicaFilters 
+                filtros={filtrosPf}
+                setFiltros={setFiltrosPf}
+                sexos={sexos}
+                classesSociais={classesSociais}
+                estadosCivis={estadosCivis}
+                profissoes={profissoes}
+                scores={scoresPf}
+                operadoras={operadoras}
+                ddds={ddds}
+              />
+            ) : (
+              <PessoaJuridicaFilters 
+                filtros={filtrosPj}
+                setFiltros={setFiltrosPj}
+                cnaes={cnaes}
+                portes={portes}
+                tiposEmpresa={tiposEmpresa}
+                scores={scoresPj}
+                operadoras={operadoras}
+                ddds={ddds}
+              />
+            )}
 
-          {currentStep === 'historico' && (
-            <HistoryStep historico={historico} />
-          )}
-        </div>
+            {/* Ações */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={realizarResumo}
+                  disabled={loading || !nomeContagem}
+                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                  {loading ? 'Calculando...' : 'Calcular Resumo'}
+                </button>
+
+                {resumoContagem && resumoContagem.permitido && (
+                  <button
+                    onClick={criarContagem}
+                    disabled={loading || contagemRealizada}
+                    className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+                    {loading ? 'Criando...' : 'Criar Contagem'}
+                  </button>
+                )}
+              </div>
+
+              {/* Resultado do resumo */}
+              {resumoContagem && (
+                <div className={`mt-6 p-4 rounded-lg ${resumoContagem.sucesso ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {resumoContagem.sucesso ? 
+                      <CheckCircle className="h-5 w-5 text-green-600" /> : 
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    }
+                    <h4 className={`font-semibold ${resumoContagem.sucesso ? 'text-green-800' : 'text-red-800'}`}>
+                      {resumoContagem.sucesso ? 'Resumo Calculado' : 'Erro no Cálculo'}
+                    </h4>
+                  </div>
+                  
+                  {resumoContagem.sucesso ? (
+                    <div className="text-green-700">
+                      <p><strong>Total encontrado:</strong> {resumoContagem.total} registros</p>
+                      <p><strong>Limite de contagem:</strong> {resumoContagem.limiteContagem}</p>
+                      <p><strong>Status:</strong> {resumoContagem.permitido ? '✅ Permitido criar contagem' : '❌ Não permitido'}</p>
+                    </div>
+                  ) : (
+                    <p className="text-red-700">{resumoContagem.msg}</p>
+                  )}
+                </div>
+              )}
+
+              {contagemRealizada && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-green-800 font-semibold">Contagem criada com sucesso!</span>
+                  </div>
+                  <p className="text-green-700 mt-1">Você pode acompanhar o progresso na aba de histórico.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </PlanProtection>
   )
 }
 
-// =================== COMPONENTES DOS STEPS ===================
-
-function ConfigurationStep({
-  apiConfig,
-  setApiConfig,
-  onAuthenticate,
-  loading
+// Componente para filtros de Pessoa Física
+function PessoaFisicaFilters({ 
+  filtros, 
+  setFiltros, 
+  sexos, 
+  classesSociais, 
+  estadosCivis, 
+  profissoes, 
+  scores, 
+  operadoras, 
+  ddds 
 }: {
-  apiConfig: { baseUrl: string; apiKey: string; token?: string }
-  setApiConfig: React.Dispatch<React.SetStateAction<{ baseUrl: string; apiKey: string; token?: string }>>
-  onAuthenticate: () => Promise<boolean>
-  loading: boolean
+  filtros: ContagemPf
+  setFiltros: (filtros: ContagemPf) => void
+  sexos: Sexo[]
+  classesSociais: ClasseSocialVM[]
+  estadosCivis: TbEstadoCivil[]
+  profissoes: TbCbo[]
+  scores: string[]
+  operadoras: TbOperadorasNew[]
+  ddds: DddRegioesVM
 }) {
   return (
-    <div className="p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Configuração da API
-      </h3>
-      
-      <div className="space-y-4 max-w-md">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            URL Base da API
-          </label>
-          <input
-            type="url"
-            value={apiConfig.baseUrl}
-            onChange={(e) => setApiConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="https://apiprofile.infinititi.com.br/api"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            API Key
-          </label>
-          <input
-            type="password"
-            value={apiConfig.apiKey}
-            onChange={(e) => setApiConfig(prev => ({ ...prev, apiKey: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Sua chave de API"
-          />
-        </div>
-
-        <button
-          onClick={onAuthenticate}
-          disabled={loading || !apiConfig.apiKey.trim()}
-          className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {loading ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4 mr-2" />
-          )}
-          Conectar à API
-        </button>
-
-        {apiConfig.token && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex">
-              <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
-              <span className="text-sm text-green-700">Conectado com sucesso!</span>
-            </div>
+    <div className="space-y-6">
+      {/* Idade e Renda */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Idade e Renda</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Idade Mínima</label>
+            <input
+              type="number"
+              value={filtros.idadeMinima || ''}
+              onChange={(e) => setFiltros({...filtros, idadeMinima: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 18"
+            />
           </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function FiltersStep({
-  activeTab,
-  ufs,
-  cidades,
-  selectedUfs,
-  setSelectedUfs,
-  selectedCidades,
-  setSelectedCidades,
-  formPf,
-  setFormPf,
-  formPj,
-  setFormPj,
-  nomeContagem,
-  setNomeContagem,
-  onCreateContagem,
-  loading
-}: {
-  activeTab: 'pf' | 'pj'
-  ufs: Uf[]
-  cidades: Cidade[]
-  selectedUfs: number[]
-  setSelectedUfs: React.Dispatch<React.SetStateAction<number[]>>
-  selectedCidades: number[]
-  setSelectedCidades: React.Dispatch<React.SetStateAction<number[]>>
-  formPf: ContagemPf
-  setFormPf: React.Dispatch<React.SetStateAction<ContagemPf>>
-  formPj: ContagemPj
-  setFormPj: React.Dispatch<React.SetStateAction<ContagemPj>>
-  nomeContagem: string
-  setNomeContagem: React.Dispatch<React.SetStateAction<string>>
-  onCreateContagem: () => void
-  loading: boolean
-}) {
-  const handleUfChange = (ufId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedUfs(prev => [...prev, ufId])
-    } else {
-      setSelectedUfs(prev => prev.filter(id => id !== ufId))
-      // Remove cidades desta UF
-      const cidadesDaUf = cidades.filter(c => c.idUf === ufId).map(c => c.idcidade)
-      setSelectedCidades(prev => prev.filter(id => !cidadesDaUf.includes(id)))
-    }
-  }
-
-  const handleCidadeChange = (cidadeId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedCidades(prev => [...prev, cidadeId])
-    } else {
-      setSelectedCidades(prev => prev.filter(id => id !== cidadeId))
-    }
-  }
-
-  return (
-    <div className="p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Configurar Filtros - {activeTab === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'}
-      </h3>
-      
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nome da Contagem *
-          </label>
-          <input
-            type="text"
-            value={nomeContagem}
-            onChange={(e) => setNomeContagem(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Ex: Leads SP - Jovens com email"
-            required
-          />
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Idade Máxima</label>
+            <input
+              type="number"
+              value={filtros.idadeMaxima || ''}
+              onChange={(e) => setFiltros({...filtros, idadeMaxima: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 65"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Renda Mínima</label>
+            <input
+              type="number"
+              value={filtros.rendaMinimo || ''}
+              onChange={(e) => setFiltros({...filtros, rendaMinimo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 1500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Renda Máxima</label>
+            <input
+              type="number"
+              value={filtros.rendaMaximo || ''}
+              onChange={(e) => setFiltros({...filtros, rendaMaximo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 10000"
+            />
+          </div>
         </div>
+      </div>
 
-        {/* Seleção de Estados */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Estados
-          </label>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded p-2">
-            {ufs.map((uf) => (
-              <label key={uf.idUf} className="flex items-center text-sm">
+      {/* Dados Disponíveis */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Dados Disponíveis</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[
+            { key: 'possuiMae', label: 'Possui Mãe' },
+            { key: 'possuiEndereco', label: 'Possui Endereço' },
+            { key: 'possuiEmail', label: 'Possui E-mail' },
+            { key: 'possuiTelefone', label: 'Possui Telefone' },
+            { key: 'possuiCelular', label: 'Possui Celular' }
+          ].map(item => (
+            <label key={item.key} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros[item.key as keyof ContagemPf] === true}
+                onChange={(e) => setFiltros({...filtros, [item.key]: e.target.checked ? true : undefined})}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Sexo */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sexo</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {sexos.map(sexo => (
+            <label key={sexo.tipo} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.sexos?.includes(sexo.tipo) || false}
+                onChange={(e) => {
+                  const current = filtros.sexos || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, sexos: [...current, sexo.tipo]})
+                  } else {
+                    setFiltros({...filtros, sexos: current.filter(s => s !== sexo.tipo)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{sexo.sexo1}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Classes Sociais */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Classes Sociais</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {classesSociais.map(classe => (
+            <label key={classe.codigo} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.classesSociais?.includes(classe.codigo) || false}
+                onChange={(e) => {
+                  const current = filtros.classesSociais || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, classesSociais: [...current, classe.codigo]})
+                  } else {
+                    setFiltros({...filtros, classesSociais: current.filter(c => c !== classe.codigo)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{classe.descricao}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Estados Civis */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Estados Civis</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {estadosCivis.map(estado => (
+            <label key={estado.cdEstadoCivil} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.estadosCivis?.includes(estado.cdEstadoCivil) || false}
+                onChange={(e) => {
+                  const current = filtros.estadosCivis || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, estadosCivis: [...current, estado.cdEstadoCivil]})
+                  } else {
+                    setFiltros({...filtros, estadosCivis: current.filter(e => e !== estado.cdEstadoCivil)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{estado.dsEstadoCivil}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Profissões */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Profissões (CBO)</h3>
+        
+        <div className="max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-1">
+            {profissoes.map(profissao => (
+              <label key={profissao.cdCbo} className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded">
                 <input
                   type="checkbox"
-                  checked={selectedUfs.includes(uf.idUf!)}
-                  onChange={(e) => handleUfChange(uf.idUf!, e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 mr-2"
+                  checked={filtros.profissoes?.includes(profissao.cdCbo) || false}
+                  onChange={(e) => {
+                    const current = filtros.profissoes || []
+                    if (e.target.checked) {
+                      setFiltros({...filtros, profissoes: [...current, profissao.cdCbo]})
+                    } else {
+                      setFiltros({...filtros, profissoes: current.filter(p => p !== profissao.cdCbo)})
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                {uf.uf1}
+                <span className="text-sm text-gray-700">{profissao.dsCbo}</span>
               </label>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {selectedUfs.length > 0 ? `${selectedUfs.length} estado(s) selecionado(s)` : 'Nenhum estado selecionado (buscará em todos)'}
-          </p>
         </div>
+      </div>
 
-        {/* Seleção de Cidades */}
-        {cidades.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cidades ({cidades.length} disponíveis)
+      {/* Scores */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {scores.map(score => (
+            <label key={score} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.scores?.includes(score) || false}
+                onChange={(e) => {
+                  const current = filtros.scores || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, scores: [...current, score]})
+                  } else {
+                    setFiltros({...filtros, scores: current.filter(s => s !== score)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{score}</span>
             </label>
-            <div className="max-h-40 overflow-y-auto border border-gray-200 rounded p-2">
-              {cidades.map((cidade) => (
-                <label key={cidade.idcidade} className="flex items-center text-sm py-1">
-                  <input
-                    type="checkbox"
-                    checked={selectedCidades.includes(cidade.idcidade)}
-                    onChange={(e) => handleCidadeChange(cidade.idcidade, e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 mr-2"
-                  />
-                  {cidade.cidade1} - {cidade.uf}
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {selectedCidades.length > 0 ? `${selectedCidades.length} cidade(s) selecionada(s)` : 'Nenhuma cidade selecionada (buscará em todas do estado)'}
-            </p>
-          </div>
-        )}
-
-        {/* Filtros específicos */}
-        {activeTab === 'pf' ? (
-          <PessoaFisicaFilters formPf={formPf} setFormPf={setFormPf} />
-        ) : (
-          <PessoaJuridicaFilters formPj={formPj} setFormPj={setFormPj} />
-        )}
-
-        <button
-          onClick={onCreateContagem}
-          disabled={loading || !nomeContagem.trim()}
-          className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {loading ? (
-            <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-          ) : (
-            <Search className="h-5 w-5 mr-2" />
-          )}
-          Iniciar Contagem
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function PessoaFisicaFilters({
-  formPf,
-  setFormPf
-}: {
-  formPf: ContagemPf
-  setFormPf: React.Dispatch<React.SetStateAction<ContagemPf>>
-}) {
-  return (
-    <div className="space-y-4">
-      <h4 className="font-medium text-gray-900">Filtros de Pessoa Física</h4>
-      
-      {/* Idade */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Idade Mínima
-          </label>
-          <input
-            type="number"
-            min="18"
-            max="100"
-            value={formPf.idadeMinima || ''}
-            onChange={(e) => setFormPf(prev => ({ ...prev, idadeMinima: e.target.value ? parseInt(e.target.value) : undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Idade Máxima
-          </label>
-          <input
-            type="number"
-            min="18"
-            max="100"
-            value={formPf.idadeMaxima || ''}
-            onChange={(e) => setFormPf(prev => ({ ...prev, idadeMaxima: e.target.value ? parseInt(e.target.value) : undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
+          ))}
         </div>
       </div>
 
-      {/* Checkboxes */}
-      <div className="space-y-2">
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPf.possuiEmail || false}
-            onChange={(e) => setFormPf(prev => ({ ...prev, possuiEmail: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui E-mail
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPf.possuiCelular || false}
-            onChange={(e) => setFormPf(prev => ({ ...prev, possuiCelular: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui Celular
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPf.possuiTelefone || false}
-            onChange={(e) => setFormPf(prev => ({ ...prev, possuiTelefone: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui Telefone
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPf.possuiEndereco || false}
-            onChange={(e) => setFormPf(prev => ({ ...prev, possuiEndereco: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui Endereço
-        </label>
-      </div>
-    </div>
-  )
-}
-
-function PessoaJuridicaFilters({
-  formPj,
-  setFormPj
-}: {
-  formPj: ContagemPj
-  setFormPj: React.Dispatch<React.SetStateAction<ContagemPj>>
-}) {
-  return (
-    <div className="space-y-4">
-      <h4 className="font-medium text-gray-900">Filtros de Pessoa Jurídica</h4>
-      
-      {/* Data de abertura */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Data Abertura Mín.
-          </label>
-          <input
-            type="date"
-            value={formPj.dataAberturaMinima || ''}
-            onChange={(e) => setFormPj(prev => ({ ...prev, dataAberturaMinima: e.target.value || undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Data Abertura Máx.
-          </label>
-          <input
-            type="date"
-            value={formPj.dataAberturaMaxima || ''}
-            onChange={(e) => setFormPj(prev => ({ ...prev, dataAberturaMaxima: e.target.value || undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Operadoras */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Operadoras de Celular</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {operadoras.map(operadora => (
+            <label key={operadora.nomeOperadora} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.operadorasCelular?.includes(operadora.nomeOperadora) || false}
+                onChange={(e) => {
+                  const current = filtros.operadorasCelular || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, operadorasCelular: [...current, operadora.nomeOperadora]})
+                  } else {
+                    setFiltros({...filtros, operadorasCelular: current.filter(o => o !== operadora.nomeOperadora)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{operadora.nomeOperadora}</span>
+            </label>
+          ))}
         </div>
       </div>
 
-      {/* Número de funcionários */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Funcionários Mín.
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={formPj.numeroFuncionariosMinimo || ''}
-            onChange={(e) => setFormPj(prev => ({ ...prev, numeroFuncionariosMinimo: e.target.value ? parseInt(e.target.value) : undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Funcionários Máx.
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={formPj.numeroFuncionariosMaximo || ''}
-            onChange={(e) => setFormPj(prev => ({ ...prev, numeroFuncionariosMaximo: e.target.value ? parseInt(e.target.value) : undefined }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* Checkboxes */}
-      <div className="space-y-2">
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPj.possuiEmail || false}
-            onChange={(e) => setFormPj(prev => ({ ...prev, possuiEmail: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui E-mail
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPj.possuiCelular || false}
-            onChange={(e) => setFormPj(prev => ({ ...prev, possuiCelular: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui Celular
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPj.possuiTelefone || false}
-            onChange={(e) => setFormPj(prev => ({ ...prev, possuiTelefone: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Possui Telefone
-        </label>
-        <label className="flex items-center text-sm">
-          <input
-            type="checkbox"
-            checked={formPj.somenteMatriz || false}
-            onChange={(e) => setFormPj(prev => ({ ...prev, somenteMatriz: e.target.checked }))}
-            className="rounded border-gray-300 text-blue-600 mr-2"
-          />
-          Somente Matriz
-        </label>
-      </div>
-    </div>
-  )
-}
-
-function CountingStep({
-  contagem,
-  polling,
-  onCreateExtracao,
-  qtdeSolicitada,
-  setQtdeSolicitada,
-  loading
-}: {
-  contagem: ContagemRetornoVM | null
-  polling: boolean
-  onCreateExtracao: () => void
-  qtdeSolicitada: number
-  setQtdeSolicitada: React.Dispatch<React.SetStateAction<number>>
-  loading: boolean
-}) {
-  if (!contagem) return null
-
-  const totalEncontrado = contagem.quantidades?.[0]?.total || 0
-  const contagemFinalizada = contagem.quantidades && contagem.quantidades.length > 0
-
-  return (
-    <div className="p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Resultado da Contagem
-      </h3>
-      
-      <div className="space-y-4">
-        <div className="flex items-center">
-          {polling ? (
-            <>
-              <RefreshCw className="h-5 w-5 text-blue-500 animate-spin mr-2" />
-              <span className="text-sm text-blue-600">Processando contagem...</span>
-            </>
-          ) : contagemFinalizada ? (
-            <>
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <span className="text-sm text-green-600">Contagem finalizada!</span>
-            </>
-          ) : (
-            <>
-              <Clock className="h-5 w-5 text-yellow-500 mr-2" />
-              <span className="text-sm text-yellow-600">Aguardando resultado...</span>
-            </>
-          )}
-        </div>
-
-        {contagemFinalizada && (
-          <>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-lg font-semibold text-blue-900">
-                    {totalEncontrado.toLocaleString()} leads encontrados
-                  </p>
-                  <p className="text-sm text-blue-700">
-                    ID da Contagem: {contagem.idContagem}
-                  </p>
-                </div>
-                <Database className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantidade para Extração
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={totalEncontrado}
-                  value={qtdeSolicitada}
-                  onChange={(e) => setQtdeSolicitada(parseInt(e.target.value) || 1)}
-                  className="w-32 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Máximo: {totalEncontrado.toLocaleString()}
-                </p>
-              </div>
-
-              <button
-                onClick={onCreateExtracao}
-                disabled={loading}
-                className="w-full flex items-center justify-center bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 disabled:bg-gray-400"
-              >
-                {loading ? (
-                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-5 w-5 mr-2" />
-                )}
-                Iniciar Extração
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ExtractionStep({
-  extracao,
-  polling,
-  onDownload,
-  onNewExtraction
-}: {
-  extracao: DetalhesExtracaoVM | null
-  polling: boolean
-  onDownload: (id: number) => void
-  onNewExtraction: () => void
-}) {
-  if (!extracao) return null
-
-  const extracaoFinalizada = extracao.status === 'FINALIZADA'
-
-  return (
-    <div className="p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Status da Extração
-      </h3>
-      
-      <div className="space-y-4">
-        <div className="flex items-center">
-          {polling ? (
-            <>
-              <RefreshCw className="h-5 w-5 text-blue-500 animate-spin mr-2" />
-              <span className="text-sm text-blue-600">Preparando arquivo...</span>
-            </>
-          ) : extracaoFinalizada ? (
-            <>
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <span className="text-sm text-green-600">Arquivo pronto para download!</span>
-            </>
-          ) : (
-            <>
-              <Clock className="h-5 w-5 text-yellow-500 mr-2" />
-              <span className="text-sm text-yellow-600">Status: {extracao.status}</span>
-            </>
-          )}
-        </div>
-
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="font-medium text-gray-700">Nome:</p>
-              <p className="text-gray-600">{extracao.nomeContagem}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Tipo:</p>
-              <p className="text-gray-600">{extracao.tipoPessoa}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Solicitado:</p>
-              <p className="text-gray-600">{extracao.qtdeSolicitada} registros</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Retornado:</p>
-              <p className="text-gray-600">{extracao.qtdeRetorno || '-'} registros</p>
-            </div>
-          </div>
-        </div>
-
-        {extracaoFinalizada && (
-          <div className="space-y-3">
-            <button
-              onClick={() => onDownload(extracao.idExtracao)}
-              className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700"
-            >
-              <Download className="h-5 w-5 mr-2" />
-              Fazer Download do Arquivo
-            </button>
-
-            <button
-              onClick={onNewExtraction}
-              className="w-full flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50"
-            >
-              Fazer Nova Extração
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function HistoryStep({
-  historico
-}: {
-  historico: ResultadoExtracaoVM[]
-}) {
-  return (
-    <div className="p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Histórico de Extrações
-      </h3>
-      
-      {historico.length > 0 ? (
-        <div className="space-y-3">
-          {historico.map((item) => (
-            <div key={item.idExtracao} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-gray-900">{item.tipoExtracao}</p>
-                  <p className="text-sm text-gray-600">{item.tipoPessoa}</p>
-                  <p className="text-xs text-gray-500">{item.data}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    item.status === 'FINALIZADA' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {item.status}
-                  </span>
-                  <p className="text-sm text-gray-600 mt-1">{item.qtdeSolicitada} registros</p>
-                </div>
+      {/* DDDs */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">DDDs</h3>
+        
+        <div className="space-y-4">
+          {ddds.estados.map(estado => (
+            <div key={estado.siglaUf}>
+              <h4 className="font-medium text-gray-900 mb-2">{estado.nome} ({estado.siglaUf})</h4>
+              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 ml-4">
+                {estado.ddds.map(ddd => (
+                  <label key={`${estado.siglaUf}-${ddd.prefixo}`} className="flex items-center space-x-1">
+                    <input
+                      type="checkbox"
+                      checked={filtros.dddsCelular?.includes(ddd.prefixo.toString()) || false}
+                      onChange={(e) => {
+                        const current = filtros.dddsCelular || []
+                        const dddStr = ddd.prefixo.toString()
+                        if (e.target.checked) {
+                          setFiltros({...filtros, dddsCelular: [...current, dddStr]})
+                        } else {
+                          setFiltros({...filtros, dddsCelular: current.filter(d => d !== dddStr)})
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">({ddd.prefixo})</span>
+                  </label>
+                ))}
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center py-8">
-          <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Nenhuma extração realizada ainda</p>
+      </div>
+    </div>
+  )
+}
+
+// Componente para filtros de Pessoa Jurídica
+function PessoaJuridicaFilters({ 
+  filtros, 
+  setFiltros, 
+  cnaes, 
+  portes, 
+  tiposEmpresa, 
+  scores, 
+  operadoras, 
+  ddds 
+}: {
+  filtros: ContagemPj
+  setFiltros: (filtros: ContagemPj) => void
+  cnaes: Tbcnae[]
+  portes: string[]
+  tiposEmpresa: string[]
+  scores: string[]
+  operadoras: TbOperadorasNew[]
+  ddds: DddRegioesVM
+}) {
+  return (
+    <div className="space-y-6">
+      {/* Datas e Números */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Datas e Números</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Data Abertura Mínima</label>
+            <input
+              type="date"
+              value={filtros.dataAberturaMinima || ''}
+              onChange={(e) => setFiltros({...filtros, dataAberturaMinima: e.target.value || undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Data Abertura Máxima</label>
+            <input
+              type="date"
+              value={filtros.dataAberturaMaxima || ''}
+              onChange={(e) => setFiltros({...filtros, dataAberturaMaxima: e.target.value || undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.somenteMatriz === true}
+                onChange={(e) => setFiltros({...filtros, somenteMatriz: e.target.checked ? true : undefined})}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Somente Matriz</span>
+            </label>
+          </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nº Funcionários Mín.</label>
+            <input
+              type="number"
+              value={filtros.numeroFuncionariosMinimo || ''}
+              onChange={(e) => setFiltros({...filtros, numeroFuncionariosMinimo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 1"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nº Funcionários Máx.</label>
+            <input
+              type="number"
+              value={filtros.numeroFuncionariosMaximo || ''}
+              onChange={(e) => setFiltros({...filtros, numeroFuncionariosMaximo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nº Sócios Mín.</label>
+            <input
+              type="number"
+              value={filtros.numeroSociosMinimo || ''}
+              onChange={(e) => setFiltros({...filtros, numeroSociosMinimo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nº Sócios Máx.</label>
+            <input
+              type="number"
+              value={filtros.numeroSociosMaximo || ''}
+              onChange={(e) => setFiltros({...filtros, numeroSociosMaximo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 10"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Faturamento Mín.</label>
+            <input
+              type="number"
+              value={filtros.faturamentoMinimo || ''}
+              onChange={(e) => setFiltros({...filtros, faturamentoMinimo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 50000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Faturamento Máx.</label>
+            <input
+              type="number"
+              value={filtros.faturamentoMaximo || ''}
+              onChange={(e) => setFiltros({...filtros, faturamentoMaximo: e.target.value ? Number(e.target.value) : undefined})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: 1000000"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Dados Disponíveis */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Dados Disponíveis</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { key: 'possuiEndereco', label: 'Possui Endereço' },
+            { key: 'possuiEmail', label: 'Possui E-mail' },
+            { key: 'possuiTelefone', label: 'Possui Telefone' },
+            { key: 'possuiCelular', label: 'Possui Celular' }
+          ].map(item => (
+            <label key={item.key} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros[item.key as keyof ContagemPj] === true}
+                onChange={(e) => setFiltros({...filtros, [item.key]: e.target.checked ? true : undefined})}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* CNAEs */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">CNAEs</h3>
+        
+        <div className="max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-1">
+            {cnaes.map(cnae => (
+              <label key={cnae.cnae} className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded">
+                <input
+                  type="checkbox"
+                  checked={filtros.cnaes?.includes(cnae.cnae) || false}
+                  onChange={(e) => {
+                    const current = filtros.cnaes || []
+                    if (e.target.checked) {
+                      setFiltros({...filtros, cnaes: [...current, cnae.cnae]})
+                    } else {
+                      setFiltros({...filtros, cnaes: current.filter(c => c !== cnae.cnae)})
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{cnae.cnae} - {cnae.descricaoCnae}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Portes */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Porte Empresarial</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {portes.map(porte => (
+            <label key={porte} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.portes?.includes(porte) || false}
+                onChange={(e) => {
+                  const current = filtros.portes || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, portes: [...current, porte]})
+                  } else {
+                    setFiltros({...filtros, portes: current.filter(p => p !== porte)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{porte}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Tipos de Empresa */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tipos de Empresa</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {tiposEmpresa.map(tipo => (
+            <label key={tipo} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.tiposEmpresa?.includes(tipo) || false}
+                onChange={(e) => {
+                  const current = filtros.tiposEmpresa || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, tiposEmpresa: [...current, tipo]})
+                  } else {
+                    setFiltros({...filtros, tiposEmpresa: current.filter(t => t !== tipo)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{tipo}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Scores */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {scores.map(score => (
+            <label key={score} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.scores?.includes(score) || false}
+                onChange={(e) => {
+                  const current = filtros.scores || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, scores: [...current, score]})
+                  } else {
+                    setFiltros({...filtros, scores: current.filter(s => s !== score)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{score}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Operadoras */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Operadoras de Celular</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {operadoras.map(operadora => (
+            <label key={operadora.nomeOperadora} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filtros.operadorasCelular?.includes(operadora.nomeOperadora) || false}
+                onChange={(e) => {
+                  const current = filtros.operadorasCelular || []
+                  if (e.target.checked) {
+                    setFiltros({...filtros, operadorasCelular: [...current, operadora.nomeOperadora]})
+                  } else {
+                    setFiltros({...filtros, operadorasCelular: current.filter(o => o !== operadora.nomeOperadora)})
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{operadora.nomeOperadora}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* DDDs */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">DDDs</h3>
+        
+        <div className="space-y-4">
+          {ddds.estados.map(estado => (
+            <div key={estado.siglaUf}>
+              <h4 className="font-medium text-gray-900 mb-2">{estado.nome} ({estado.siglaUf})</h4>
+              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 ml-4">
+                {estado.ddds.map(ddd => (
+                  <label key={`${estado.siglaUf}-${ddd.prefixo}`} className="flex items-center space-x-1">
+                    <input
+                      type="checkbox"
+                      checked={filtros.dddsCelular?.includes(ddd.prefixo.toString()) || false}
+                      onChange={(e) => {
+                        const current = filtros.dddsCelular || []
+                        const dddStr = ddd.prefixo.toString()
+                        if (e.target.checked) {
+                          setFiltros({...filtros, dddsCelular: [...current, dddStr]})
+                        } else {
+                          setFiltros({...filtros, dddsCelular: current.filter(d => d !== dddStr)})
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">({ddd.prefixo})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
