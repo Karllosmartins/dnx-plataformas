@@ -240,7 +240,10 @@ export default function ExtracaoLeadsPage() {
 
   // Carregar cidades baseado nas UFs selecionadas
   const loadCidades = async () => {
+    console.log('loadCidades chamado:', { token: !!apiConfig.token, selectedUfs })
+    
     if (!apiConfig.token || selectedUfs.length === 0) {
+      console.log('loadCidades: sem token ou UFs, limpando cidades')
       setCidades([])
       return
     }
@@ -250,12 +253,16 @@ export default function ExtracaoLeadsPage() {
       const params = new URLSearchParams()
       selectedUfs.forEach(uf => params.append('idsUfs', uf.toString()))
       
+      console.log('loadCidades: fazendo requisição:', { endpoint, params: params.toString() })
+      
       const response = await fetch(`/api/profile-proxy?endpoint=${endpoint}&${params}`, {
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`
         }
       })
       const data = await response.json()
+      
+      console.log('loadCidades: resposta recebida:', { dataLength: data?.length || 0, data })
       setCidades(data || [])
     } catch (error) {
       console.error('Erro ao carregar cidades:', error)
@@ -496,10 +503,21 @@ export default function ExtracaoLeadsPage() {
   }, [apiConfig.token, tipoPessoa])
 
   useEffect(() => {
+    console.log('UseEffect cidades disparado:', { 
+      authenticated: apiConfig.authenticated, 
+      loading, 
+      selectedUfs: selectedUfs.length,
+      hasToken: !!apiConfig.token 
+    })
+    
     if (apiConfig.authenticated && !loading && selectedUfs.length > 0) {
+      console.log('Carregando cidades para UFs:', selectedUfs)
       loadCidades()
+    } else if (selectedUfs.length === 0) {
+      console.log('Limpando cidades pois nenhuma UF selecionada')
+      setCidades([])
     }
-  }, [selectedUfs, apiConfig.authenticated, loading])
+  }, [selectedUfs, apiConfig.authenticated, loading, apiConfig.token])
 
   useEffect(() => {
     if (apiConfig.authenticated && !loading) {
@@ -1131,28 +1149,17 @@ function PessoaJuridicaFilters({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">CNAEs</h3>
         
-        <div className="max-h-64 overflow-y-auto">
-          <div className="grid grid-cols-1 gap-1">
-            {cnaes.map(cnae => (
-              <label key={cnae.cnae} className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded">
-                <input
-                  type="checkbox"
-                  checked={filtros.cnaes?.includes(cnae.cnae) || false}
-                  onChange={(e) => {
-                    const current = filtros.cnaes || []
-                    if (e.target.checked) {
-                      setFiltros({...filtros, cnaes: [...current, cnae.cnae]})
-                    } else {
-                      setFiltros({...filtros, cnaes: current.filter(c => c !== cnae.cnae)})
-                    }
-                  }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{cnae.cnae} - {cnae.descricaoCnae}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <SearchableMultiSelect
+          options={cnaes.map(cnae => ({
+            value: cnae.cnae,
+            label: `${cnae.cnae} - ${cnae.descricaoCnae}`
+          }))}
+          value={filtros.cnaes || []}
+          onChange={(values) => setFiltros({...filtros, cnaes: values as string[]})}
+          placeholder="Selecione os CNAEs"
+          searchPlaceholder="Pesquisar CNAEs..."
+          maxHeight="300px"
+        />
       </div>
 
       {/* Portes */}
