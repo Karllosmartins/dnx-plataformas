@@ -6,6 +6,7 @@ import PlanProtection from '../../components/PlanProtection'
 import SearchableMultiSelect from '../../components/SearchableMultiSelect'
 import ResultadosContagem from '../../components/ResultadosContagem'
 import ExtracaoProgress from '../../components/ExtracaoProgress'
+import HistoricoContagens from '../../components/HistoricoContagens'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
 import { 
   Target, 
@@ -229,6 +230,9 @@ export default function ExtracaoLeadsPage() {
     nomeArquivo: string
     status: string
   } | null>(null)
+
+  // Estado da aba ativa
+  const [abaAtiva, setAbaAtiva] = useState<'extracao' | 'historico'>('extracao')
 
   // Carregar UFs
   const loadUfs = async () => {
@@ -594,6 +598,11 @@ export default function ExtracaoLeadsPage() {
         nomeArquivo: resultado.nomeArquivo,
         status: resultado.status
       })
+
+      // Opcional: mudar para aba de histórico após 3 segundos
+      setTimeout(() => {
+        setAbaAtiva('historico')
+      }, 3000)
       
     } catch (error) {
       console.error('Erro ao criar extração:', error)
@@ -612,6 +621,7 @@ export default function ExtracaoLeadsPage() {
     setSelectedCidades([])
     setFiltrosPf({})
     setFiltrosPj({})
+    setAbaAtiva('extracao') // Voltar para aba de extração
   }
 
   // Effects
@@ -676,7 +686,44 @@ export default function ExtracaoLeadsPage() {
           </div>
         ) : (
           <>
-            {/* Seleção do tipo de pessoa */}
+            {/* Navegação por abas */}
+            <div className="bg-white rounded-lg shadow mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex">
+                  <button
+                    onClick={() => setAbaAtiva('extracao')}
+                    className={`px-6 py-3 border-b-2 font-medium text-sm ${
+                      abaAtiva === 'extracao'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Nova Extração
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setAbaAtiva('historico')}
+                    className={`px-6 py-3 border-b-2 font-medium text-sm ${
+                      abaAtiva === 'historico'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Histórico
+                    </div>
+                  </button>
+                </nav>
+              </div>
+            </div>
+
+            {/* Conteúdo das abas */}
+            {abaAtiva === 'extracao' ? (
+              <>
+                {/* Seleção do tipo de pessoa */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Filter className="h-5 w-5" />
@@ -856,6 +903,15 @@ export default function ExtracaoLeadsPage() {
                 tipoPessoa={tipoPessoa}
                 onCriarExtracao={handleCriarExtracao}
                 onNovaContagem={handleNovaContagem}
+              />
+            )}
+              </>
+            ) : (
+              /* Aba do Histórico */
+              <HistoricoContagens
+                apiConfig={apiConfig}
+                authenticateAPI={authenticateAPI}
+                loading={loading}
               />
             )}
           </>
