@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
+// Marcar como dinâmico para evitar erro de pré-renderização
+export const dynamic = 'force-dynamic'
+
 // Função para autenticar na API Profile - ATUALIZADA PARA JSON
 async function authenticateAPI(apiKey: string) {
   const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
@@ -61,8 +64,8 @@ export async function GET(request: NextRequest) {
 
     // Retornar o arquivo como stream
     const fileBuffer = await response.arrayBuffer()
-    const contentType = response.headers.get('content-type') || 'text/csv'
-    const filename = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || `extracao_${idExtracaoAPI}.csv`
+    const contentType = response.headers.get('content-type') || 'application/zip'
+    const filename = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || `PROFILE_EXTRACAO_ID_${idExtracaoAPI}.zip`
 
     return new NextResponse(fileBuffer, {
       status: 200,

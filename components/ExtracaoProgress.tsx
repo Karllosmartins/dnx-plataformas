@@ -71,8 +71,9 @@ export default function ExtracaoProgress({
         const data = await response.json()
         setStatus(data.extracao)
         
-        // Parar polling se finalizado, com erro ou cancelado
-        if (data.extracao.status === 'Finalizada' || 
+        // Parar polling se processado, com erro ou cancelado
+        if (data.extracao.status === 'Processado' || 
+            data.extracao.status === 'Finalizada' || 
             data.extracao.status === 'Erro' || 
             data.extracao.status === 'Cancelada') {
           setPolling(false)
@@ -94,7 +95,7 @@ export default function ExtracaoProgress({
 
   // Função para download
   const handleDownload = () => {
-    if (status.status === 'Finalizada') {
+    if (status.status === 'Processado' || status.status === 'Finalizada') {
       const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
       window.open(downloadUrl, '_blank')
     }
@@ -103,6 +104,7 @@ export default function ExtracaoProgress({
   // Ícone baseado no status
   const getStatusIcon = () => {
     switch (status.status) {
+      case 'Processado':
       case 'Finalizada':
         return <CheckCircle className="h-6 w-6 text-green-600" />
       case 'Erro':
@@ -118,6 +120,7 @@ export default function ExtracaoProgress({
   // Cor do status
   const getStatusColor = () => {
     switch (status.status) {
+      case 'Processado':
       case 'Finalizada':
         return 'bg-green-50 border-green-200 text-green-800'
       case 'Erro':
@@ -135,6 +138,7 @@ export default function ExtracaoProgress({
     switch (status.status) {
       case 'Processando':
         return 'Processando...'
+      case 'Processado':
       case 'Finalizada':
         return 'Concluída'
       case 'Erro':
@@ -197,7 +201,7 @@ export default function ExtracaoProgress({
 
           {/* Botões */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
-            {status.status === 'Finalizada' ? (
+            {status.status === 'Processado' || status.status === 'Finalizada' ? (
               <button
                 onClick={handleDownload}
                 className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold flex items-center justify-center gap-2"

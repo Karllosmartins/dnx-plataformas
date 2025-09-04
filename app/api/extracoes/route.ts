@@ -3,6 +3,9 @@ import { supabase } from '../../../lib/supabase'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
+// Marcar como dinâmico para evitar erro de pré-renderização
+export const dynamic = 'force-dynamic'
+
 // Função para autenticar na API Profile - ATUALIZADA PARA JSON
 async function authenticateAPI(apiKey: string) {
   console.log('🔐 Tentando autenticar com API Key:', apiKey ? 'presente' : 'ausente')
@@ -256,7 +259,7 @@ export async function PUT(request: NextRequest) {
     // Atualizar status no banco local se tiver extracaoId
     if (extracaoId) {
       let statusLocal = 'processando'
-      if (detalhesExtracao.status === 'Finalizada') {
+      if (detalhesExtracao.status === 'Processado' || detalhesExtracao.status === 'Finalizada') {
         statusLocal = 'concluida'
       } else if (detalhesExtracao.status === 'Erro' || detalhesExtracao.status === 'Cancelada') {
         statusLocal = 'erro'
@@ -274,7 +277,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ 
       extracao: detalhesExtracao,
-      downloadDisponivel: detalhesExtracao.status === 'Finalizada'
+      downloadDisponivel: detalhesExtracao.status === 'Processado' || detalhesExtracao.status === 'Finalizada'
     })
 
   } catch (error) {
