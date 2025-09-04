@@ -7,6 +7,7 @@ import SearchableMultiSelect from '../../components/SearchableMultiSelect'
 import ResultadosContagem from '../../components/ResultadosContagem'
 import ExtracaoProgress from '../../components/ExtracaoProgress'
 import HistoricoContagens from '../../components/HistoricoContagens'
+import ModalCriarExtracao from '../../components/ModalCriarExtracao'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
 import { 
   Target, 
@@ -235,6 +236,9 @@ export default function ExtracaoLeadsPage() {
 
   // Estado da aba ativa
   const [abaAtiva, setAbaAtiva] = useState<'extracao' | 'historico'>('extracao')
+  
+  // Estado do modal de criação de extração
+  const [modalCriarExtracaoAberto, setModalCriarExtracaoAberto] = useState(false)
 
   // Carregar UFs
   const loadUfs = async () => {
@@ -555,25 +559,23 @@ export default function ExtracaoLeadsPage() {
     }
   }
 
-  // Funções para os botões de resultado
-  const handleCriarExtracao = async () => {
-    if (!resultadoContagem?.idContagem || !user || !apiConfig.token) return
+  // Função para abrir o modal de criar extração
+  const handleCriarExtracao = () => {
+    setModalCriarExtracaoAberto(true)
+  }
+
+  // Função para confirmar a criação da extração (callback do modal)
+  const handleConfirmarExtracao = async (dados: {
+    idContagem: number
+    idTipoAcesso: number
+    qtdeSolicitada: number
+    removerRegistrosExtraidos: boolean
+  }) => {
+    if (!user) return
     
     try {
       setLoading(true)
       
-      // Buscar a contagem salva no banco
-      const { data: contagem, error: erroContagem } = await supabase
-        .from('contagens_profile')
-        .select('*')
-        .eq('id_contagem_api', resultadoContagem.idContagem)
-        .eq('user_id', parseInt(user.id.toString()))
-        .single()
-
-      if (erroContagem || !contagem) {
-        throw new Error('Contagem não encontrada no banco de dados')
-      }
-
       // Buscar apikeydados do usuário
       const { data: configCredenciais, error: erroConfig } = await supabase
         .from('configuracoes_credenciais')
@@ -585,16 +587,18 @@ export default function ExtracaoLeadsPage() {
         throw new Error('API Key não encontrada. Verifique suas configurações.')
       }
 
-      // Chamar API de extração
+      // Chamar API de extração com dados do modal
       const response = await fetch('/api/extracoes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contagemId: contagem.id,
+          contagemId: dados.idContagem,
           userId: parseInt(user.id.toString()),
-          qtdeSolicitada: 1000, // Padrão de 1000 registros
+          idTipoAcesso: dados.idTipoAcesso,
+          qtdeSolicitada: dados.qtdeSolicitada,
+          removerRegistrosExtraidos: dados.removerRegistrosExtraidos,
           apiKey: configCredenciais.apikeydados
         })
       })
@@ -604,6 +608,9 @@ export default function ExtracaoLeadsPage() {
       if (!response.ok) {
         throw new Error(resultado.error || 'Erro ao criar extração')
       }
+
+      // Fechar modal
+      setModalCriarExtracaoAberto(false)
 
       // Iniciar tracking da extração
       setExtracaoEmAndamento({
@@ -943,6 +950,18 @@ export default function ExtracaoLeadsPage() {
           userId={parseInt(user?.id?.toString() || '0')}
           apiKey={extracaoEmAndamento.apiKey || ''}
           onClose={() => setExtracaoEmAndamento(null)}
+        />
+      )}
+
+      {/* Modal para criar extração */}
+      {modalCriarExtracaoAberto && resultadoContagem && (
+        <ModalCriarExtracao
+          idContagem={resultadoContagem.idContagem}
+          nomeContagem={nomeContagem}
+          tipoPessoa={tipoPessoa}
+          totalRegistros={resultadoContagem.quantidades.find(q => q.descricao === 'Total')?.total || 0}
+          onConfirmar={handleConfirmarExtracao}
+          onCancelar={() => setModalCriarExtracaoAberto(false)}
         />
       )}
     </PlanProtection>

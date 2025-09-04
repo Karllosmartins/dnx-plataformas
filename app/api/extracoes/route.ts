@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { contagemId, userId, qtdeSolicitada = 1000, apiKey } = body
+    const { contagemId, userId, qtdeSolicitada = 1000, idTipoAcesso = 3, removerRegistrosExtraidos = true, apiKey } = body
 
     if (!contagemId || !userId || !apiKey) {
       return NextResponse.json({ 
@@ -124,9 +124,9 @@ export async function POST(request: NextRequest) {
     // 3. Criar extração - EXATAMENTE COMO N8N "Criar extração"
     const extracaoPayload = {
       idContagem: contagem.id_contagem_api,
-      idTipoAcesso: 3,
+      idTipoAcesso: idTipoAcesso,
       qtdeSolicitada: Math.min(qtdeSolicitada, contagem.total_registros),
-      removerRegistrosExtraidos: true
+      removerRegistrosExtraidos: removerRegistrosExtraidos
     }
 
     const response = await fetch(`${API_PROFILE_BASE_URL}/api/Extracao/CriarExtracao`, {
