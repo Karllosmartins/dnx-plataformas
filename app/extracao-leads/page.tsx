@@ -740,7 +740,16 @@ export default function ExtracaoLeadsPage() {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <span className="text-green-800 font-semibold">Contagem criada com sucesso!</span>
                   </div>
-                  <p className="text-green-700 mt-1">Você pode acompanhar o progresso na aba de histórico.</p>
+                  <p className="text-green-700 mt-1">
+                    Você pode acompanhar o progresso no{' '}
+                    <a
+                      href="/historico-contagens"
+                      className="underline hover:text-green-900 font-medium"
+                    >
+                      histórico de contagens
+                    </a>
+                    .
+                  </p>
                 </div>
               )}
             </div>
