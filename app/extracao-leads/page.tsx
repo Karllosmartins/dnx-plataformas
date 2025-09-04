@@ -224,6 +224,7 @@ export default function ExtracaoLeadsPage() {
   const [resumoContagem, setResumoContagem] = useState<ResumoContagemVM | null>(null)
   const [contagemRealizada, setContagemRealizada] = useState(false)
   const [resultadoContagem, setResultadoContagem] = useState<ContagemRetornoVM | null>(null)
+  const [contagemLocalId, setContagemLocalId] = useState<number | null>(null)
 
   // Estados de extração
   const [extracaoEmAndamento, setExtracaoEmAndamento] = useState<{
@@ -545,14 +546,17 @@ export default function ExtracaoLeadsPage() {
         data_conclusao: new Date().toISOString()
       }
 
-      const { error } = await supabase
+      const { data: contagemSalva, error } = await supabase
         .from('contagens_profile')
         .insert([dadosContagem])
+        .select()
+        .single()
 
       if (error) {
         console.error('Erro ao salvar contagem no banco:', error)
       } else {
         console.log('Contagem salva no banco com sucesso')
+        setContagemLocalId(contagemSalva.id) // Salvar o ID local da contagem
       }
     } catch (error) {
       console.error('Erro ao salvar contagem:', error)
@@ -594,7 +598,7 @@ export default function ExtracaoLeadsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contagemId: dados.idContagem,
+          contagemId: contagemLocalId, // Usar o ID local da contagem, não o da API
           userId: parseInt(user.id.toString()),
           idTipoAcesso: dados.idTipoAcesso,
           qtdeSolicitada: dados.qtdeSolicitada,
@@ -638,6 +642,7 @@ export default function ExtracaoLeadsPage() {
     setResultadoContagem(null)
     setContagemRealizada(false)
     setResumoContagem(null)
+    setContagemLocalId(null)
     setNomeContagem('')
     setSelectedUfs([])
     setSelectedCidades([])
@@ -954,9 +959,9 @@ export default function ExtracaoLeadsPage() {
       )}
 
       {/* Modal para criar extração */}
-      {modalCriarExtracaoAberto && resultadoContagem && (
+      {modalCriarExtracaoAberto && resultadoContagem && contagemLocalId && (
         <ModalCriarExtracao
-          idContagem={resultadoContagem.idContagem}
+          idContagem={contagemLocalId} // Usar o ID local da contagem
           nomeContagem={nomeContagem}
           tipoPessoa={tipoPessoa}
           totalRegistros={resultadoContagem.quantidades.find(q => q.descricao === 'Total')?.total || 0}
