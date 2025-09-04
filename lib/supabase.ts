@@ -279,4 +279,52 @@ export interface Lead {
   updated_at?: string
 }
 
+// Interfaces para contagens da API Profile
+export interface ContagemProfile {
+  id: number
+  user_id: number
+  id_contagem_api: number // ID retornado pela API Profile
+  nome_contagem: string
+  tipo_pessoa: 'pf' | 'pj'
+  
+  // Dados da contagem
+  total_registros: number
+  dados_filtros: any // JSON com os filtros aplicados
+  dados_resultado: any // JSON com o resultado completo da API
+  
+  // Status
+  status: 'processando' | 'concluida' | 'erro'
+  data_criacao: string
+  data_conclusao?: string
+  
+  created_at: string
+  updated_at?: string
+}
+
+export interface ExtracaoProfile {
+  id: number
+  user_id: number
+  contagem_id: number // FK para contagens_profile
+  id_extracao_api?: number // ID da extração na API Profile (se aplicável)
+  
+  // Dados da extração
+  nome_arquivo: string
+  formato_arquivo: 'csv' | 'excel' | 'json'
+  url_download?: string
+  tamanho_arquivo?: number
+  total_registros_extraidos: number
+  
+  // Status
+  status: 'solicitada' | 'processando' | 'concluida' | 'erro' | 'expirada'
+  data_solicitacao: string
+  data_conclusao?: string
+  data_expiracao?: string // Link expira após X dias
+  
+  // Relacionamento
+  contagem_profile?: ContagemProfile
+  
+  created_at: string
+  updated_at?: string
+}
+
 

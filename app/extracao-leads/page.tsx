@@ -5,7 +5,7 @@ import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
 import SearchableMultiSelect from '../../components/SearchableMultiSelect'
 import ResultadosContagem from '../../components/ResultadosContagem'
-import { supabase } from '../../lib/supabase'
+import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
 import { 
   Target, 
   Search, 
@@ -491,6 +491,9 @@ export default function ExtracaoLeadsPage() {
       const data: ContagemRetornoVM = await response.json()
       
       if (data.sucesso) {
+        // Salvar contagem no banco de dados
+        await salvarContagemNoBanco(data, payload)
+        
         setContagemRealizada(true)
         setResultadoContagem(data)
         console.log('Contagem iniciada com sucesso:', data)
@@ -506,12 +509,107 @@ export default function ExtracaoLeadsPage() {
     }
   }
 
+  // Salvar contagem no banco de dados
+  const salvarContagemNoBanco = async (resultado: ContagemRetornoVM, filtrosAplicados: any) => {
+    if (!user) return
+
+    try {
+      const dadosContagem: Partial<ContagemProfile> = {
+        user_id: parseInt(user.id.toString()),
+        id_contagem_api: resultado.idContagem,
+        nome_contagem: nomeContagem,
+        tipo_pessoa: tipoPessoa,
+        total_registros: resultado.quantidades.find(q => q.descricao === 'Total')?.total || 0,
+        dados_filtros: filtrosAplicados,
+        dados_resultado: resultado,
+        status: 'concluida',
+        data_criacao: new Date().toISOString(),
+        data_conclusao: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('contagens_profile')
+        .insert([dadosContagem])
+
+      if (error) {
+        console.error('Erro ao salvar contagem no banco:', error)
+      } else {
+        console.log('Contagem salva no banco com sucesso')
+      }
+    } catch (error) {
+      console.error('Erro ao salvar contagem:', error)
+    }
+  }
+
   // Funções para os botões de resultado
   const handleCriarExtracao = async () => {
-    if (!resultadoContagem?.idContagem) return
+    if (!resultadoContagem?.idContagem || !user) return
     
-    // TODO: Implementar lógica de extração/download
-    alert(`Implementar extração para contagem ID: ${resultadoContagem.idContagem}`)
+    try {
+      setLoading(true)
+      
+      // Buscar a contagem salva no banco
+      const { data: contagem, error: erroContagem } = await supabase
+        .from('contagens_profile')
+        .select('*')
+        .eq('id_contagem_api', resultadoContagem.idContagem)
+        .eq('user_id', parseInt(user.id.toString()))
+        .single()
+
+      if (erroContagem || !contagem) {
+        throw new Error('Contagem não encontrada no banco de dados')
+      }
+
+      // Criar registro de extração
+      const nomeArquivo = `leads_${nomeContagem.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.csv`
+      const dataExpiracao = new Date()
+      dataExpiracao.setDate(dataExpiracao.getDate() + 7) // Expira em 7 dias
+      
+      const dadosExtracao: Partial<ExtracaoProfile> = {
+        user_id: parseInt(user.id.toString()),
+        contagem_id: contagem.id,
+        nome_arquivo: nomeArquivo,
+        formato_arquivo: 'csv',
+        total_registros_extraidos: contagem.total_registros,
+        status: 'solicitada',
+        data_solicitacao: new Date().toISOString(),
+        data_expiracao: dataExpiracao.toISOString()
+      }
+
+      const { data: novaExtracao, error: erroExtracao } = await supabase
+        .from('extracoes_profile')
+        .insert([dadosExtracao])
+        .select('*')
+        .single()
+
+      if (erroExtracao) {
+        throw new Error('Erro ao criar registro de extração')
+      }
+
+      // Simular processamento da extração
+      // TODO: Integrar com API real de extração aqui
+      setTimeout(async () => {
+        const urlDownload = `https://example.com/downloads/${nomeArquivo}` // URL fictícia
+        
+        await supabase
+          .from('extracoes_profile')
+          .update({
+            status: 'concluida',
+            url_download: urlDownload,
+            data_conclusao: new Date().toISOString(),
+            tamanho_arquivo: Math.floor(Math.random() * 5000000) + 1000000 // Tamanho fictício
+          })
+          .eq('id', novaExtracao.id)
+      }, 2000)
+
+      alert(`Extração solicitada com sucesso!\nArquivo: ${nomeArquivo}\nStatus: Processando...`)
+      
+    } catch (error) {
+      console.error('Erro ao criar extração:', error)
+      alert('Erro ao criar extração: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleNovaContagem = () => {
