@@ -203,74 +203,103 @@ export default function WhatsAppPage() {
     setConnecting(true)
     
     try {
-      console.log('Verificando status atual da instância:', instance.instanceName)
+      console.log('Iniciando processo de geração do QR Code:', instance.instanceName)
       
-      // Primeiro verificar se já está conectado
-      const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+      // Estratégia 1: Reiniciar instância para forçar novo QR Code
+      console.log('Reiniciando instância para gerar novo QR Code...')
+      const restartResponse = await evolutionAPI.restartInstance(instance.instanceName)
       
-      if (statusResponse.success && statusResponse.data?.state === 'open') {
-        // Já está conectado
-        setInstances(prev => prev.map(inst => 
-          inst.id === instance.id 
-            ? { ...inst, status: 'connected' }
-            : inst
-        ))
-        
-        setSelectedInstance(prev => prev ? {
-          ...prev,
-          status: 'connected'
-        } : null)
-        
-        alert('✅ Instância já está conectada!')
-        return
-      }
-      
-      console.log('Conectando instância para gerar QR Code:', instance.instanceName)
-      
-      // Conectar instância na Evolution API para gerar QR Code
-      const connectResponse = await evolutionAPI.connectInstance(instance.instanceName)
-      
-      if (!connectResponse.success) {
-        throw new Error(connectResponse.error || 'Erro ao conectar instância')
+      if (restartResponse.success) {
+        console.log('Instância reiniciada com sucesso')
+      } else {
+        console.log('Falha ao reiniciar, tentando conectar diretamente...')
+        const connectResponse = await evolutionAPI.connectInstance(instance.instanceName)
+        if (!connectResponse.success) {
+          throw new Error(connectResponse.error || 'Erro ao conectar instância')
+        }
       }
 
-      // QR Code é gerado via webhook/polling, então precisamos aguardar e verificar o status
+      // Aguardar um pouco após reinício/conexão
+      await new Promise(resolve => setTimeout(resolve, 3000))
+
       let qrCodeData: string | null = null
       
-      console.log('Aguardando QR Code ser gerado...')
+      // Estratégia 2: Polling mais agressivo com diferentes endpoints
+      console.log('Iniciando polling para QR Code...')
       
-      // Polling para obter QR Code - baseado nos logs, o campo é 'base64'
-      for (let attempt = 0; attempt < 6; attempt++) {
+      for (let attempt = 0; attempt < 10; attempt++) {
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-        console.log(`Tentativa ${attempt + 1} - Status completo:`, JSON.stringify(statusResponse, null, 2))
-        
-        if (statusResponse.success && statusResponse.data) {
-          // Verificar múltiplos campos possíveis baseado nos logs
-          const possibleQrFields = [
-            statusResponse.data.base64,  // Campo principal baseado nos logs
-            statusResponse.data.qr,
-            statusResponse.data.qrcode,
-            statusResponse.data.data?.base64,
-            statusResponse.data.data?.qr
-          ]
+        try {
+          // Tentar obter status de conexão
+          const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
+          console.log(`Tentativa ${attempt + 1} - Status:`, statusResponse.success ? 'OK' : 'ERRO', statusResponse.data?.instance?.state || statusResponse.data?.state)
           
-          for (const field of possibleQrFields) {
-            if (field && typeof field === 'string' && field.includes('data:image')) {
-              qrCodeData = field
-              console.log('QR Code encontrado no campo:', field.substring(0, 50) + '...')
-              break
+          if (statusResponse.success && statusResponse.data) {
+            const data = statusResponse.data
+            
+            // Verificar estado da conexão
+            const connectionState = data.instance?.state || data.state
+            
+            if (connectionState === 'open') {
+              console.log('✅ Instância conectou automaticamente!')
+              
+              setInstances(prev => prev.map(inst => 
+                inst.id === instance.id 
+                  ? { ...inst, status: 'connected' }
+                  : inst
+              ))
+              
+              setSelectedInstance(prev => prev ? {
+                ...prev,
+                status: 'connected'
+              } : null)
+              
+              alert('✅ WhatsApp conectado com sucesso!')
+              return
             }
+            
+            // Procurar QR Code em todos os campos possíveis
+            const possibleQrSources = [
+              data.base64,
+              data.qr, 
+              data.qrcode,
+              data.qrCode,
+              data.data?.base64,
+              data.data?.qr,
+              data.data?.qrcode, 
+              data.instance?.qr,
+              data.instance?.base64,
+              data.instance?.qrcode,
+              statusResponse.qr,
+              statusResponse.base64
+            ]
+            
+            for (const qrField of possibleQrSources) {
+              if (qrField && typeof qrField === 'string') {
+                // Verificar se é um QR Code válido (base64 de imagem)
+                if (qrField.includes('data:image') || qrField.startsWith('iVBORw0KGgo')) {
+                  qrCodeData = qrField.startsWith('data:image') ? qrField : `data:image/png;base64,${qrField}`
+                  console.log('✅ QR Code encontrado!')
+                  break
+                }
+              }
+            }
+            
+            if (qrCodeData) break
+            
+            // Se ainda está connecting, continuar tentando
+            if (connectionState === 'connecting') {
+              console.log(`⏳ Aguardando QR Code... (${attempt + 1}/10)`)
+              continue
+            }
+            
+          } else {
+            console.log(`⚠️ Erro na API: ${statusResponse.error}`)
           }
           
-          if (qrCodeData) break
-          
-          // Se estado já é 'open', a conexão foi feita
-          if (statusResponse.data.state === 'open') {
-            console.log('Instância conectou automaticamente')
-            break
-          }
+        } catch (pollError) {
+          console.log(`⚠️ Erro no polling ${attempt + 1}:`, pollError)
         }
       }
       
