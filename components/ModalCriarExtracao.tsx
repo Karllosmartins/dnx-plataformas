@@ -12,7 +12,7 @@ import {
 interface TipoExtracao {
   idTipoAcesso: number
   descricao: string
-  limiteUtilizacao?: number
+  limiteUtilizacao?: number | null
   totalUtilizado: number
 }
 
