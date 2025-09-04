@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
 import SearchableMultiSelect from '../../components/SearchableMultiSelect'
+import ResultadosContagem from '../../components/ResultadosContagem'
 import { supabase } from '../../lib/supabase'
 import { 
   Target, 
@@ -219,6 +220,7 @@ export default function ExtracaoLeadsPage() {
   // Estados de contagem
   const [resumoContagem, setResumoContagem] = useState<ResumoContagemVM | null>(null)
   const [contagemRealizada, setContagemRealizada] = useState(false)
+  const [resultadoContagem, setResultadoContagem] = useState<ContagemRetornoVM | null>(null)
 
   // Carregar UFs
   const loadUfs = async () => {
@@ -490,7 +492,8 @@ export default function ExtracaoLeadsPage() {
       
       if (data.sucesso) {
         setContagemRealizada(true)
-        alert('✅ Contagem criada com sucesso!')
+        setResultadoContagem(data)
+        console.log('Contagem iniciada com sucesso:', data)
       } else {
         throw new Error(data.msg)
       }
@@ -501,6 +504,25 @@ export default function ExtracaoLeadsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Funções para os botões de resultado
+  const handleCriarExtracao = async () => {
+    if (!resultadoContagem?.idContagem) return
+    
+    // TODO: Implementar lógica de extração/download
+    alert(`Implementar extração para contagem ID: ${resultadoContagem.idContagem}`)
+  }
+
+  const handleNovaContagem = () => {
+    setResultadoContagem(null)
+    setContagemRealizada(false)
+    setResumoContagem(null)
+    setNomeContagem('')
+    setSelectedUfs([])
+    setSelectedCidades([])
+    setFiltrosPf({})
+    setFiltrosPj({})
   }
 
   // Effects
@@ -685,29 +707,30 @@ export default function ExtracaoLeadsPage() {
               />
             )}
 
-            {/* Ações */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={realizarResumo}
-                  disabled={loading || !nomeContagem}
-                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
-                  {loading ? 'Calculando...' : 'Calcular Resumo'}
-                </button>
-
-                {resumoContagem && resumoContagem.permitido && (
+            {/* Ações - ocultar se resultado da contagem estiver sendo exibido */}
+            {!resultadoContagem && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={criarContagem}
-                    disabled={loading || contagemRealizada}
-                    className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    onClick={realizarResumo}
+                    disabled={loading || !nomeContagem}
+                    className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
-                    {loading ? 'Criando...' : 'Criar Contagem'}
+                    {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                    {loading ? 'Calculando...' : 'Calcular Resumo'}
                   </button>
-                )}
-              </div>
+
+                  {resumoContagem && resumoContagem.permitido && (
+                    <button
+                      onClick={criarContagem}
+                      disabled={loading || contagemRealizada}
+                      className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+                      {loading ? 'Criando...' : 'Criar Contagem'}
+                    </button>
+                  )}
+                </div>
 
               {/* Resultado do resumo */}
               {resumoContagem && (
@@ -733,26 +756,19 @@ export default function ExtracaoLeadsPage() {
                   )}
                 </div>
               )}
+              </div>
+            )}
 
-              {contagemRealizada && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-green-800 font-semibold">Contagem criada com sucesso!</span>
-                  </div>
-                  <p className="text-green-700 mt-1">
-                    Você pode acompanhar o progresso no{' '}
-                    <a
-                      href="/historico-contagens"
-                      className="underline hover:text-green-900 font-medium"
-                    >
-                      histórico de contagens
-                    </a>
-                    .
-                  </p>
-                </div>
-              )}
-            </div>
+            {/* Resultado da Contagem */}
+            {resultadoContagem && (
+              <ResultadosContagem
+                resultado={resultadoContagem}
+                nomeContagem={nomeContagem}
+                tipoPessoa={tipoPessoa}
+                onCriarExtracao={handleCriarExtracao}
+                onNovaContagem={handleNovaContagem}
+              />
+            )}
           </>
         )}
       </div>
