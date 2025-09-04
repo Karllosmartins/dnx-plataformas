@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
+import { supabase } from '../../lib/supabase'
 import { 
   Target, 
   Search, 
