@@ -5,8 +5,12 @@ const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
 // Função para autenticar na API Profile - IGUAL AO N8N
 async function authenticateAPI(apiKey: string) {
+  console.log('🔐 Tentando autenticar com API Key:', apiKey ? 'presente' : 'ausente')
+  
   const formData = new URLSearchParams()
   formData.append('apiKey', apiKey)
+  
+  console.log('📤 Body da requisição:', formData.toString())
   
   const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
     method: 'POST',
@@ -17,12 +21,17 @@ async function authenticateAPI(apiKey: string) {
     body: formData.toString()
   })
 
+  console.log('📥 Status da resposta:', response.status)
+  console.log('📥 Headers da resposta:', Object.fromEntries(response.headers.entries()))
+
   if (!response.ok) {
     const errorText = await response.text()
+    console.error('❌ Erro na autenticação:', errorText)
     throw new Error(`Falha na autenticação da API Profile: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
+  console.log('✅ Autenticação bem-sucedida, token recebido')
   return data.token
 }
 
