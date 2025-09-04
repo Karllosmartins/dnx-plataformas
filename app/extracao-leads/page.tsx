@@ -253,9 +253,17 @@ export default function ExtracaoLeadsPage() {
       const params = new URLSearchParams()
       selectedUfs.forEach(uf => params.append('idsUfs', uf.toString()))
       
-      console.log('loadCidades: fazendo requisição:', { endpoint, params: params.toString() })
+      // Construir URL corretamente
+      const queryString = params.toString()
+      const fullEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint
       
-      const response = await fetch(`/api/profile-proxy?endpoint=${endpoint}&${params}`, {
+      console.log('loadCidades: fazendo requisição:', { 
+        endpoint: fullEndpoint, 
+        selectedUfs,
+        queryString 
+      })
+      
+      const response = await fetch(`/api/profile-proxy?endpoint=${encodeURIComponent(fullEndpoint)}`, {
         headers: {
           'Authorization': `Bearer ${apiConfig.token}`
         }
