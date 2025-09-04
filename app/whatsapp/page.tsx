@@ -270,9 +270,7 @@ export default function WhatsAppPage() {
               data.data?.qrcode, 
               data.instance?.qr,
               data.instance?.base64,
-              data.instance?.qrcode,
-              statusResponse.qr,
-              statusResponse.base64
+              data.instance?.qrcode
             ]
             
             for (const qrField of possibleQrSources) {
