@@ -63,14 +63,6 @@ export default function ConfiguracoesPage() {
         .eq('user_id', currentUser.id)
         .single()
 
-      // Carregar API Profile key da tabela credenciais_api
-      const { data: profileData } = await supabase
-        .from('credenciais_api')
-        .select('api_key')
-        .eq('user_id', currentUser.id)
-        .eq('nome', 'profile')
-        .single()
-
       if (data) {
         setCredenciais(data)
         setCredenciaisForm({
@@ -79,18 +71,12 @@ export default function ConfiguracoesPage() {
           apikey_elevenlabs: data.apikey_elevenlabs || '',
           id_voz_elevenlabs: data.id_voz_elevenlabs || '',
           vector_store_ids: data.vector_store_ids ? JSON.stringify(data.vector_store_ids) : '',
-          api_profile_key: profileData?.api_key || '',
+          api_profile_key: data.api_profile_key || '',
           delay_entre_mensagens_em_segundos: data.delay_entre_mensagens_em_segundos || 1,
           delay_apos_intervencao_humana_minutos: data.delay_apos_intervencao_humana_minutos || 60,
           inicio_expediente: data.inicio_expediente || 8,
           fim_expediente: data.fim_expediente || 18
         })
-      } else {
-        // Se não tem credenciais, pelo menos carrega a API Profile
-        setCredenciaisForm(prev => ({
-          ...prev,
-          api_profile_key: profileData?.api_key || ''
-        }))
       }
     } catch (error) {
       console.error('Erro ao carregar credenciais:', error)
@@ -125,34 +111,6 @@ export default function ConfiguracoesPage() {
         const { error } = await supabase
           .from('configuracoes_credenciais')
           .insert([dataToSave])
-      }
-
-      // Salvar API Profile key na tabela credenciais_api
-      if (credenciaisForm.api_profile_key) {
-        // Verificar se já existe
-        const { data: existingProfile } = await supabase
-          .from('credenciais_api')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .eq('nome', 'profile')
-          .single()
-
-        if (existingProfile) {
-          // Update
-          await supabase
-            .from('credenciais_api')
-            .update({ api_key: credenciaisForm.api_profile_key })
-            .eq('id', existingProfile.id)
-        } else {
-          // Insert
-          await supabase
-            .from('credenciais_api')
-            .insert([{
-              user_id: currentUser.id,
-              nome: 'profile',
-              api_key: credenciaisForm.api_profile_key
-            }])
-        }
       }
 
       alert('Credenciais salvas com sucesso!')

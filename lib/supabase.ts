@@ -47,6 +47,7 @@ export interface ConfiguracaoCredenciais {
   model: string
   type_tool_supabase: string
   reasoning_effort?: string
+  api_profile_key?: string
   
   // ElevenLabs
   apikey_elevenlabs?: string

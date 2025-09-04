@@ -356,14 +356,13 @@ export default function ExtracaoLeadsPage() {
     setLoading(true)
     try {
       const credenciais = await supabase
-        .from('credenciais_api')
-        .select('api_key')
+        .from('configuracoes_credenciais')
+        .select('api_profile_key')
         .eq('user_id', user.id)
-        .eq('nome', 'profile')
         .single()
 
-      if (!credenciais.data?.api_key) {
-        throw new Error('API Key não encontrada')
+      if (!credenciais.data?.api_profile_key) {
+        throw new Error('API Key da Profile não encontrada. Configure em Configurações > Credenciais.')
       }
 
       const response = await fetch('/api/profile-proxy?endpoint=/Auth', {
@@ -372,7 +371,7 @@ export default function ExtracaoLeadsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          apiKey: credenciais.data.api_key
+          apiKey: credenciais.data.api_profile_key
         })
       })
 
