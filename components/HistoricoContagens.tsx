@@ -219,14 +219,20 @@ export default function HistoricoContagens({
                               }`}>
                                 {extracao.formato_arquivo.toUpperCase()}
                               </span>
-                              {extracao.url_download && (
+                              {extracao.url_download && extracao.status === 'concluida' && (
                                 <button
                                   onClick={() => window.open(extracao.url_download, '_blank')}
-                                  className="text-blue-600 hover:text-blue-800"
+                                  className="text-green-600 hover:text-green-800"
                                   title="Download"
                                 >
                                   <Download className="h-3 w-3" />
                                 </button>
+                              )}
+                              {extracao.status === 'processando' && (
+                                <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
+                              )}
+                              {extracao.status === 'erro' && (
+                                <AlertCircle className="h-3 w-3 text-red-600" />
                               )}
                             </div>
                           ))}

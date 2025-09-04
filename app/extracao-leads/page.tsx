@@ -5,6 +5,7 @@ import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
 import SearchableMultiSelect from '../../components/SearchableMultiSelect'
 import ResultadosContagem from '../../components/ResultadosContagem'
+import ExtracaoProgress from '../../components/ExtracaoProgress'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
 import { 
   Target, 
@@ -221,6 +222,13 @@ export default function ExtracaoLeadsPage() {
   const [resumoContagem, setResumoContagem] = useState<ResumoContagemVM | null>(null)
   const [contagemRealizada, setContagemRealizada] = useState(false)
   const [resultadoContagem, setResultadoContagem] = useState<ContagemRetornoVM | null>(null)
+
+  // Estados de extração
+  const [extracaoEmAndamento, setExtracaoEmAndamento] = useState<{
+    id: number
+    nomeArquivo: string
+    status: string
+  } | null>(null)
 
   // Carregar UFs
   const loadUfs = async () => {
@@ -543,7 +551,7 @@ export default function ExtracaoLeadsPage() {
 
   // Funções para os botões de resultado
   const handleCriarExtracao = async () => {
-    if (!resultadoContagem?.idContagem || !user) return
+    if (!resultadoContagem?.idContagem || !user || !apiConfig.token) return
     
     try {
       setLoading(true)
@@ -560,49 +568,32 @@ export default function ExtracaoLeadsPage() {
         throw new Error('Contagem não encontrada no banco de dados')
       }
 
-      // Criar registro de extração
-      const nomeArquivo = `leads_${nomeContagem.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.csv`
-      const dataExpiracao = new Date()
-      dataExpiracao.setDate(dataExpiracao.getDate() + 7) // Expira em 7 dias
+      // Chamar API de extração
+      const response = await fetch('/api/extracoes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contagemId: contagem.id,
+          userId: parseInt(user.id.toString()),
+          formatoArquivo: 'csv',
+          apiToken: apiConfig.token
+        })
+      })
+
+      const resultado = await response.json()
       
-      const dadosExtracao: Partial<ExtracaoProfile> = {
-        user_id: parseInt(user.id.toString()),
-        contagem_id: contagem.id,
-        nome_arquivo: nomeArquivo,
-        formato_arquivo: 'csv',
-        total_registros_extraidos: contagem.total_registros,
-        status: 'solicitada',
-        data_solicitacao: new Date().toISOString(),
-        data_expiracao: dataExpiracao.toISOString()
+      if (!response.ok) {
+        throw new Error(resultado.error || 'Erro ao criar extração')
       }
 
-      const { data: novaExtracao, error: erroExtracao } = await supabase
-        .from('extracoes_profile')
-        .insert([dadosExtracao])
-        .select('*')
-        .single()
-
-      if (erroExtracao) {
-        throw new Error('Erro ao criar registro de extração')
-      }
-
-      // Simular processamento da extração
-      // TODO: Integrar com API real de extração aqui
-      setTimeout(async () => {
-        const urlDownload = `https://example.com/downloads/${nomeArquivo}` // URL fictícia
-        
-        await supabase
-          .from('extracoes_profile')
-          .update({
-            status: 'concluida',
-            url_download: urlDownload,
-            data_conclusao: new Date().toISOString(),
-            tamanho_arquivo: Math.floor(Math.random() * 5000000) + 1000000 // Tamanho fictício
-          })
-          .eq('id', novaExtracao.id)
-      }, 2000)
-
-      alert(`Extração solicitada com sucesso!\nArquivo: ${nomeArquivo}\nStatus: Processando...`)
+      // Iniciar tracking da extração
+      setExtracaoEmAndamento({
+        id: resultado.extracaoId,
+        nomeArquivo: resultado.nomeArquivo,
+        status: resultado.status
+      })
       
     } catch (error) {
       console.error('Erro ao criar extração:', error)
@@ -870,6 +861,17 @@ export default function ExtracaoLeadsPage() {
           </>
         )}
       </div>
+
+      {/* Modal de progresso da extração */}
+      {extracaoEmAndamento && (
+        <ExtracaoProgress
+          extracaoId={extracaoEmAndamento.id}
+          nomeArquivo={extracaoEmAndamento.nomeArquivo}
+          initialStatus={extracaoEmAndamento.status}
+          userId={parseInt(user?.id?.toString() || '0')}
+          onClose={() => setExtracaoEmAndamento(null)}
+        />
+      )}
     </PlanProtection>
   )
 }
