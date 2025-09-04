@@ -244,7 +244,7 @@ export default function WhatsAppPage() {
         await new Promise(resolve => setTimeout(resolve, 2000))
         
         const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-        console.log(`Tentativa ${attempt + 1} - Status:`, statusResponse.data)
+        console.log(`Tentativa ${attempt + 1} - Status completo:`, JSON.stringify(statusResponse, null, 2))
         
         if (statusResponse.success && statusResponse.data) {
           // Verificar múltiplos campos possíveis baseado nos logs
