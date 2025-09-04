@@ -227,6 +227,7 @@ export default function ExtracaoLeadsPage() {
   // Estados de extração
   const [extracaoEmAndamento, setExtracaoEmAndamento] = useState<{
     id: number
+    idExtracaoAPI: number
     nomeArquivo: string
     status: string
   } | null>(null)
@@ -581,8 +582,8 @@ export default function ExtracaoLeadsPage() {
         body: JSON.stringify({
           contagemId: contagem.id,
           userId: parseInt(user.id.toString()),
-          formatoArquivo: 'csv',
-          apiToken: apiConfig.token
+          qtdeSolicitada: 1000, // Padrão de 1000 registros
+          apiKey: apiConfig.token
         })
       })
 
@@ -595,6 +596,7 @@ export default function ExtracaoLeadsPage() {
       // Iniciar tracking da extração
       setExtracaoEmAndamento({
         id: resultado.extracaoId,
+        idExtracaoAPI: resultado.idExtracaoAPI,
         nomeArquivo: resultado.nomeArquivo,
         status: resultado.status
       })
@@ -922,9 +924,11 @@ export default function ExtracaoLeadsPage() {
       {extracaoEmAndamento && (
         <ExtracaoProgress
           extracaoId={extracaoEmAndamento.id}
+          idExtracaoAPI={extracaoEmAndamento.idExtracaoAPI}
           nomeArquivo={extracaoEmAndamento.nomeArquivo}
           initialStatus={extracaoEmAndamento.status}
           userId={parseInt(user?.id?.toString() || '0')}
+          apiKey={apiConfig.token || ''}
           onClose={() => setExtracaoEmAndamento(null)}
         />
       )}

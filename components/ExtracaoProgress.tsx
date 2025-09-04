@@ -13,30 +13,41 @@ import {
 
 interface ExtracaoProgressProps {
   extracaoId: number
+  idExtracaoAPI: number
   nomeArquivo: string
   initialStatus: string
   userId: number
+  apiKey: string
   onClose: () => void
 }
 
 interface ExtracaoStatus {
-  id: number
-  status: 'solicitada' | 'processando' | 'concluida' | 'erro' | 'expirada'
-  url_download?: string
-  data_conclusao?: string
-  tamanho_arquivo?: number
+  idExtracao: number
+  idContagem: number
+  status: string // Status da API Profile: 'Processando', 'Finalizada', 'Erro', etc.
+  nomeContagem?: string
+  tipoPessoa?: string
+  qtdeSolicitada?: number
+  qtdeRetorno?: number
+  dataCriacao?: string
+  dataFinalizacao?: string
+  usuario?: string
+  tipoExtracao?: string
 }
 
 export default function ExtracaoProgress({ 
   extracaoId, 
+  idExtracaoAPI,
   nomeArquivo, 
   initialStatus, 
-  userId, 
+  userId,
+  apiKey, 
   onClose 
 }: ExtracaoProgressProps) {
   const [status, setStatus] = useState<ExtracaoStatus>({
-    id: extracaoId,
-    status: initialStatus as ExtracaoStatus['status']
+    idExtracao: idExtracaoAPI,
+    idContagem: 0,
+    status: initialStatus
   })
   const [polling, setPolling] = useState(true)
 
@@ -50,7 +61,9 @@ export default function ExtracaoProgress({
         },
         body: JSON.stringify({
           extracaoId,
-          userId
+          userId,
+          apiKey,
+          idExtracaoAPI
         })
       })
 
@@ -58,8 +71,10 @@ export default function ExtracaoProgress({
         const data = await response.json()
         setStatus(data.extracao)
         
-        // Parar polling se concluído ou com erro
-        if (data.extracao.status === 'concluida' || data.extracao.status === 'erro') {
+        // Parar polling se finalizado, com erro ou cancelado
+        if (data.extracao.status === 'Finalizada' || 
+            data.extracao.status === 'Erro' || 
+            data.extracao.status === 'Cancelada') {
           setPolling(false)
         }
       }
@@ -79,19 +94,21 @@ export default function ExtracaoProgress({
 
   // Função para download
   const handleDownload = () => {
-    if (status.url_download) {
-      window.open(status.url_download, '_blank')
+    if (status.status === 'Finalizada') {
+      const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
+      window.open(downloadUrl, '_blank')
     }
   }
 
   // Ícone baseado no status
   const getStatusIcon = () => {
     switch (status.status) {
-      case 'concluida':
+      case 'Finalizada':
         return <CheckCircle className="h-6 w-6 text-green-600" />
-      case 'erro':
+      case 'Erro':
+      case 'Cancelada':
         return <AlertCircle className="h-6 w-6 text-red-600" />
-      case 'processando':
+      case 'Processando':
         return <RefreshCw className="h-6 w-6 text-blue-600 animate-spin" />
       default:
         return <Clock className="h-6 w-6 text-yellow-600" />
@@ -101,11 +118,12 @@ export default function ExtracaoProgress({
   // Cor do status
   const getStatusColor = () => {
     switch (status.status) {
-      case 'concluida':
+      case 'Finalizada':
         return 'bg-green-50 border-green-200 text-green-800'
-      case 'erro':
+      case 'Erro':
+      case 'Cancelada':
         return 'bg-red-50 border-red-200 text-red-800'
-      case 'processando':
+      case 'Processando':
         return 'bg-blue-50 border-blue-200 text-blue-800'
       default:
         return 'bg-yellow-50 border-yellow-200 text-yellow-800'
@@ -115,18 +133,16 @@ export default function ExtracaoProgress({
   // Texto do status
   const getStatusText = () => {
     switch (status.status) {
-      case 'solicitada':
-        return 'Solicitada'
-      case 'processando':
+      case 'Processando':
         return 'Processando...'
-      case 'concluida':
+      case 'Finalizada':
         return 'Concluída'
-      case 'erro':
+      case 'Erro':
         return 'Erro no processamento'
-      case 'expirada':
-        return 'Link expirado'
+      case 'Cancelada':
+        return 'Cancelada'
       default:
-        return 'Status desconhecido'
+        return status.status || 'Aguardando...'
     }
   }
 
@@ -159,24 +175,29 @@ export default function ExtracaoProgress({
             {getStatusIcon()}
             <div className="flex-1">
               <div className="font-semibold">{getStatusText()}</div>
-              {status.data_conclusao && (
+              {status.dataFinalizacao && (
                 <div className="text-sm opacity-75">
-                  Concluída em: {new Date(status.data_conclusao).toLocaleString('pt-BR')}
+                  Concluída em: {new Date(status.dataFinalizacao).toLocaleString('pt-BR')}
+                </div>
+              )}
+              {status.qtdeRetorno && (
+                <div className="text-sm opacity-75">
+                  Registros extraídos: {status.qtdeRetorno.toLocaleString('pt-BR')}
                 </div>
               )}
             </div>
           </div>
 
           {/* Informações adicionais */}
-          {status.status === 'concluida' && status.tamanho_arquivo && (
+          {status.tipoExtracao && (
             <div className="text-sm text-gray-600">
-              Tamanho: {(status.tamanho_arquivo / (1024 * 1024)).toFixed(2)} MB
+              Tipo: {status.tipoExtracao}
             </div>
           )}
 
           {/* Botões */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
-            {status.status === 'concluida' && status.url_download ? (
+            {status.status === 'Finalizada' ? (
               <button
                 onClick={handleDownload}
                 className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold flex items-center justify-center gap-2"
@@ -184,13 +205,13 @@ export default function ExtracaoProgress({
                 <Download className="h-4 w-4" />
                 Fazer Download
               </button>
-            ) : status.status === 'erro' ? (
+            ) : status.status === 'Erro' || status.status === 'Cancelada' ? (
               <div className="flex-1 text-center text-red-600 py-2">
-                Erro no processamento. Tente novamente.
+                {status.status === 'Erro' ? 'Erro no processamento. Tente novamente.' : 'Extração cancelada.'}
               </div>
             ) : (
               <div className="flex-1 text-center text-gray-600 py-2">
-                {status.status === 'processando' ? 'Processando arquivo...' : 'Aguarde...'}
+                {status.status === 'Processando' ? 'Processando arquivo...' : 'Aguarde...'}
               </div>
             )}
             
