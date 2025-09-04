@@ -3,26 +3,23 @@ import { supabase } from '../../../lib/supabase'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
-// Função para autenticar na API Profile - IGUAL AO N8N
+// Função para autenticar na API Profile - ATUALIZADA PARA JSON
 async function authenticateAPI(apiKey: string) {
   console.log('🔐 Tentando autenticar com API Key:', apiKey ? 'presente' : 'ausente')
   
-  const formData = new URLSearchParams()
-  formData.append('apiKey', apiKey)
-  
-  console.log('📤 Body da requisição:', formData.toString())
+  const payload = { apiKey: apiKey }
+  console.log('📤 Payload da requisição:', payload)
   
   const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
     method: 'POST',
     headers: {
       'accept': 'text/plain',
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/json'
     },
-    body: formData.toString()
+    body: JSON.stringify(payload)
   })
 
   console.log('📥 Status da resposta:', response.status)
-  console.log('📥 Headers da resposta:', Object.fromEntries(response.headers.entries()))
 
   if (!response.ok) {
     const errorText = await response.text()

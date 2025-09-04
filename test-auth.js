@@ -10,14 +10,28 @@ async function testAuth(apiKey) {
   console.log('📤 Body da requisição:', formData.toString())
   
   try {
-    const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
+    // Primeiro, tenta com application/json
+    console.log('🔄 Tentativa 1: application/json')
+    let response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
       method: 'POST',
       headers: {
         'accept': 'text/plain',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/json'
       },
-      body: formData.toString()
+      body: JSON.stringify({ apiKey: apiKey })
     })
+
+    if (response.status === 415) {
+      console.log('🔄 Tentativa 2: application/x-www-form-urlencoded')
+      response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
+        method: 'POST',
+        headers: {
+          'accept': 'text/plain',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+      })
+    }
 
     console.log('📥 Status da resposta:', response.status)
     console.log('📥 Headers da resposta:', Object.fromEntries(response.headers.entries()))
@@ -38,8 +52,8 @@ async function testAuth(apiKey) {
   }
 }
 
-// Substitua pela sua API Key real
-const API_KEY = 'SUA_API_KEY_AQUI'
+// API Key do banco de dados
+const API_KEY = '043d2754-cd7f-47ba-b83b-0dbbb3877f36'
 
 testAuth(API_KEY).then(result => {
   console.log('\n🏁 Resultado final:', result)
