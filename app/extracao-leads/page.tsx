@@ -230,6 +230,7 @@ export default function ExtracaoLeadsPage() {
     idExtracaoAPI: number
     nomeArquivo: string
     status: string
+    apiKey: string
   } | null>(null)
 
   // Estado da aba ativa
@@ -573,6 +574,17 @@ export default function ExtracaoLeadsPage() {
         throw new Error('Contagem não encontrada no banco de dados')
       }
 
+      // Buscar apikeydados do usuário
+      const { data: configCredenciais, error: erroConfig } = await supabase
+        .from('configuracoes_credenciais')
+        .select('apikeydados')
+        .eq('user_id', parseInt(user.id.toString()))
+        .single()
+
+      if (erroConfig || !configCredenciais?.apikeydados) {
+        throw new Error('API Key não encontrada. Verifique suas configurações.')
+      }
+
       // Chamar API de extração
       const response = await fetch('/api/extracoes', {
         method: 'POST',
@@ -583,7 +595,7 @@ export default function ExtracaoLeadsPage() {
           contagemId: contagem.id,
           userId: parseInt(user.id.toString()),
           qtdeSolicitada: 1000, // Padrão de 1000 registros
-          apiKey: apiConfig.token
+          apiKey: configCredenciais.apikeydados
         })
       })
 
@@ -598,7 +610,8 @@ export default function ExtracaoLeadsPage() {
         id: resultado.extracaoId,
         idExtracaoAPI: resultado.idExtracaoAPI,
         nomeArquivo: resultado.nomeArquivo,
-        status: resultado.status
+        status: resultado.status,
+        apiKey: configCredenciais.apikeydados
       })
 
       // Opcional: mudar para aba de histórico após 3 segundos
@@ -928,7 +941,7 @@ export default function ExtracaoLeadsPage() {
           nomeArquivo={extracaoEmAndamento.nomeArquivo}
           initialStatus={extracaoEmAndamento.status}
           userId={parseInt(user?.id?.toString() || '0')}
-          apiKey={apiConfig.token || ''}
+          apiKey={extracaoEmAndamento.apiKey || ''}
           onClose={() => setExtracaoEmAndamento(null)}
         />
       )}
