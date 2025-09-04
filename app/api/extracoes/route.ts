@@ -3,19 +3,23 @@ import { supabase } from '../../../lib/supabase'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
-// Função para autenticar na API Profile
+// Função para autenticar na API Profile - IGUAL AO N8N
 async function authenticateAPI(apiKey: string) {
+  const formData = new URLSearchParams()
+  formData.append('apiKey', apiKey)
+  
   const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
     method: 'POST',
     headers: {
       'accept': 'text/plain',
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: `apiKey=${encodeURIComponent(apiKey)}`
+    body: formData.toString()
   })
 
   if (!response.ok) {
-    throw new Error('Falha na autenticação da API Profile')
+    const errorText = await response.text()
+    throw new Error(`Falha na autenticação da API Profile: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
@@ -88,7 +92,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/extracoes - Criar nova extração usando API Profile real
+// POST /api/extracoes - EXATAMENTE COMO NO N8N
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Buscar contagem no banco
+    // 1. Buscar contagem no banco para pegar o ID da API Profile
     const { data: contagem, error: erroContagem } = await supabase
       .from('contagens_profile')
       .select('*')
@@ -114,13 +118,13 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Autenticar na API Profile
+    // 2. Autenticar para pegar token - EXATAMENTE COMO N8N "Busca Senha2"
     const token = await authenticateAPI(apiKey)
 
-    // Criar extração na API Profile usando o endpoint correto
+    // 3. Criar extração - EXATAMENTE COMO N8N "Criar extração"
     const extracaoPayload = {
       idContagem: contagem.id_contagem_api,
-      idTipoAcesso: 3, // Conforme exemplo do N8N
+      idTipoAcesso: 3,
       qtdeSolicitada: Math.min(qtdeSolicitada, contagem.total_registros),
       removerRegistrosExtraidos: true
     }
@@ -137,21 +141,19 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(`Erro na API Profile: ${response.status} - ${errorText}`)
+      throw new Error(`API Profile retornou erro: ${response.status} - ${errorText}`)
     }
 
     const resultadoExtracao = await response.json()
 
     if (!resultadoExtracao.sucesso) {
-      throw new Error(`API Profile retornou erro: ${resultadoExtracao.msg}`)
+      throw new Error(`API Profile: ${resultadoExtracao.msg}`)
     }
 
-    // Criar registro de extração no banco local para tracking
+    // 4. Salvar no banco local (opcional, para tracking)
     const nomeArquivo = `leads_${contagem.nome_contagem.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.csv`
-    const dataExpiracao = new Date()
-    dataExpiracao.setDate(dataExpiracao.getDate() + 7)
 
-    const { data: novaExtracao, error: erroExtracao } = await supabase
+    const { data: novaExtracao } = await supabase
       .from('extracoes_profile')
       .insert([{
         user_id: userId,
@@ -161,23 +163,18 @@ export async function POST(request: NextRequest) {
         formato_arquivo: 'csv',
         total_registros_extraidos: qtdeSolicitada,
         status: 'processando',
-        data_solicitacao: new Date().toISOString(),
-        data_expiracao: dataExpiracao.toISOString()
+        data_solicitacao: new Date().toISOString()
       }])
       .select('*')
       .single()
 
-    if (erroExtracao) {
-      console.error('Erro ao salvar no banco local:', erroExtracao)
-      // Não falhar aqui pois a extração foi criada na API Profile
-    }
-
+    // 5. Retornar resultado
     return NextResponse.json({ 
       extracaoId: novaExtracao?.id,
       idExtracaoAPI: resultadoExtracao.idExtracao,
       nomeArquivo,
       status: 'processando',
-      message: resultadoExtracao.msg || 'Extração criada com sucesso!'
+      message: 'Extração criada com sucesso!'
     })
 
   } catch (error) {
