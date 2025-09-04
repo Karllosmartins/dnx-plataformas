@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
+import SearchableMultiSelect from '../../components/SearchableMultiSelect'
 import { supabase } from '../../lib/supabase'
 import { 
   Target, 
@@ -495,10 +496,10 @@ export default function ExtracaoLeadsPage() {
   }, [apiConfig.token, tipoPessoa])
 
   useEffect(() => {
-    if (apiConfig.authenticated && !loading) {
+    if (apiConfig.authenticated && !loading && selectedUfs.length > 0) {
       loadCidades()
     }
-  }, [selectedUfs, apiConfig.token, tipoPessoa])
+  }, [selectedUfs, apiConfig.authenticated, loading])
 
   useEffect(() => {
     if (apiConfig.authenticated && !loading) {
@@ -599,47 +600,35 @@ export default function ExtracaoLeadsPage() {
                 {/* Estados */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Estados</label>
-                  <select
-                    multiple
-                    value={selectedUfs.map(String)}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => Number(option.value))
-                      setSelectedUfs(values)
+                  <SearchableMultiSelect
+                    options={ufs.map(uf => ({
+                      value: uf.idUf,
+                      label: `${uf.uf1} - ${uf.ufDescricao}`
+                    }))}
+                    value={selectedUfs}
+                    onChange={(values) => {
+                      setSelectedUfs(values as number[])
                       setSelectedCidades([]) // Reset cidades
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
-                  >
-                    {ufs.map(uf => (
-                      <option key={uf.idUf} value={uf.idUf}>
-                        {uf.uf1} - {uf.ufDescricao}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Segure Ctrl/Cmd para selecionar múltiplos</p>
+                    placeholder="Selecione os estados"
+                    searchPlaceholder="Pesquisar estados..."
+                  />
                 </div>
 
                 {/* Cidades */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Cidades</label>
-                  <select
-                    multiple
-                    value={selectedCidades.map(String)}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => Number(option.value))
-                      setSelectedCidades(values)
-                    }}
+                  <SearchableMultiSelect
+                    options={cidades.map(cidade => ({
+                      value: cidade.idcidade,
+                      label: `${cidade.cidade1} - ${cidade.uf}`
+                    }))}
+                    value={selectedCidades}
+                    onChange={(values) => setSelectedCidades(values as number[])}
+                    placeholder={selectedUfs.length === 0 ? "Selecione estados primeiro" : "Selecione as cidades"}
+                    searchPlaceholder="Pesquisar cidades..."
                     disabled={selectedUfs.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32 disabled:bg-gray-50"
-                  >
-                    {cidades.map(cidade => (
-                      <option key={cidade.idcidade} value={cidade.idcidade}>
-                        {cidade.cidade1} - {cidade.uf}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {selectedUfs.length === 0 ? 'Selecione estados primeiro' : 'Segure Ctrl/Cmd para selecionar múltiplos'}
-                  </p>
+                  />
                 </div>
               </div>
             </div>
@@ -866,26 +855,16 @@ function PessoaFisicaFilters({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Classes Sociais</h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {classesSociais.map(classe => (
-            <label key={classe.codigo} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={filtros.classesSociais?.includes(classe.codigo) || false}
-                onChange={(e) => {
-                  const current = filtros.classesSociais || []
-                  if (e.target.checked) {
-                    setFiltros({...filtros, classesSociais: [...current, classe.codigo]})
-                  } else {
-                    setFiltros({...filtros, classesSociais: current.filter(c => c !== classe.codigo)})
-                  }
-                }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{classe.descricao}</span>
-            </label>
-          ))}
-        </div>
+        <SearchableMultiSelect
+          options={classesSociais.map(classe => ({
+            value: classe.codigo,
+            label: classe.descricao
+          }))}
+          value={filtros.classesSociais || []}
+          onChange={(values) => setFiltros({...filtros, classesSociais: values as string[]})}
+          placeholder="Selecione as classes sociais"
+          searchPlaceholder="Pesquisar classes sociais..."
+        />
       </div>
 
       {/* Estados Civis */}
@@ -918,28 +897,17 @@ function PessoaFisicaFilters({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Profissões (CBO)</h3>
         
-        <div className="max-h-64 overflow-y-auto">
-          <div className="grid grid-cols-1 gap-1">
-            {profissoes.map(profissao => (
-              <label key={profissao.cdCbo} className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded">
-                <input
-                  type="checkbox"
-                  checked={filtros.profissoes?.includes(profissao.cdCbo) || false}
-                  onChange={(e) => {
-                    const current = filtros.profissoes || []
-                    if (e.target.checked) {
-                      setFiltros({...filtros, profissoes: [...current, profissao.cdCbo]})
-                    } else {
-                      setFiltros({...filtros, profissoes: current.filter(p => p !== profissao.cdCbo)})
-                    }
-                  }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{profissao.dsCbo}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <SearchableMultiSelect
+          options={profissoes.map(profissao => ({
+            value: profissao.cdCbo,
+            label: profissao.dsCbo
+          }))}
+          value={filtros.profissoes || []}
+          onChange={(values) => setFiltros({...filtros, profissoes: values as string[]})}
+          placeholder="Selecione as profissões"
+          searchPlaceholder="Pesquisar profissões..."
+          maxHeight="300px"
+        />
       </div>
 
       {/* Scores */}
@@ -972,60 +940,35 @@ function PessoaFisicaFilters({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Operadoras de Celular</h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {operadoras.map(operadora => (
-            <label key={operadora.nomeOperadora} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={filtros.operadorasCelular?.includes(operadora.nomeOperadora) || false}
-                onChange={(e) => {
-                  const current = filtros.operadorasCelular || []
-                  if (e.target.checked) {
-                    setFiltros({...filtros, operadorasCelular: [...current, operadora.nomeOperadora]})
-                  } else {
-                    setFiltros({...filtros, operadorasCelular: current.filter(o => o !== operadora.nomeOperadora)})
-                  }
-                }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{operadora.nomeOperadora}</span>
-            </label>
-          ))}
-        </div>
+        <SearchableMultiSelect
+          options={operadoras.map(operadora => ({
+            value: operadora.nomeOperadora,
+            label: operadora.nomeOperadora
+          }))}
+          value={filtros.operadorasCelular || []}
+          onChange={(values) => setFiltros({...filtros, operadorasCelular: values as string[]})}
+          placeholder="Selecione as operadoras"
+          searchPlaceholder="Pesquisar operadoras..."
+        />
       </div>
 
       {/* DDDs */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">DDDs</h3>
         
-        <div className="space-y-4">
-          {ddds.estados.map(estado => (
-            <div key={estado.siglaUf}>
-              <h4 className="font-medium text-gray-900 mb-2">{estado.nome} ({estado.siglaUf})</h4>
-              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 ml-4">
-                {estado.ddds.map(ddd => (
-                  <label key={`${estado.siglaUf}-${ddd.prefixo}`} className="flex items-center space-x-1">
-                    <input
-                      type="checkbox"
-                      checked={filtros.dddsCelular?.includes(ddd.prefixo.toString()) || false}
-                      onChange={(e) => {
-                        const current = filtros.dddsCelular || []
-                        const dddStr = ddd.prefixo.toString()
-                        if (e.target.checked) {
-                          setFiltros({...filtros, dddsCelular: [...current, dddStr]})
-                        } else {
-                          setFiltros({...filtros, dddsCelular: current.filter(d => d !== dddStr)})
-                        }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">({ddd.prefixo})</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <SearchableMultiSelect
+          options={ddds.estados.flatMap(estado => 
+            estado.ddds.map(ddd => ({
+              value: ddd.prefixo.toString(),
+              label: `(${ddd.prefixo}) ${ddd.nome} - ${estado.siglaUf}`
+            }))
+          )}
+          value={filtros.dddsCelular || []}
+          onChange={(values) => setFiltros({...filtros, dddsCelular: values as string[]})}
+          placeholder="Selecione os DDDs"
+          searchPlaceholder="Pesquisar DDDs..."
+          maxHeight="300px"
+        />
       </div>
     </div>
   )
@@ -1294,60 +1237,35 @@ function PessoaJuridicaFilters({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Operadoras de Celular</h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {operadoras.map(operadora => (
-            <label key={operadora.nomeOperadora} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={filtros.operadorasCelular?.includes(operadora.nomeOperadora) || false}
-                onChange={(e) => {
-                  const current = filtros.operadorasCelular || []
-                  if (e.target.checked) {
-                    setFiltros({...filtros, operadorasCelular: [...current, operadora.nomeOperadora]})
-                  } else {
-                    setFiltros({...filtros, operadorasCelular: current.filter(o => o !== operadora.nomeOperadora)})
-                  }
-                }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{operadora.nomeOperadora}</span>
-            </label>
-          ))}
-        </div>
+        <SearchableMultiSelect
+          options={operadoras.map(operadora => ({
+            value: operadora.nomeOperadora,
+            label: operadora.nomeOperadora
+          }))}
+          value={filtros.operadorasCelular || []}
+          onChange={(values) => setFiltros({...filtros, operadorasCelular: values as string[]})}
+          placeholder="Selecione as operadoras"
+          searchPlaceholder="Pesquisar operadoras..."
+        />
       </div>
 
       {/* DDDs */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">DDDs</h3>
         
-        <div className="space-y-4">
-          {ddds.estados.map(estado => (
-            <div key={estado.siglaUf}>
-              <h4 className="font-medium text-gray-900 mb-2">{estado.nome} ({estado.siglaUf})</h4>
-              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 ml-4">
-                {estado.ddds.map(ddd => (
-                  <label key={`${estado.siglaUf}-${ddd.prefixo}`} className="flex items-center space-x-1">
-                    <input
-                      type="checkbox"
-                      checked={filtros.dddsCelular?.includes(ddd.prefixo.toString()) || false}
-                      onChange={(e) => {
-                        const current = filtros.dddsCelular || []
-                        const dddStr = ddd.prefixo.toString()
-                        if (e.target.checked) {
-                          setFiltros({...filtros, dddsCelular: [...current, dddStr]})
-                        } else {
-                          setFiltros({...filtros, dddsCelular: current.filter(d => d !== dddStr)})
-                        }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">({ddd.prefixo})</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <SearchableMultiSelect
+          options={ddds.estados.flatMap(estado => 
+            estado.ddds.map(ddd => ({
+              value: ddd.prefixo.toString(),
+              label: `(${ddd.prefixo}) ${ddd.nome} - ${estado.siglaUf}`
+            }))
+          )}
+          value={filtros.dddsCelular || []}
+          onChange={(values) => setFiltros({...filtros, dddsCelular: values as string[]})}
+          placeholder="Selecione os DDDs"
+          searchPlaceholder="Pesquisar DDDs..."
+          maxHeight="300px"
+        />
       </div>
     </div>
   )
