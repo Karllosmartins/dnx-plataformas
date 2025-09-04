@@ -34,7 +34,6 @@ export default function ConfiguracoesPage() {
     apikey_elevenlabs: '',
     id_voz_elevenlabs: '',
     vector_store_ids: '',
-    api_profile_key: '',
     delay_entre_mensagens_em_segundos: 1,
     delay_apos_intervencao_humana_minutos: 60,
     inicio_expediente: 8,
@@ -71,7 +70,6 @@ export default function ConfiguracoesPage() {
           apikey_elevenlabs: data.apikey_elevenlabs || '',
           id_voz_elevenlabs: data.id_voz_elevenlabs || '',
           vector_store_ids: data.vector_store_ids ? JSON.stringify(data.vector_store_ids) : '',
-          api_profile_key: data.api_profile_key || '',
           delay_entre_mensagens_em_segundos: data.delay_entre_mensagens_em_segundos || 1,
           delay_apos_intervencao_humana_minutos: data.delay_apos_intervencao_humana_minutos || 60,
           inicio_expediente: data.inicio_expediente || 8,
@@ -252,19 +250,6 @@ export default function ConfiguracoesPage() {
                   rows={3}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder='["vs_123", "vs_456"]'
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  API Profile Key
-                </label>
-                <input
-                  type="password"
-                  value={credenciaisForm.api_profile_key}
-                  onChange={(e) => setCredenciaisForm({...credenciaisForm, api_profile_key: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="043d2754-cd7f-47ba-b83b-0dbbb3877f36"
                 />
               </div>
             </div>
