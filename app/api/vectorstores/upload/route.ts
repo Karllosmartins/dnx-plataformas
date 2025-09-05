@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Buscar token OpenAI e vector store ID
     const { data: config, error: configError } = await supabase
-      .from('configuracao_credenciais')
+      .from('configuracoes_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
       .single()

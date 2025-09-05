@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Buscar token OpenAI
     const { data: config, error: configError } = await supabase
-      .from('configuracao_credenciais')
+      .from('configuracoes_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
       .single()
@@ -86,7 +86,7 @@ export async function DELETE(request: NextRequest) {
 
     // 1. Buscar token OpenAI
     const { data: config, error: configError } = await supabase
-      .from('configuracao_credenciais')
+      .from('configuracoes_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
       .single()
