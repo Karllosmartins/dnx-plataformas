@@ -35,3 +35,7 @@ pids
 .npm
 .cache/
 node_modules
+
+# Security - Docker compose with credentials
+docker-compose.portainer.local.yml
+*.local.yml

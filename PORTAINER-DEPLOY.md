@@ -9,6 +9,14 @@
 
 ## Como fazer o Deploy
 
+### **🔐 IMPORTANTE: Segurança das Credenciais**
+
+Este projeto usa **sistema de deploy seguro**. Veja [DEPLOY-SEGURO.md](DEPLOY-SEGURO.md) para detalhes.
+
+**Resumo:**
+- `docker-compose.portainer.yml` = Template (GitHub)
+- `docker-compose.portainer.local.yml` = Com credenciais (local)
+
 ### **⚠️ IMPORTANTE: Build da imagem primeiro**
 
 Como o Docker Swarm não suporta `build`, você precisa fazer o build da imagem antes:

@@ -40,11 +40,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      # Supabase Configuration
-      - NEXT_PUBLIC_SUPABASE_URL=https://enwxbkyvnrjderqdygtl.supabase.co
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNjMwMzQsImV4cCI6MjA3MTYzOTAzNH0.xr39krGQYM6HC64cNFmjtpbj2IsDn2BEyhviBiTooCY
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjA2MzAzNCwiZXhwIjoyMDcxNjM5MDM0fQ.BxADhNw1F84N_YVV7EQC8OHJlE6StJx0lqjZxjHRRD8
-      - DATABASE_URL=postgresql://postgres:8W0KemHchTqSBcgi@enwxbkyvnrjderqdygtl.supabase.co:5432/postgres
+      # Supabase Configuration - SUBSTITUA PELAS SUAS CREDENCIAIS
+      - NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key-here
+      - SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
+      - DATABASE_URL=postgresql://postgres:your-password@your-project.supabase.co:5432/postgres
     
     deploy:
       mode: replicated
