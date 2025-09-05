@@ -226,16 +226,16 @@ export default function AgentesIAPage() {
           {agentes.length > 0 ? (
             <div className="grid gap-6">
               {agentes.map((agente) => (
-                <div key={agente.id} className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                <div key={agente.id} className="border border-gray-200 rounded-lg p-4 sm:p-6 hover:border-gray-300 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-purple-100 rounded-lg">
                           <Bot className="h-6 w-6 text-purple-600" />
                         </div>
-                        <div>
-                          <h4 className="text-xl font-semibold text-gray-900">{agente.nome}</h4>
-                          <p className="text-sm text-gray-600">{agente.funcao}</p>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{agente.nome}</h4>
+                          <p className="text-sm text-gray-600 truncate">{agente.funcao}</p>
                         </div>
                       </div>
                       
@@ -268,20 +268,20 @@ export default function AgentesIAPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-2 ml-6">
+                    <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 justify-end sm:justify-start">
                       <button
                         onClick={() => setEditingAgent(agente)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
+                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors whitespace-nowrap"
                       >
-                        <Edit2 className="h-4 w-4 mr-1" />
-                        Editar
+                        <Edit2 className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline ml-1">Editar</span>
                       </button>
                       <button
                         onClick={() => deleteAgent(agente.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors"
+                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
+                        <Trash2 className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline ml-1">Excluir</span>
                       </button>
                     </div>
                   </div>

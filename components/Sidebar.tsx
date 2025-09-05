@@ -67,7 +67,7 @@ export default function Sidebar({ user, onLogout, onCollapseChange }: SidebarPro
           <Menu className="h-6 w-6" aria-hidden="true" />
         </button>
         <div className="flex-1 text-sm font-semibold leading-6 text-white">
-          MySellers Dashboard
+          DNX Plataformas
         </div>
       </div>
 

@@ -190,9 +190,9 @@ export default function UsuariosPage() {
           {users.length > 0 ? (
             <div className="grid gap-6">
               {users.map((user) => (
-                <div key={user.id} className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                <div key={user.id} className="border border-gray-200 rounded-lg p-4 sm:p-6 hover:border-gray-300 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`p-2 rounded-lg ${user.role === 'admin' ? 'bg-red-100' : 'bg-indigo-100'}`}>
                           {user.role === 'admin' ? (
@@ -201,41 +201,41 @@ export default function UsuariosPage() {
                             <Users className="h-6 w-6 text-indigo-600" />
                           )}
                         </div>
-                        <div>
-                          <h4 className="text-xl font-semibold text-gray-900">{user.name}</h4>
-                          <p className="text-sm text-gray-600">{user.email}</p>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{user.name}</h4>
+                          <p className="text-sm text-gray-600 truncate">{user.email}</p>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Plano</span>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500">Plano</span>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900">
                             {getPlanDisplayName(user.plano)}
                           </p>
                         </div>
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Instâncias</span>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500">Instâncias</span>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900">
                             {user.numero_instancias || 1}
                           </p>
                         </div>
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Limite Leads</span>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500">Limite Leads</span>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900">
                             {user.limite_leads.toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Limite Consultas</span>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500">Limite Consultas</span>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900">
                             {user.limite_consultas.toLocaleString()}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 mb-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4">
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                           user.active 
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
@@ -243,12 +243,12 @@ export default function UsuariosPage() {
                           {user.active ? 'Ativo' : 'Inativo'}
                         </span>
                         
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                           user.role === 'admin'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                          {user.role === 'admin' ? 'Admin' : 'Usuário'}
                         </span>
                       </div>
 
@@ -257,28 +257,28 @@ export default function UsuariosPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-2 ml-6">
+                    <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 justify-end sm:justify-start">
                       <button
                         onClick={() => setEditingUser(user)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
+                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors whitespace-nowrap"
                       >
-                        <Edit2 className="h-4 w-4 mr-1" />
-                        Editar
+                        <Edit2 className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline ml-1">Editar</span>
                       </button>
                       <button
                         onClick={() => setShowUserTools({...showUserTools, [user.id]: !showUserTools[user.id]})}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 transition-colors"
+                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 transition-colors whitespace-nowrap"
                       >
-                        <Wrench className="h-4 w-4 mr-1" />
-                        Tools
+                        <Wrench className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline ml-1">Tools</span>
                       </button>
                       {user.id !== parseInt(currentUser?.id || '0') && (
                         <button
                           onClick={() => deleteUser(user.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors"
+                          className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap"
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Excluir
+                          <Trash2 className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline ml-1">Excluir</span>
                         </button>
                       )}
                     </div>
