@@ -1,33 +1,49 @@
-# 🚀 Guia de Deploy - DNX Plataformas CRM
+# 🚀 Deploy - DNX Plataformas CRM
+
+Guia simplificado para deploy via Docker/Portainer.
 
 ## 📋 Pré-requisitos
 
-### No servidor VPS:
-- [x] Docker instalado
-- [x] Docker Compose instalado
-- [x] Traefik configurado (para SSL automático)
-- [x] Domínio `app.dnmarketing.com.br` apontado para o servidor
+### Servidor VPS
+- ✅ Docker + Docker Compose
+- ✅ Portainer configurado
+- ✅ Traefik (SSL automático)
+- ✅ Domínio: `app.dnxplataformas.com.br`
 
-## 🔧 Configuração
+## 🔧 Deploy Rápido
 
-### 1. Configurar variáveis de ambiente
+### 1. Variáveis de Ambiente
 ```bash
-cp .env.example .env.production
-```
-
-### ⚠️ **Variáveis obrigatórias**:
-```bash
-DATABASE_URL="postgresql://postgres:8W0KemHchTqSBcgi@enwxbkyvnrjderqdygtl.supabase.co:5432/postgres"
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://enwxbkyvnrjderqdygtl.supabase.co
-NEXTAUTH_URL=https://app.dnmarketing.com.br
+NEXT_PUBLIC_SUPABASE_ANON_KEY=seu-token
+SUPABASE_SERVICE_ROLE_KEY=seu-service-key
+
+# App
+NEXTAUTH_URL=https://app.dnxplataformas.com.br
+DEFAULT_WHATSAPP_BASEURL=https://wsapi.dnmarketing.com.br
 ```
 
-### 2. Deploy
+### 2. Docker Deploy
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+# Build e deploy
+docker build -t dnx-crm .
+docker run -d --name dnx-crm -p 3000:3000 dnx-crm
 ```
 
-## 🌐 Acesso
-- **Produção**: https://app.dnmarketing.com.br
+### 3. Via Portainer
+1. Acesse Portainer Web UI
+2. Create Stack → Docker Compose
+3. Cole docker-compose.yml
+4. Configure environment variables
+5. Deploy Stack
+
+## 🌐 URLs
+
+- **Produção**: https://app.dnxplataformas.com.br
 - **SSL**: Automático via Traefik
+- **Portainer**: https://portainer.dnxplataformas.com.br
+
+## 📚 Documentação Completa
+
+Ver [PORTAINER-DEPLOY.md](PORTAINER-DEPLOY.md) para instruções detalhadas.
