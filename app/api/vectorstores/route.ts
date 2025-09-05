@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Criar vector store na OpenAI
+    console.log('Criando vector store na OpenAI com nome:', vectorStoreName)
+    
     const openaiResponse = await fetch('https://api.openai.com/v1/vector_stores', {
       method: 'POST',
       headers: {
@@ -81,6 +83,8 @@ export async function POST(request: NextRequest) {
       })
     })
 
+    console.log('Status da resposta OpenAI:', openaiResponse.status)
+
     if (!openaiResponse.ok) {
       const errorData = await openaiResponse.text()
       console.error('Erro na API OpenAI:', errorData)
@@ -90,8 +94,16 @@ export async function POST(request: NextRequest) {
     }
 
     const vectorStoreData = await openaiResponse.json()
+    console.log('Vector store criado na OpenAI:', vectorStoreData.id)
 
     // 3. Salvar no banco
+    console.log('Salvando no banco:', {
+      user_id: parseInt(userId),
+      agent_id: parseInt(agentId),
+      vectorstore_id: vectorStoreData.id,
+      is_active: true
+    })
+
     const { data: savedData, error: saveError } = await supabase
       .from('user_agent_vectorstore')
       .insert([{
@@ -104,8 +116,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (saveError) {
+      console.error('Erro ao salvar no banco:', saveError)
       // Se falhou ao salvar, tentar deletar o vector store da OpenAI
       try {
+        console.log('Tentando deletar vector store da OpenAI por falha no banco')
         await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreData.id}`, {
           method: 'DELETE',
           headers: {
@@ -118,6 +132,8 @@ export async function POST(request: NextRequest) {
       }
       throw saveError
     }
+
+    console.log('Vector store salvo com sucesso no banco:', savedData)
 
     return NextResponse.json({ 
       success: true,
