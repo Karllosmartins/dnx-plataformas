@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { data: config, error: configError } = await supabase
       .from('configuracao_credenciais')
       .select('openai_api_token')
-      .eq('user_id', userId)
+      .eq('user_id', parseInt(userId))
       .single()
 
     if (configError || !config?.openai_api_token) {
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     const { data: vectorStore, error: vectorError } = await supabase
       .from('user_agent_vectorstore')
       .select('vectorstore_id')
-      .eq('user_id', userId)
-      .eq('agent_id', agentId)
+      .eq('user_id', parseInt(userId))
+      .eq('agent_id', parseInt(agentId))
       .eq('is_active', true)
       .single()
 
@@ -88,7 +88,7 @@ export async function DELETE(request: NextRequest) {
     const { data: config, error: configError } = await supabase
       .from('configuracao_credenciais')
       .select('openai_api_token')
-      .eq('user_id', userId)
+      .eq('user_id', parseInt(userId))
       .single()
 
     if (configError || !config?.openai_api_token) {
@@ -101,8 +101,8 @@ export async function DELETE(request: NextRequest) {
     const { data: vectorStore, error: vectorError } = await supabase
       .from('user_agent_vectorstore')
       .select('vectorstore_id')
-      .eq('user_id', userId)
-      .eq('agent_id', agentId)
+      .eq('user_id', parseInt(userId))
+      .eq('agent_id', parseInt(agentId))
       .eq('is_active', true)
       .single()
 

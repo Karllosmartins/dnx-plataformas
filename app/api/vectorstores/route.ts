@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('user_agent_vectorstore')
       .select('*')
-      .eq('user_id', userId)
-      .eq('agent_id', agentId)
+      .eq('user_id', parseInt(userId))
+      .eq('agent_id', parseInt(agentId))
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -48,11 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Buscar token OpenAI do usuário
+    console.log('Buscando config para userId:', userId, 'tipo:', typeof userId)
+    
     const { data: config, error: configError } = await supabase
       .from('configuracao_credenciais')
       .select('openai_api_token')
-      .eq('user_id', userId)
+      .eq('user_id', parseInt(userId))
       .single()
+
+    console.log('Resultado busca config:', { config, configError })
 
     if (configError || !config?.openai_api_token) {
       return NextResponse.json({ 
@@ -141,8 +145,8 @@ export async function PUT(request: NextRequest) {
         is_active: isActive,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', userId)
-      .eq('agent_id', agentId)
+      .eq('user_id', parseInt(userId))
+      .eq('agent_id', parseInt(agentId))
       .select()
       .single()
 
