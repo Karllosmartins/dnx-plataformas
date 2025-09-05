@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAuth } from './AuthWrapper'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../lib/supabase'
 import { 
   History, 
@@ -31,20 +32,24 @@ export default function HistoricoContagens({
   authenticateAPI, 
   loading 
 }: HistoricoContagensProps) {
+  const { user } = useAuth()
   const [contagens, setContagens] = useState<ContagemComExtracoes[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
 
   // Carregar histórico de contagens
   const loadHistorico = async () => {
+    if (!user) return
+    
     setLoadingHistorico(true)
     try {
-      // Buscar contagens do banco com suas extrações
+      // Buscar contagens do banco com suas extrações APENAS do usuário logado
       const { data: contagensBanco, error } = await supabase
         .from('contagens_profile')
         .select(`
           *,
           extracoes_profile (*)
         `)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -59,10 +64,12 @@ export default function HistoricoContagens({
     }
   }
 
-  // Carregar histórico quando componente monta
+  // Carregar histórico quando componente monta ou usuário muda
   useEffect(() => {
-    loadHistorico()
-  }, [])
+    if (user) {
+      loadHistorico()
+    }
+  }, [user])
 
   if (!apiConfig.authenticated) {
     return (
