@@ -34,7 +34,6 @@ const navigation = [
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Usuários', href: '/usuarios', icon: UserCog, feature: 'usuarios' as const, adminOnly: true },
-  { name: 'Configurações', href: '/configuracoes', icon: Settings, feature: 'configuracoes' as const },
 ]
 
 interface SidebarProps {

@@ -327,4 +327,15 @@ export interface ExtracaoProfile {
   updated_at?: string
 }
 
+// Interface para tabela user_agent_vectorstore
+export interface UserAgentVectorStore {
+  id: number
+  user_id: number
+  agent_id: number
+  vectorstore_id: string // ID do vector store na OpenAI
+  is_active: boolean
+  created_at: string
+  updated_at?: string
+}
+
 

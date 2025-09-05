@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase, AgenteIA, Tool, UserTool } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
+import VectorStoreManager from '../../components/VectorStoreManager'
 import { 
   Plus, 
   Edit2, 
@@ -266,6 +267,9 @@ export default function AgentesIAPage() {
                       <div className="mt-4 text-xs text-gray-500">
                         ID: {agente.agente_id} • Criado em {new Date(agente.created_at).toLocaleDateString('pt-BR')}
                       </div>
+
+                      {/* Vector Store Manager */}
+                      <VectorStoreManager agentId={agente.id} />
                     </div>
                     
                     <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 justify-end sm:justify-start">
