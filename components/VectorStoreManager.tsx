@@ -107,7 +107,11 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
         setShowCreateForm(false)
         checkVectorStore()
       } else {
-        alert(data.error || 'Erro ao criar Vector Store')
+        const errorMessage = data.details 
+          ? `${data.error}: ${data.details}` 
+          : data.error || 'Erro ao criar Vector Store'
+        alert(errorMessage)
+        console.error('Erro detalhado:', data)
       }
     } catch (error) {
       console.error('Erro ao criar vector store:', error)
