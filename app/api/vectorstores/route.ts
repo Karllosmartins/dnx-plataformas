@@ -48,17 +48,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Buscar token OpenAI do usuário
-    console.log('Buscando config para userId:', userId, 'tipo:', typeof userId)
-    
     const { data: config, error: configError } = await supabase
       .from('configuracao_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
       .single()
 
-    console.log('Resultado busca config:', { config, configError })
+    if (configError) {
+      console.error('Erro ao buscar config:', configError)
+      return NextResponse.json({ 
+        error: `Erro ao buscar configuração: ${configError.message}` 
+      }, { status: 400 })
+    }
 
-    if (configError || !config?.openai_api_token) {
+    if (!config?.openai_api_token) {
+      console.error('Token não encontrado na config:', config)
       return NextResponse.json({ 
         error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.' 
       }, { status: 400 })
