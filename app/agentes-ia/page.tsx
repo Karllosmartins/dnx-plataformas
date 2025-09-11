@@ -92,22 +92,40 @@ export default function AgentesIAPage() {
     if (!currentUser) return
 
     try {
-      const existingUserTool = userTools.find(ut => 
+      // Primeiro, verificar se existe um registro para este agente específico
+      const existingForAgent = userTools.find(ut => 
         ut.tool_id === toolId && 
         ut.user_id === parseInt(currentUser.id) && 
         ut.agente_id === agentId.toString()
       )
 
-      if (existingUserTool) {
-        // Atualizar existente
+      // Verificar se existe algum registro para esta combinação user_id + tool_id
+      const existingForUser = userTools.find(ut => 
+        ut.tool_id === toolId && 
+        ut.user_id === parseInt(currentUser.id)
+      )
+
+      if (existingForAgent) {
+        // Atualizar o registro específico do agente
         const { error } = await supabase
           .from('user_tools')
           .update({ is_active: !currentState })
-          .eq('id', existingUserTool.id)
+          .eq('id', existingForAgent.id)
+
+        if (error) throw error
+      } else if (existingForUser) {
+        // Atualizar o registro existente para incluir o novo agente
+        const { error } = await supabase
+          .from('user_tools')
+          .update({ 
+            agente_id: agentId.toString(),
+            is_active: true
+          })
+          .eq('id', existingForUser.id)
 
         if (error) throw error
       } else {
-        // Inserir novo
+        // Inserir novo registro
         const { error } = await supabase
           .from('user_tools')
           .insert([{
