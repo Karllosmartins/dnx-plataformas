@@ -28,6 +28,41 @@ interface UserFormData {
   active: boolean
 }
 
+interface ConfigCredentials {
+  openai_api_token?: string
+  gemini_api_key?: string
+  model?: string
+  type_tool_supabase?: string
+  reasoning_effort?: string
+  apikey_elevenlabs?: string
+  id_voz_elevenlabs?: string
+  firecrawl_apikey?: string
+  baseurl?: string
+  instancia?: string
+  apikey?: string
+  base_tools_supabase?: string
+  base_leads_supabase?: string
+  base_mensagens_supabase?: string
+  base_agentes_supabase?: string
+  base_rag_supabase?: string
+  base_ads_supabase?: string
+  prompt_do_agente?: string
+  vector_store_ids?: string
+  structured_output?: string
+  delay_entre_mensagens_em_segundos?: number
+  delay_apos_intervencao_humana_minutos?: number
+  inicio_expediente?: number
+  fim_expediente?: number
+  url_crm?: string
+  usuario_crm?: string
+  senha_crm?: string
+  token_crm?: string
+  pasta_drive?: string
+  id_pasta_drive_rag?: string
+  cliente?: string
+  apikeydados?: string
+}
+
 export default function UsuariosPage() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
@@ -35,11 +70,30 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showUserTools, setShowUserTools] = useState<{[key: number]: boolean}>({})
+  const [defaultCredentials, setDefaultCredentials] = useState<ConfigCredentials>({})
+  
+  const loadDefaultCredentials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes_credenciais')
+        .select('*')
+        .eq('user_id', 24)
+        .maybeSingle()
+
+      if (data && !error) {
+        const { id, user_id, created_at, updated_at, ...credentials } = data
+        setDefaultCredentials(credentials)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar credenciais padrão:', error)
+    }
+  }
 
   useEffect(() => {
     if (currentUser?.role === 'admin') {
       loadUsers()
       loadTools()
+      loadDefaultCredentials()
     }
   }, [currentUser])
 
@@ -90,34 +144,80 @@ export default function UsuariosPage() {
     }
   }
 
-  const saveUser = async (userData: UserFormData) => {
+  const saveUser = async (userData: UserFormData, credentials?: ConfigCredentials) => {
     try {
       const dataToSave = {
         ...userData,
         updated_at: new Date().toISOString()
       }
 
+      let userId: number
+
       if (editingUser && editingUser.id > 0) {
-        // Update
         const { error } = await supabase
           .from('users')
           .update(dataToSave)
           .eq('id', editingUser.id)
 
         if (error) throw error
+        userId = editingUser.id
       } else {
-        // Insert
-        const { error } = await supabase
+        const { data: newUser, error } = await supabase
           .from('users')
           .insert([{
             ...dataToSave,
             created_at: new Date().toISOString()
           }])
+          .select()
+          .single()
 
         if (error) throw error
+        userId = newUser.id
       }
 
-      alert('Usuário salvo com sucesso!')
+      // Salvar credenciais se fornecidas
+      if (credentials && userId) {
+        const credentialsToSave = Object.fromEntries(
+          Object.entries(credentials).filter(([_, value]) => 
+            value !== undefined && value !== null && value !== ''
+          )
+        )
+
+        if (Object.keys(credentialsToSave).length > 0) {
+          const finalCredentials = {
+            ...defaultCredentials,
+            ...credentialsToSave,
+            user_id: userId,
+            updated_at: new Date().toISOString()
+          }
+
+          const { data: existingConfig } = await supabase
+            .from('configuracoes_credenciais')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle()
+
+          if (existingConfig) {
+            const { error: credError } = await supabase
+              .from('configuracoes_credenciais')
+              .update(finalCredentials)
+              .eq('user_id', userId)
+
+            if (credError) throw credError
+          } else {
+            const { error: credError } = await supabase
+              .from('configuracoes_credenciais')
+              .insert([{
+                ...finalCredentials,
+                created_at: new Date().toISOString()
+              }])
+
+            if (credError) throw credError
+          }
+        }
+      }
+
+      alert('Usuário e credenciais salvos com sucesso!')
       setEditingUser(null)
       loadUsers()
     } catch (error) {
@@ -313,6 +413,7 @@ export default function UsuariosPage() {
           user={editingUser}
           onSave={saveUser}
           onClose={() => setEditingUser(null)}
+          defaultConfig={defaultCredentials}
         />
       )}
     </div>
@@ -446,11 +547,13 @@ function UserToolsSection({
 function UserModal({ 
   user, 
   onSave, 
-  onClose 
+  onClose,
+  defaultConfig
 }: { 
   user: User
-  onSave: (data: UserFormData) => void
+  onSave: (data: UserFormData, credentials?: ConfigCredentials) => void
   onClose: () => void
+  defaultConfig: ConfigCredentials
 }) {
   const [formData, setFormData] = useState<UserFormData>({
     name: user.name || '',
@@ -464,9 +567,11 @@ function UserModal({
     active: user.active ?? true
   })
 
+  const [credentials, setCredentials] = useState<ConfigCredentials>({})
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    onSave(formData, credentials)
   }
 
   return (
@@ -610,6 +715,60 @@ function UserModal({
               />
               <span className="ml-2 text-sm font-medium text-gray-700">Usuário Ativo</span>
             </label>
+          </div>
+
+          {/* Seção de Credenciais Essenciais */}
+          <div className="border-t border-gray-200 pt-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <Settings className="h-5 w-5 mr-2 text-indigo-600" />
+              Credenciais (Opcional)
+            </h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Preencha apenas os campos necessários. Campos vazios usarão configuração padrão do sistema.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">OpenAI API Token</label>
+                <input
+                  type="password"
+                  value={credentials.openai_api_token || ''}
+                  onChange={(e) => setCredentials({...credentials, openai_api_token: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="sk-proj-..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API Key de Dados</label>
+                <input
+                  type="password"
+                  value={credentials.apikeydados || ''}
+                  onChange={(e) => setCredentials({...credentials, apikeydados: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="043d2754-..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Base URL</label>
+                <input
+                  type="url"
+                  value={credentials.baseurl || ''}
+                  onChange={(e) => setCredentials({...credentials, baseurl: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="https://wsapi.dnmarketing.com.br"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+                <input
+                  type="text"
+                  value={credentials.cliente || ''}
+                  onChange={(e) => setCredentials({...credentials, cliente: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Nome da empresa"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
