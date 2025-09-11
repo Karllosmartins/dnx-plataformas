@@ -174,3 +174,74 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
+
+// DELETE - Deletar vector store da OpenAI e do banco
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { userId, agentId, vectorStoreId } = body
+
+    if (!userId || !agentId || !vectorStoreId) {
+      return NextResponse.json({ 
+        error: 'userId, agentId e vectorStoreId são obrigatórios' 
+      }, { status: 400 })
+    }
+
+    // 1. Buscar token OpenAI do usuário
+    const { data: config, error: configError } = await supabase
+      .from('configuracoes_credenciais')
+      .select('openai_api_token')
+      .eq('user_id', parseInt(userId))
+      .maybeSingle()
+
+    if (configError) {
+      console.error('Erro ao buscar config:', configError)
+      return NextResponse.json({ 
+        error: `Erro ao buscar configuração: ${configError.message}` 
+      }, { status: 400 })
+    }
+
+    // 2. Deletar vector store da OpenAI (se token disponível)
+    if (config?.openai_api_token) {
+      try {
+        const openaiResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${config.openai_api_token}`,
+            'OpenAI-Beta': 'assistants=v2'
+          }
+        })
+
+        if (!openaiResponse.ok) {
+          console.warn('Erro ao deletar vector store da OpenAI, mas continuando com exclusão do banco')
+        }
+      } catch (openaiError) {
+        console.warn('Erro ao comunicar com OpenAI, mas continuando com exclusão do banco:', openaiError)
+      }
+    }
+
+    // 3. Deletar do banco de dados
+    const { error: deleteError } = await supabase
+      .from('user_agent_vectorstore')
+      .delete()
+      .eq('user_id', parseInt(userId))
+      .eq('agent_id', parseInt(agentId))
+      .eq('vectorstore_id', vectorStoreId)
+
+    if (deleteError) {
+      throw deleteError
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Vector Store deletado com sucesso'
+    })
+
+  } catch (error) {
+    console.error('Erro ao deletar vector store:', error)
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
+  }
+}

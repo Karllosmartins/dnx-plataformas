@@ -21,7 +21,7 @@ export default function AgentesIAPage() {
   const [editingAgent, setEditingAgent] = useState<AgenteIA | null>(null)
   const [tools, setTools] = useState<Tool[]>([])
   const [userTools, setUserTools] = useState<UserTool[]>([])
-  const [showTools, setShowTools] = useState(false)
+  const [showAgentTools, setShowAgentTools] = useState<{[key: number]: boolean}>({})
 
   useEffect(() => {
     if (currentUser) {
@@ -55,36 +55,15 @@ export default function AgentesIAPage() {
     if (!currentUser) return
 
     try {
-      // Buscar apenas as tools que o usuário tem acesso na tabela user_tools
+      // Buscar todas as tools disponíveis
       const { data, error } = await supabase
-        .from('user_tools')
-        .select(`
-          tool_id,
-          tools (
-            id,
-            type,
-            nome,
-            descricao,
-            created_at
-          )
-        `)
-        .eq('user_id', currentUser.id)
+        .from('tools')
+        .select('*')
+        .order('nome')
 
       if (error) throw error
       if (data) {
-        // Extrair as tools dos resultados do JOIN
-        const userTools: Tool[] = data
-          .map(userTool => userTool.tools)
-          .filter((tool): tool is any => tool !== null)
-          .map(tool => ({
-            id: tool.id,
-            type: tool.type,
-            nome: tool.nome,
-            descricao: tool.descricao,
-            tool: {}, // Campo JSON vazio pois não precisamos dele na UI
-            created_at: tool.created_at
-          }))
-        setTools(userTools)
+        setTools(data)
       }
     } catch (error) {
       console.error('Erro ao carregar tools:', error)
@@ -109,18 +88,37 @@ export default function AgentesIAPage() {
     }
   }
 
-  const toggleUserTool = async (toolId: number, currentState: boolean) => {
+  const toggleAgentTool = async (agentId: number, toolId: number, currentState: boolean) => {
     if (!currentUser) return
 
     try {
-      // Como a tool só aparece se o usuário tem acesso, apenas alterar is_active
-      const { error } = await supabase
-        .from('user_tools')
-        .update({ is_active: !currentState })
-        .eq('user_id', currentUser.id)
-        .eq('tool_id', toolId)
+      const existingUserTool = userTools.find(ut => 
+        ut.tool_id === toolId && 
+        ut.user_id === parseInt(currentUser.id) && 
+        ut.agente_id === agentId.toString()
+      )
 
-      if (error) throw error
+      if (existingUserTool) {
+        // Atualizar existente
+        const { error } = await supabase
+          .from('user_tools')
+          .update({ is_active: !currentState })
+          .eq('id', existingUserTool.id)
+
+        if (error) throw error
+      } else {
+        // Inserir novo
+        const { error } = await supabase
+          .from('user_tools')
+          .insert([{
+            user_id: parseInt(currentUser.id),
+            tool_id: toolId,
+            agente_id: agentId.toString(),
+            is_active: true
+          }])
+
+        if (error) throw error
+      }
 
       // Recarregar user_tools
       loadUserTools()
@@ -130,8 +128,12 @@ export default function AgentesIAPage() {
     }
   }
 
-  const isToolActive = (toolId: number): boolean => {
-    const userTool = userTools.find(ut => ut.tool_id === toolId)
+  const isAgentToolActive = (agentId: number, toolId: number): boolean => {
+    const userTool = userTools.find(ut => 
+      ut.tool_id === toolId && 
+      ut.user_id === parseInt(currentUser?.id || '0') && 
+      ut.agente_id === agentId.toString()
+    )
     return userTool?.is_active === true
   }
 
@@ -167,9 +169,35 @@ export default function AgentesIAPage() {
   }
 
   const deleteAgent = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este agente?')) return
+    if (!confirm('Tem certeza que deseja excluir este agente? Isso também removerá o Vector Store associado.')) return
 
     try {
+      // 1. Primeiro, deletar o vector store associado (se existir)
+      try {
+        const vectorStoreResponse = await fetch(`/api/vectorstores?userId=${currentUser?.id}&agentId=${id}`)
+        const vectorStoreData = await vectorStoreResponse.json()
+        
+        if (vectorStoreData.hasVectorStore && vectorStoreData.vectorStore) {
+          // Deletar vector store da OpenAI e do banco
+          const deleteResponse = await fetch('/api/vectorstores', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser?.id,
+              agentId: id,
+              vectorStoreId: vectorStoreData.vectorStore.vectorstore_id
+            })
+          })
+          
+          if (!deleteResponse.ok) {
+            console.warn('Erro ao deletar vector store, mas continuando com exclusão do agente')
+          }
+        }
+      } catch (vectorStoreError) {
+        console.warn('Erro ao processar vector store, mas continuando com exclusão do agente:', vectorStoreError)
+      }
+
+      // 2. Deletar o agente
       const { error } = await supabase
         .from('agentes_ia')
         .delete()
@@ -177,7 +205,7 @@ export default function AgentesIAPage() {
 
       if (error) throw error
 
-      alert('Agente excluído com sucesso!')
+      alert('Agente e recursos associados excluídos com sucesso!')
       loadAgentes()
     } catch (error) {
       console.error('Erro ao excluir agente:', error)
@@ -270,6 +298,57 @@ export default function AgentesIAPage() {
 
                       {/* Vector Store Manager */}
                       <VectorStoreManager agentId={agente.id} />
+                      
+                      {/* Ferramentas do Agente */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Wrench className="h-5 w-5 text-blue-600" />
+                            <h5 className="text-sm font-medium text-gray-900">Ferramentas do Agente</h5>
+                          </div>
+                          <button
+                            onClick={() => setShowAgentTools({
+                              ...showAgentTools, 
+                              [agente.id]: !showAgentTools[agente.id]
+                            })}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            {showAgentTools[agente.id] ? 'Ocultar' : 'Mostrar'}
+                          </button>
+                        </div>
+
+                        {showAgentTools[agente.id] && (
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                            {tools.map((tool) => {
+                              const isActive = isAgentToolActive(agente.id, tool.id)
+                              return (
+                                <div key={tool.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                  <div className="min-w-0 flex-1">
+                                    <h6 className="text-xs font-medium text-gray-900 truncate">{tool.nome}</h6>
+                                    <p className="text-xs text-gray-500 truncate">{tool.type}</p>
+                                  </div>
+                                  
+                                  <label className="flex items-center cursor-pointer ml-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={isActive}
+                                      onChange={() => toggleAgentTool(agente.id, tool.id, isActive)}
+                                      className="sr-only"
+                                    />
+                                    <div className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                      isActive ? 'bg-green-600' : 'bg-gray-300'
+                                    }`}>
+                                      <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
+                                        isActive ? 'translate-x-4' : 'translate-x-1'
+                                      }`} />
+                                    </div>
+                                  </label>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 justify-end sm:justify-start">
@@ -321,81 +400,6 @@ export default function AgentesIAPage() {
         </div>
       </div>
 
-      {/* Seção de Tools */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <div className="flex items-center">
-            <Wrench className="h-6 w-6 mr-3 text-blue-600" />
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Ferramentas dos Agentes</h3>
-              <p className="text-sm text-gray-500">Ative ou desative ferramentas disponíveis para seus agentes</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowTools(!showTools)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            {showTools ? 'Ocultar Tools' : 'Mostrar Tools'}
-          </button>
-        </div>
-
-        {showTools && (
-          <div className="p-6">
-            {tools.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tools.map((tool) => {
-                  const isActive = isToolActive(tool.id)
-                  return (
-                    <div key={tool.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="p-1.5 bg-blue-100 rounded">
-                              <Wrench className="h-4 w-4 text-blue-600" />
-                            </div>
-                            <h4 className="text-sm font-semibold text-gray-900">{tool.nome}</h4>
-                          </div>
-                          
-                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                            {tool.descricao || 'Sem descrição disponível'}
-                          </p>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {tool.type}
-                            </span>
-                            
-                            <label className="flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={isActive}
-                                onChange={() => toggleUserTool(tool.id, isActive)}
-                                className="sr-only"
-                              />
-                              <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                isActive ? 'bg-blue-600' : 'bg-gray-300'
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                  isActive ? 'translate-x-5' : 'translate-x-1'
-                                }`} />
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-500">Nenhuma ferramenta disponível</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Modal de Edição de Agente */}
       {editingAgent && (
