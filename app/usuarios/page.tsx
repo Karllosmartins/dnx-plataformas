@@ -26,41 +26,62 @@ interface UserFormData {
   limite_consultas: number
   numero_instancias: number
   active: boolean
+  cpf?: string
+  telefone?: string
 }
 
 interface ConfigCredentials {
+  // APIs de IA
   openai_api_token?: string
   gemini_api_key?: string
   model?: string
   type_tool_supabase?: string
   reasoning_effort?: string
+  apikeydados?: string
+  
+  // ElevenLabs
   apikey_elevenlabs?: string
   id_voz_elevenlabs?: string
+  
+  // FireCrawl
   firecrawl_apikey?: string
+  
+  // WhatsApp Evolution API
   baseurl?: string
   instancia?: string
   apikey?: string
+  
+  // Supabase Databases
   base_tools_supabase?: string
   base_leads_supabase?: string
   base_mensagens_supabase?: string
   base_agentes_supabase?: string
   base_rag_supabase?: string
   base_ads_supabase?: string
+  
+  // Configurações do Agente
   prompt_do_agente?: string
   vector_store_ids?: string
   structured_output?: string
+  
+  // Configurações Operacionais
   delay_entre_mensagens_em_segundos?: number
   delay_apos_intervencao_humana_minutos?: number
   inicio_expediente?: number
   fim_expediente?: number
+  
+  // CRM Integration
   url_crm?: string
   usuario_crm?: string
   senha_crm?: string
   token_crm?: string
+  
+  // Drive Integration
   pasta_drive?: string
   id_pasta_drive_rag?: string
+  
+  // Cliente
   cliente?: string
-  apikeydados?: string
 }
 
 export default function UsuariosPage() {
@@ -276,6 +297,8 @@ export default function UsuariosPage() {
               limite_leads: 100,
               limite_consultas: 50,
               numero_instancias: 1,
+              cpf: '',
+              telefone: '',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             } as User)}
@@ -564,7 +587,9 @@ function UserModal({
     limite_leads: user.limite_leads || 100,
     limite_consultas: user.limite_consultas || 50,
     numero_instancias: user.numero_instancias || 1,
-    active: user.active ?? true
+    active: user.active ?? true,
+    cpf: user.cpf || '',
+    telefone: user.telefone || ''
   })
 
   const [credentials, setCredentials] = useState<ConfigCredentials>({})
@@ -614,6 +639,36 @@ function UserModal({
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="joao@exemplo.com"
                 required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CPF
+              </label>
+              <input
+                type="text"
+                value={formData.cpf}
+                onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Telefone
+              </label>
+              <input
+                type="tel"
+                value={formData.telefone}
+                onChange={(e) => setFormData({...formData, telefone: e.target.value})}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="(11) 99999-9999"
+                maxLength={20}
               />
             </div>
           </div>
@@ -717,56 +772,420 @@ function UserModal({
             </label>
           </div>
 
-          {/* Seção de Credenciais Essenciais */}
+          {/* Seção de Credenciais Completa */}
           <div className="border-t border-gray-200 pt-6">
             <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
               <Settings className="h-5 w-5 mr-2 text-indigo-600" />
-              Credenciais (Opcional)
+              Configurações e Credenciais (Opcional)
             </h4>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-6">
               Preencha apenas os campos necessários. Campos vazios usarão configuração padrão do sistema.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">OpenAI API Token</label>
-                <input
-                  type="password"
-                  value={credentials.openai_api_token || ''}
-                  onChange={(e) => setCredentials({...credentials, openai_api_token: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="sk-proj-..."
-                />
+            {/* Seção: APIs de IA */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🤖 APIs de IA</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">OpenAI API Token</label>
+                  <input
+                    type="password"
+                    value={credentials.openai_api_token || ''}
+                    onChange={(e) => setCredentials({...credentials, openai_api_token: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="sk-proj-..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={credentials.gemini_api_key || ''}
+                    onChange={(e) => setCredentials({...credentials, gemini_api_key: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="AI..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Modelo IA</label>
+                  <select
+                    value={credentials.model || ''}
+                    onChange={(e) => setCredentials({...credentials, model: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4">GPT-4</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="gemini-pro">Gemini Pro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Tool Supabase</label>
+                  <select
+                    value={credentials.type_tool_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, type_tool_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="OpenAi">OpenAI</option>
+                    <option value="Gemini">Gemini</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reasoning Effort</label>
+                  <select
+                    value={credentials.reasoning_effort || ''}
+                    onChange={(e) => setCredentials({...credentials, reasoning_effort: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="low">Baixo</option>
+                    <option value="medium">Médio</option>
+                    <option value="high">Alto</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">API Key de Dados (Profile)</label>
+                  <input
+                    type="password"
+                    value={credentials.apikeydados || ''}
+                    onChange={(e) => setCredentials({...credentials, apikeydados: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="043d2754-..."
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">API Key de Dados</label>
-                <input
-                  type="password"
-                  value={credentials.apikeydados || ''}
-                  onChange={(e) => setCredentials({...credentials, apikeydados: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="043d2754-..."
-                />
+            </div>
+
+            {/* Seção: ElevenLabs */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🎙️ ElevenLabs (Síntese de Voz)</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">API Key ElevenLabs</label>
+                  <input
+                    type="password"
+                    value={credentials.apikey_elevenlabs || ''}
+                    onChange={(e) => setCredentials({...credentials, apikey_elevenlabs: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="sk_..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ID da Voz ElevenLabs</label>
+                  <input
+                    type="text"
+                    value={credentials.id_voz_elevenlabs || ''}
+                    onChange={(e) => setCredentials({...credentials, id_voz_elevenlabs: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="21m00Tcm4TlvDq8ikWAM"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Base URL</label>
-                <input
-                  type="url"
-                  value={credentials.baseurl || ''}
-                  onChange={(e) => setCredentials({...credentials, baseurl: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="https://wsapi.dnmarketing.com.br"
-                />
+            </div>
+
+            {/* Seção: FireCrawl */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🔥 FireCrawl (Web Scraping)</h5>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">FireCrawl API Key</label>
+                  <input
+                    type="password"
+                    value={credentials.firecrawl_apikey || ''}
+                    onChange={(e) => setCredentials({...credentials, firecrawl_apikey: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="fc-..."
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-                <input
-                  type="text"
-                  value={credentials.cliente || ''}
-                  onChange={(e) => setCredentials({...credentials, cliente: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Nome da empresa"
-                />
+            </div>
+
+            {/* Seção: WhatsApp */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">📱 WhatsApp Evolution API</h5>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                  <input
+                    type="url"
+                    value={credentials.baseurl || ''}
+                    onChange={(e) => setCredentials({...credentials, baseurl: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="https://wsapi.dnmarketing.com.br"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Instância</label>
+                  <input
+                    type="text"
+                    value={credentials.instancia || ''}
+                    onChange={(e) => setCredentials({...credentials, instancia: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="minha-instancia"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">API Key da Instância</label>
+                  <input
+                    type="password"
+                    value={credentials.apikey || ''}
+                    onChange={(e) => setCredentials({...credentials, apikey: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="B6D711FCDE4D4FD5936544120E713976"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Supabase Databases */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🗄️ Bases de Dados Supabase</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Tools</label>
+                  <input
+                    type="text"
+                    value={credentials.base_tools_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_tools_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base Tools"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Leads</label>
+                  <input
+                    type="text"
+                    value={credentials.base_leads_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_leads_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base Leads"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Mensagens</label>
+                  <input
+                    type="text"
+                    value={credentials.base_mensagens_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_mensagens_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base Mensagens"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Agentes</label>
+                  <input
+                    type="text"
+                    value={credentials.base_agentes_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_agentes_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base Agentes"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base RAG</label>
+                  <input
+                    type="text"
+                    value={credentials.base_rag_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_rag_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base RAG"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Ads</label>
+                  <input
+                    type="text"
+                    value={credentials.base_ads_supabase || ''}
+                    onChange={(e) => setCredentials({...credentials, base_ads_supabase: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="URL da base Ads"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Configurações do Agente */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🤖 Configurações do Agente</h5>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Prompt do Agente</label>
+                  <textarea
+                    value={credentials.prompt_do_agente || ''}
+                    onChange={(e) => setCredentials({...credentials, prompt_do_agente: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    rows={4}
+                    placeholder="Você é um assistente especializado em..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vector Store IDs</label>
+                    <input
+                      type="text"
+                      value={credentials.vector_store_ids || ''}
+                      onChange={(e) => setCredentials({...credentials, vector_store_ids: e.target.value})}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder='["vs_abc123", "vs_def456"]'
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Structured Output</label>
+                    <input
+                      type="text"
+                      value={credentials.structured_output || ''}
+                      onChange={(e) => setCredentials({...credentials, structured_output: e.target.value})}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder='{"tipo": "object", "properties": {...}}'
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Configurações Operacionais */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">⚙️ Configurações Operacionais</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delay Entre Mensagens (seg)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={credentials.delay_entre_mensagens_em_segundos || ''}
+                    onChange={(e) => setCredentials({...credentials, delay_entre_mensagens_em_segundos: parseInt(e.target.value) || undefined})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delay Após Intervenção (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={credentials.delay_apos_intervencao_humana_minutos || ''}
+                    onChange={(e) => setCredentials({...credentials, delay_apos_intervencao_humana_minutos: parseInt(e.target.value) || undefined})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Início Expediente (h)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={credentials.inicio_expediente || ''}
+                    onChange={(e) => setCredentials({...credentials, inicio_expediente: parseInt(e.target.value) || undefined})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="8"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fim Expediente (h)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={credentials.fim_expediente || ''}
+                    onChange={(e) => setCredentials({...credentials, fim_expediente: parseInt(e.target.value) || undefined})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="18"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: CRM Integration */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🔗 Integração CRM</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">URL do CRM</label>
+                  <input
+                    type="url"
+                    value={credentials.url_crm || ''}
+                    onChange={(e) => setCredentials({...credentials, url_crm: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="https://crm.exemplo.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuário CRM</label>
+                  <input
+                    type="text"
+                    value={credentials.usuario_crm || ''}
+                    onChange={(e) => setCredentials({...credentials, usuario_crm: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="usuario@crm.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha CRM</label>
+                  <input
+                    type="password"
+                    value={credentials.senha_crm || ''}
+                    onChange={(e) => setCredentials({...credentials, senha_crm: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Token CRM</label>
+                  <input
+                    type="password"
+                    value={credentials.token_crm || ''}
+                    onChange={(e) => setCredentials({...credentials, token_crm: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="token_api_crm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Drive Integration */}
+            <div className="mb-8">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">📁 Integração Google Drive</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pasta Drive</label>
+                  <input
+                    type="text"
+                    value={credentials.pasta_drive || ''}
+                    onChange={(e) => setCredentials({...credentials, pasta_drive: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ID Pasta Drive RAG</label>
+                  <input
+                    type="text"
+                    value={credentials.id_pasta_drive_rag || ''}
+                    onChange={(e) => setCredentials({...credentials, id_pasta_drive_rag: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Cliente */}
+            <div className="mb-6">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🏢 Informações do Cliente</h5>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente/Empresa</label>
+                  <input
+                    type="text"
+                    value={credentials.cliente || ''}
+                    onChange={(e) => setCredentials({...credentials, cliente: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Nome da empresa"
+                  />
+                </div>
               </div>
             </div>
           </div>
