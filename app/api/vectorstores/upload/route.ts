@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       .from('configuracoes_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
-      .single()
+      .maybeSingle()
 
     if (configError || !config?.openai_api_token) {
       return NextResponse.json({ 

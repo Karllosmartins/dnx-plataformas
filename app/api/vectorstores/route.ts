@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .from('configuracoes_credenciais')
       .select('openai_api_token')
       .eq('user_id', parseInt(userId))
-      .single()
+      .maybeSingle()
 
     if (configError) {
       console.error('Erro ao buscar config:', configError)
@@ -91,17 +91,20 @@ export async function POST(request: NextRequest) {
 
     const vectorStoreData = await openaiResponse.json()
 
-    // 3. Salvar no banco
+    // 3. Salvar no banco usando upsert para evitar conflito de constraint unique
     const { data: savedData, error: saveError } = await supabase
       .from('user_agent_vectorstore')
-      .insert([{
+      .upsert({
         user_id: parseInt(userId),
         agent_id: parseInt(agentId),
         vectorstore_id: vectorStoreData.id,
-        is_active: true
-      }])
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,agent_id,vectorstore_id'
+      })
       .select()
-      .single()
+      .maybeSingle()
 
     if (saveError) {
       // Se falhou ao salvar, tentar deletar o vector store da OpenAI
