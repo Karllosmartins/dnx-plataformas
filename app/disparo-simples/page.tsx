@@ -214,6 +214,7 @@ export default function DisparoSimplesPage() {
             formData.append('campanha', nomeCampanha)
             formData.append('usuario_id', user?.id || '')
             formData.append('tipo', 'disparo_simples_imagem')
+            formData.append('tipo_disparo', 'imagem')
             formData.append('image', selectedImage)
 
             const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
@@ -233,7 +234,8 @@ export default function DisparoSimplesPage() {
                 mensagem: mensagemPersonalizada,
                 campanha: nomeCampanha,
                 usuario_id: user?.id,
-                tipo: 'disparo_simples'
+                tipo: 'disparo_simples',
+                tipo_disparo: 'texto'
               })
             })
           }

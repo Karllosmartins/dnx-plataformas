@@ -272,9 +272,12 @@ export default function DisparoIAPage() {
         formData.append('agente_id', agenteSelected || '')
         formData.append('instancia', selectedInstance)
         
-        // Adicionar imagem se selecionada
+        // Adicionar imagem e tipo de disparo
         if (selectedImage) {
           formData.append('image', selectedImage)
+          formData.append('tipo_disparo', 'imagem')
+        } else {
+          formData.append('tipo_disparo', 'texto')
         }
 
         const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e9dr1', {
