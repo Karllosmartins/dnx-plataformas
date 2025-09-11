@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase } from '../../lib/supabase'
-import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle } from 'lucide-react'
+import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -36,6 +36,10 @@ export default function DisparoSimplesPage() {
   const [csvContacts, setCsvContacts] = useState<CsvContact[]>([])
   const [sending, setSending] = useState(false)
   const [sendingProgress, setSendingProgress] = useState(0)
+  
+  // Estados para imagens
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -131,6 +135,37 @@ export default function DisparoSimplesPage() {
     reader.readAsText(file)
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Verificar se é uma imagem
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, etc.)')
+      return
+    }
+
+    // Verificar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB')
+      return
+    }
+
+    setSelectedImage(file)
+
+    // Criar preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+  }
+
   const processMessage = (message: string, nome: string) => {
     return message.replace(/{nome}/g, nome)
   }
@@ -170,21 +205,38 @@ export default function DisparoSimplesPage() {
         const mensagemPersonalizada = processMessage(mensagem, contato.nome)
         
         try {
-          // Fazer POST para o webhook
-          const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              telefone: contato.telefone,
-              nome: contato.nome,
-              mensagem: mensagemPersonalizada,
-              campanha: nomeCampanha,
-              usuario_id: user?.id,
-              tipo: 'disparo_simples'
+          // Se há imagem selecionada, enviar com FormData
+          if (selectedImage) {
+            const formData = new FormData()
+            formData.append('telefone', contato.telefone)
+            formData.append('nome', contato.nome)
+            formData.append('mensagem', mensagemPersonalizada)
+            formData.append('campanha', nomeCampanha)
+            formData.append('usuario_id', user?.id || '')
+            formData.append('tipo', 'disparo_simples_imagem')
+            formData.append('image', selectedImage)
+
+            const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
+              method: 'POST',
+              body: formData
             })
-          })
+          } else {
+            // Enviar apenas texto como antes
+            const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                telefone: contato.telefone,
+                nome: contato.nome,
+                mensagem: mensagemPersonalizada,
+                campanha: nomeCampanha,
+                usuario_id: user?.id,
+                tipo: 'disparo_simples'
+              })
+            })
+          }
 
           console.log(`Enviado para ${contato.nome} (${contato.telefone}):`, mensagemPersonalizada)
 
@@ -206,6 +258,8 @@ export default function DisparoSimplesPage() {
       setMensagem('')
       setCsvFile(null)
       setCsvContacts([])
+      setSelectedImage(null)
+      setImagePreview(null)
       
       // Recarregar campanhas
       fetchCampaigns()
@@ -264,6 +318,56 @@ export default function DisparoSimplesPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
                 </p>
+              </div>
+
+              {/* Seção de Upload de Imagem */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Image className="inline h-4 w-4 mr-1" />
+                  Imagem (Opcional)
+                </label>
+                
+                {!imagePreview ? (
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
+                    <div className="space-y-1 text-center">
+                      <Image className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="flex text-sm text-gray-600">
+                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                          <span>Selecionar imagem</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="sr-only"
+                            disabled={sending}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF até 5MB</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="mt-1 border-2 border-gray-300 rounded-md p-2">
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="max-h-40 mx-auto rounded-md object-contain"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      disabled={sending}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="mt-2 text-sm text-gray-600 text-center">
+                      ✓ {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

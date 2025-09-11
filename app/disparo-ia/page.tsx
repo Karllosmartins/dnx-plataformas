@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase, AgenteIA } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
-import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle } from 'lucide-react'
+import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -45,6 +45,10 @@ export default function DisparoIAPage() {
   const [csvContacts, setCsvContacts] = useState<CsvContact[]>([])
   const [sending, setSending] = useState(false)
   const [sendingProgress, setSendingProgress] = useState(0)
+  
+  // Estados para imagens
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -175,6 +179,37 @@ export default function DisparoIAPage() {
     reader.readAsText(file)
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Verificar se é uma imagem
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, etc.)')
+      return
+    }
+
+    // Verificar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB')
+      return
+    }
+
+    setSelectedImage(file)
+
+    // Criar preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+  }
+
   const generateAIMessage = async (baseMessage: string, contexto: string, nome: string) => {
     // Simulação de geração de mensagem por IA
     const variations = [
@@ -236,6 +271,11 @@ export default function DisparoIAPage() {
         formData.append('mensagem', mensagem)
         formData.append('agente_id', agenteSelected || '')
         formData.append('instancia', selectedInstance)
+        
+        // Adicionar imagem se selecionada
+        if (selectedImage) {
+          formData.append('image', selectedImage)
+        }
 
         const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e9dr1', {
           method: 'POST',
@@ -264,6 +304,8 @@ export default function DisparoIAPage() {
       setSelectedInstance('')
       setCsvFile(null)
       setCsvContacts([])
+      setSelectedImage(null)
+      setImagePreview(null)
       
       // Recarregar campanhas
       fetchCampaigns()
@@ -375,6 +417,56 @@ export default function DisparoIAPage() {
                   <Bot className="h-3 w-3 inline mr-1" />
                   Selecione um agente para usar suas configurações específicas
                 </p>
+              </div>
+
+              {/* Seção de Upload de Imagem */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Image className="inline h-4 w-4 mr-1" />
+                  Imagem (Opcional)
+                </label>
+                
+                {!imagePreview ? (
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
+                    <div className="space-y-1 text-center">
+                      <Image className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="flex text-sm text-gray-600">
+                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
+                          <span>Selecionar imagem</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="sr-only"
+                            disabled={isDisabled}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF até 5MB</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="mt-1 border-2 border-gray-300 rounded-md p-2">
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="max-h-40 mx-auto rounded-md object-contain"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      disabled={isDisabled}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="mt-2 text-sm text-gray-600 text-center">
+                      ✓ {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
