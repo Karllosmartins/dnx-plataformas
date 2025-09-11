@@ -92,46 +92,42 @@ export default function AgentesIAPage() {
     if (!currentUser) return
 
     try {
-      // Primeiro, verificar se existe um registro para este agente específico
-      const existingForAgent = userTools.find(ut => 
-        ut.tool_id === toolId && 
-        ut.user_id === parseInt(currentUser.id) && 
-        ut.agente_id === agentId.toString()
-      )
-
-      // Verificar se existe algum registro para esta combinação user_id + tool_id
-      const existingForUser = userTools.find(ut => 
+      // Com a nova estrutura, existe apenas UM registro por (user_id, tool_id)
+      // O agente_id é atualizado conforme necessário
+      const existingUserTool = userTools.find(ut => 
         ut.tool_id === toolId && 
         ut.user_id === parseInt(currentUser.id)
       )
 
-      if (existingForAgent) {
-        // Atualizar o registro específico do agente
-        const { error } = await supabase
-          .from('user_tools')
-          .update({ is_active: !currentState })
-          .eq('id', existingForAgent.id)
+      if (existingUserTool) {
+        // Se o registro é do mesmo agente, alternar o status
+        if (existingUserTool.agente_id === agentId) {
+          const { error } = await supabase
+            .from('user_tools')
+            .update({ is_active: !currentState })
+            .eq('id', existingUserTool.id)
 
-        if (error) throw error
-      } else if (existingForUser) {
-        // Atualizar o registro existente para incluir o novo agente
-        const { error } = await supabase
-          .from('user_tools')
-          .update({ 
-            agente_id: agentId.toString(),
-            is_active: true
-          })
-          .eq('id', existingForUser.id)
+          if (error) throw error
+        } else {
+          // Se é de outro agente, transferir para este agente e ativar
+          const { error } = await supabase
+            .from('user_tools')
+            .update({ 
+              agente_id: agentId,
+              is_active: true
+            })
+            .eq('id', existingUserTool.id)
 
-        if (error) throw error
+          if (error) throw error
+        }
       } else {
-        // Inserir novo registro
+        // Criar novo registro para este usuário e ferramenta
         const { error } = await supabase
           .from('user_tools')
           .insert([{
             user_id: parseInt(currentUser.id),
             tool_id: toolId,
-            agente_id: agentId.toString(),
+            agente_id: agentId,
             is_active: true
           }])
 
@@ -149,10 +145,13 @@ export default function AgentesIAPage() {
   const isAgentToolActive = (agentId: number, toolId: number): boolean => {
     const userTool = userTools.find(ut => 
       ut.tool_id === toolId && 
-      ut.user_id === parseInt(currentUser?.id || '0') && 
-      ut.agente_id === agentId.toString()
+      ut.user_id === parseInt(currentUser?.id || '0')
     )
-    return userTool?.is_active === true
+    // A ferramenta está ativa para este agente se:
+    // 1. Existe um registro para esta ferramenta
+    // 2. O registro está ativo (is_active = true)
+    // 3. O agente_id corresponde ao agente atual
+    return userTool?.is_active === true && userTool?.agente_id === agentId
   }
 
   const saveAgent = async (agentData: Partial<AgenteIA>) => {

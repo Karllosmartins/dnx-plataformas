@@ -148,7 +148,7 @@ export interface UserTool {
   id: number
   user_id: number
   tool_id: number
-  agente_id?: string
+  agente_id?: number // Mudou para number (bigint no banco)
   is_active: boolean
   created_at: string
 }
