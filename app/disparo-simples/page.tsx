@@ -180,24 +180,59 @@ export default function DisparoSimplesPage() {
     setSendingProgress(0)
 
     try {
-      // Inserir leads na tabela primeiro
-      const leadsToInsert = csvContacts.map(contato => ({
-        user_id: user?.id,
-        nome_cliente: contato.nome,
-        telefone: contato.telefone,
-        numero_formatado: contato.telefone.replace(/\D/g, ''),
-        origem: 'Disparo Simples',
-        nome_campanha: nomeCampanha,
-        status_limpa_nome: 'novo_lead',
-        observacoes_limpa_nome: `Campanha: ${nomeCampanha}`,
-        created_at: new Date().toISOString()
-      }))
+      // Inserir/Atualizar leads (verificar se existe para o mesmo usuário)
+      for (const contato of csvContacts) {
+        try {
+          // Verificar se lead já existe para este usuário e telefone
+          const { data: existingLead, error: searchError } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('user_id', user?.id)
+            .eq('telefone', contato.telefone)
+            .maybeSingle()
 
-      const { error: insertError } = await supabase
-        .from('leads')
-        .insert(leadsToInsert)
+          if (searchError) {
+            console.error('Erro ao buscar lead existente:', searchError)
+            continue
+          }
 
-      if (insertError) throw insertError
+          const leadData = {
+            user_id: user?.id,
+            nome_cliente: contato.nome,
+            telefone: contato.telefone,
+            numero_formatado: contato.telefone.replace(/\D/g, ''),
+            origem: 'Disparo Simples',
+            nome_campanha: nomeCampanha,
+            status_limpa_nome: 'novo_lead',
+            observacoes_limpa_nome: `Campanha: ${nomeCampanha}`,
+            updated_at: new Date().toISOString()
+          }
+
+          if (existingLead) {
+            // Atualizar lead existente
+            const { error: updateError } = await supabase
+              .from('leads')
+              .update(leadData)
+              .eq('id', existingLead.id)
+
+            if (updateError) {
+              console.error('Erro ao atualizar lead:', updateError)
+            }
+          } else {
+            // Inserir novo lead
+            const { error: insertError } = await supabase
+              .from('leads')
+              .insert([{ ...leadData, created_at: new Date().toISOString() }])
+
+            if (insertError) {
+              console.error('Erro ao inserir lead:', insertError)
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao processar lead:', error)
+          // Continuar com os outros contatos mesmo se um falhar
+        }
+      }
 
       // Enviar mensagens
       for (let i = 0; i < csvContacts.length; i++) {
