@@ -171,10 +171,25 @@ export default function AgentesIAPage() {
   }
 
   const deleteAgent = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este agente? Isso também removerá o Vector Store associado.')) return
+    if (!confirm('Tem certeza que deseja excluir este agente? Isso também removerá o Vector Store e ferramentas associadas.')) return
 
     try {
-      // 1. Primeiro, deletar o vector store associado (se existir)
+      // 1. Deletar ferramentas do agente (user_tools)
+      try {
+        const { error: toolsError } = await supabase
+          .from('user_tools')
+          .delete()
+          .eq('agente_id', id)
+          .eq('user_id', parseInt(currentUser?.id || '0'))
+
+        if (toolsError) {
+          console.warn('Erro ao deletar ferramentas do agente:', toolsError)
+        }
+      } catch (toolsError) {
+        console.warn('Erro ao processar ferramentas, mas continuando:', toolsError)
+      }
+
+      // 2. Deletar o vector store associado (se existir)
       try {
         const vectorStoreResponse = await fetch(`/api/vectorstores?userId=${currentUser?.id}&agentId=${id}`)
         const vectorStoreData = await vectorStoreResponse.json()
@@ -199,7 +214,7 @@ export default function AgentesIAPage() {
         console.warn('Erro ao processar vector store, mas continuando com exclusão do agente:', vectorStoreError)
       }
 
-      // 2. Deletar o agente
+      // 3. Deletar o agente
       const { error } = await supabase
         .from('agentes_ia')
         .delete()
@@ -207,8 +222,9 @@ export default function AgentesIAPage() {
 
       if (error) throw error
 
-      alert('Agente e recursos associados excluídos com sucesso!')
+      alert('Agente e todos os recursos associados excluídos com sucesso!')
       loadAgentes()
+      loadUserTools() // Recarregar ferramentas para atualizar UI
     } catch (error) {
       console.error('Erro ao excluir agente:', error)
       alert('Erro ao excluir agente')
