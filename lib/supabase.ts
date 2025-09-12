@@ -282,6 +282,11 @@ export interface Lead {
   // Controle
   data_ultima_atividade?: string
   updated_at?: string
+  
+  // Campos do sistema multi-negócios
+  tipo_negocio_id?: number
+  status_generico?: string
+  dados_personalizados?: Record<string, any>
 }
 
 // Interfaces para contagens da API Profile

@@ -116,18 +116,45 @@ export default function HomePage() {
 
   const calculateMetrics = (leadsData: Lead[]) => {
     // Debug: ver todos os status existentes
-    const allStatus = [...new Set(leadsData.map(l => l.status_limpa_nome))]
+    const allStatus = [...new Set(leadsData.map(l => l.status_generico || l.status_limpa_nome))]
     console.log('Status encontrados no banco:', allStatus)
     
     const totalLeads = leadsData.length
-    const novosLeads = leadsData.filter(l => l.status_limpa_nome === 'novo_lead').length
-    const qualificados = leadsData.filter(l => l.status_limpa_nome === 'qualificacao').length
-    const pagamentosRealizados = leadsData.filter(l => l.status_limpa_nome === 'pagamento_consulta').length
-    const dividasEncontradas = leadsData.filter(l => l.status_limpa_nome === 'consta_divida').length
-    const clientesFechados = leadsData.filter(l => l.status_limpa_nome === 'cliente_fechado').length
-    const leadsPerdidos = leadsData.filter(l => 
-      l.status_limpa_nome === 'desqualificado'
-    ).length
+    
+    // Usar status_generico (novo sistema) ou status_limpa_nome (fallback)
+    const getStatus = (lead: Lead) => lead.status_generico || lead.status_limpa_nome || 'novo_lead'
+    
+    // Métricas genéricas baseadas em padrões comuns
+    const novosLeads = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('novo') || status === 'novo_lead' || status === 'novo_caso' || status === 'novo_contato'
+    }).length
+    
+    const qualificados = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('qualific') || status.includes('analise') || status.includes('mapeando')
+    }).length
+    
+    const emAndamento = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('pagamento') || status.includes('contrato') || status.includes('processo') || 
+             status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
+    }).length
+    
+    const dividasEncontradas = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('divida') || status.includes('consta') || status.includes('viavel')
+    }).length
+    
+    const clientesFechados = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('fechado') || status.includes('finalizado') || status.includes('convertido') || status.includes('deal_fechado')
+    }).length
+    
+    const leadsPerdidos = leadsData.filter(l => {
+      const status = getStatus(l)
+      return status.includes('desqualific') || status.includes('inviavel') || status.includes('perdido')
+    }).length
     
     const valorTotalConsultas = leadsData.reduce((sum, lead) => {
       return sum + (lead.valor_pago_consulta || 0)
@@ -143,7 +170,7 @@ export default function HomePage() {
       totalLeads,
       novosLeads,
       qualificados,
-      pagamentosRealizados,
+      pagamentosRealizados: emAndamento, // Renomeado para ser mais genérico
       dividasEncontradas,
       clientesFechados,
       leadsPerdidos,
@@ -171,7 +198,7 @@ export default function HomePage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">DNX Plataformas</h1>
         <p className="text-gray-600 mt-2">
-          Dashboard de recuperação de crédito - Bem-vindo, {user?.name}
+          Dashboard CRM Multi-Negócios - Bem-vindo, {user?.name}
         </p>
       </div>
 
@@ -238,9 +265,9 @@ export default function HomePage() {
         />
         
         <MetricCard
-          title="Consultas Pagas"
+          title="Receita Total"
           value={formatCurrency(metrics.valorTotalConsultas)}
-          description={`${metrics.pagamentosRealizados} pagamentos`}
+          description={`${metrics.pagamentosRealizados} em andamento`}
           icon={DollarSign}
         />
         
@@ -285,7 +312,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.pagamentosRealizados}</div>
-                <div className="text-xs text-gray-500">Pagou Consulta</div>
+                <div className="text-xs text-gray-500">Em Andamento</div>
               </div>
             </div>
 
@@ -295,7 +322,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.dividasEncontradas}</div>
-                <div className="text-xs text-gray-500">Dívidas Encontradas</div>
+                <div className="text-xs text-gray-500">Casos Viáveis</div>
               </div>
             </div>
 
@@ -305,7 +332,10 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">
-                  {leads.filter(l => l.status_limpa_nome === 'enviado_para_negociacao').length}
+                  {leads.filter(l => {
+                    const status = l.status_generico || l.status_limpa_nome || ''
+                    return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
+                  }).length}
                 </div>
                 <div className="text-xs text-gray-500">Em Negociação</div>
               </div>
@@ -353,16 +383,17 @@ export default function HomePage() {
                         {lead.origem} • {lead.telefone}
                       </div>
                     </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      lead.status_limpa_nome === 'cliente_fechado' 
-                        ? 'bg-green-100 text-green-800'
-                        : lead.status_limpa_nome === 'consta_divida'
-                        ? 'bg-orange-100 text-orange-800'
-                        : lead.status_limpa_nome === 'qualificacao'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {lead.status_limpa_nome?.replace('_', ' ') || 'novo lead'}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(() => {
+                      const status = lead.status_generico || lead.status_limpa_nome || 'novo'
+                      if (status.includes('fechado') || status.includes('finalizado') || status.includes('convertido')) 
+                        return 'bg-green-100 text-green-800'
+                      if (status.includes('divida') || status.includes('viavel') || status.includes('consta')) 
+                        return 'bg-orange-100 text-orange-800'
+                      if (status.includes('qualific') || status.includes('analise')) 
+                        return 'bg-yellow-100 text-yellow-800'
+                      return 'bg-blue-100 text-blue-800'
+                    })()}`}>
+                      {(lead.status_generico || lead.status_limpa_nome)?.replace(/_/g, ' ') || 'novo lead'}
                     </span>
                   </div>
                 </div>
