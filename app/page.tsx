@@ -51,6 +51,8 @@ export default function HomePage() {
     taxaConversao: 0
   })
   const [loading, setLoading] = useState(true)
+  const [userBusinessTypes, setUserBusinessTypes] = useState<any[]>([])
+  const [dashboardConfig, setDashboardConfig] = useState<any>(null)
 
   useEffect(() => {
     if (user) {
@@ -66,20 +68,110 @@ export default function HomePage() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
+      // Carregar leads do usuário
+      const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select('*')
         .eq('user_id', parseInt(user.id || '0'))
 
-      if (error) throw error
+      if (leadsError) throw leadsError
       
-      setLeads(data || [])
-      setFilteredLeads(data || [])
+      // Carregar tipos de negócio do usuário
+      const { data: userTypesData, error: typesError } = await supabase
+        .from('user_tipos_negocio')
+        .select(`
+          tipos_negocio (
+            id, nome, nome_exibicao, cor,
+            campos_personalizados, status_personalizados
+          )
+        `)
+        .eq('user_id', parseInt(user.id || '0'))
+        .eq('ativo', true)
+
+      if (typesError) throw typesError
+
+      const businessTypes = userTypesData?.map(item => {
+        const tipo = item.tipos_negocio as any;
+        if (tipo) {
+          return {
+            ...tipo,
+            campos_personalizados: typeof tipo.campos_personalizados === 'string' 
+              ? JSON.parse(tipo.campos_personalizados) 
+              : tipo.campos_personalizados || [],
+            status_personalizados: typeof tipo.status_personalizados === 'string'
+              ? JSON.parse(tipo.status_personalizados)
+              : tipo.status_personalizados || []
+          };
+        }
+        return null;
+      }).filter(Boolean) || [];
+
+      setUserBusinessTypes(businessTypes)
+      setLeads(leadsData || [])
+      setFilteredLeads(leadsData || [])
+
+      // Configurar dashboard baseado no primeiro tipo de negócio do usuário
+      if (businessTypes.length > 0) {
+        configureDashboard(businessTypes[0])
+      }
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const configureDashboard = (businessType: any) => {
+    const config: any = {}
+    
+    if (businessType.nome === 'limpa_nome') {
+      config.title = 'Dashboard Limpa Nome'
+      config.subtitle = 'Recuperação de crédito'
+      config.metrics = {
+        novosLeads: 'Novos Leads',
+        qualificados: 'Qualificados', 
+        emAndamento: 'Pagou Consulta',
+        casosViaveis: 'Dívidas Encontradas',
+        fechados: 'Clientes Fechados',
+        negociacao: 'Em Negociação'
+      }
+    } else if (businessType.nome === 'previdenciario') {
+      config.title = 'Dashboard Previdenciário'
+      config.subtitle = 'Casos previdenciários'
+      config.metrics = {
+        novosLeads: 'Novos Casos',
+        qualificados: 'Análise Viabilidade',
+        emAndamento: 'Contratos Enviados', 
+        casosViaveis: 'Casos Viáveis',
+        fechados: 'Casos Finalizados',
+        negociacao: 'Processos Iniciados'
+      }
+    } else if (businessType.nome === 'b2b') {
+      config.title = 'Dashboard B2B'
+      config.subtitle = 'Prospecção empresarial'
+      config.metrics = {
+        novosLeads: 'Novos Contatos',
+        qualificados: 'Qualificação',
+        emAndamento: 'Apresentações',
+        casosViaveis: 'Propostas Enviadas', 
+        fechados: 'Deals Fechados',
+        negociacao: 'Em Negociação'
+      }
+    } else {
+      // Fallback genérico
+      config.title = 'Dashboard CRM'
+      config.subtitle = 'Gestão de leads'
+      config.metrics = {
+        novosLeads: 'Novos Leads',
+        qualificados: 'Qualificados',
+        emAndamento: 'Em Andamento',
+        casosViaveis: 'Casos Viáveis',
+        fechados: 'Fechados',
+        negociacao: 'Em Negociação'
+      }
+    }
+    
+    setDashboardConfig(config)
   }
 
   const filterLeadsByDate = () => {
@@ -115,46 +207,67 @@ export default function HomePage() {
   }
 
   const calculateMetrics = (leadsData: Lead[]) => {
-    // Debug: ver todos os status existentes
-    const allStatus = [...new Set(leadsData.map(l => l.status_generico || l.status_limpa_nome))]
-    console.log('Status encontrados no banco:', allStatus)
-    
     const totalLeads = leadsData.length
     
-    // Usar status_generico (novo sistema) ou status_limpa_nome (fallback)
-    const getStatus = (lead: Lead) => lead.status_generico || lead.status_limpa_nome || 'novo_lead'
+    if (userBusinessTypes.length === 0) {
+      // Fallback se não conseguir carregar tipos de negócio
+      return setMetrics({
+        totalLeads,
+        novosLeads: 0,
+        qualificados: 0,
+        pagamentosRealizados: 0,
+        dividasEncontradas: 0,
+        clientesFechados: 0,
+        leadsPerdidos: 0,
+        valorTotalConsultas: 0,
+        valorTotalContratos: 0,
+        taxaConversao: 0
+      })
+    }
+
+    const businessType = userBusinessTypes[0] // Usar primeiro tipo do usuário
+    const statusPersonalizados = businessType.status_personalizados || []
     
-    // Métricas genéricas baseadas em padrões comuns
-    const novosLeads = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('novo') || status === 'novo_lead' || status === 'novo_caso' || status === 'novo_contato'
-    }).length
+    console.log('Tipo de negócio:', businessType.nome)
+    console.log('Status personalizados:', statusPersonalizados)
     
-    const qualificados = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('qualific') || status.includes('analise') || status.includes('mapeando')
-    }).length
+    // Usar status_generico (novo sistema) ou status_limpa_nome (fallback para limpa nome)
+    const getStatus = (lead: Lead) => {
+      if (businessType.nome === 'limpa_nome') {
+        return lead.status_limpa_nome || 'novo_lead'
+      }
+      return lead.status_generico || 'novo_lead'
+    }
     
-    const emAndamento = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('pagamento') || status.includes('contrato') || status.includes('processo') || 
-             status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
-    }).length
+    // Debug: ver todos os status existentes nos leads
+    const allStatus = [...new Set(leadsData.map(l => getStatus(l)))]
+    console.log('Status encontrados nos leads:', allStatus)
     
-    const dividasEncontradas = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('divida') || status.includes('consta') || status.includes('viavel')
-    }).length
+    // Calcular métricas baseado nos status específicos do tipo de negócio
+    let novosLeads = 0, qualificados = 0, emAndamento = 0, casosViaveis = 0, fechados = 0, perdidos = 0
     
-    const clientesFechados = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('fechado') || status.includes('finalizado') || status.includes('convertido') || status.includes('deal_fechado')
-    }).length
-    
-    const leadsPerdidos = leadsData.filter(l => {
-      const status = getStatus(l)
-      return status.includes('desqualific') || status.includes('inviavel') || status.includes('perdido')
-    }).length
+    if (businessType.nome === 'limpa_nome') {
+      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_lead').length
+      qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao').length
+      emAndamento = leadsData.filter(l => getStatus(l) === 'pagamento_consulta').length
+      casosViaveis = leadsData.filter(l => getStatus(l) === 'consta_divida').length
+      fechados = leadsData.filter(l => getStatus(l) === 'cliente_fechado').length
+      perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
+    } else if (businessType.nome === 'previdenciario') {
+      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_caso').length
+      qualificados = leadsData.filter(l => getStatus(l) === 'analise_viabilidade').length
+      emAndamento = leadsData.filter(l => getStatus(l) === 'contrato_enviado').length
+      casosViaveis = leadsData.filter(l => getStatus(l) === 'caso_viavel').length
+      fechados = leadsData.filter(l => getStatus(l) === 'caso_finalizado').length
+      perdidos = leadsData.filter(l => getStatus(l) === 'caso_inviavel').length
+    } else if (businessType.nome === 'b2b') {
+      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_contato').length
+      qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao_inicial').length
+      emAndamento = leadsData.filter(l => getStatus(l) === 'apresentacao_realizada').length
+      casosViaveis = leadsData.filter(l => getStatus(l) === 'proposta_enviada').length
+      fechados = leadsData.filter(l => getStatus(l) === 'deal_fechado').length
+      perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
+    }
     
     const valorTotalConsultas = leadsData.reduce((sum, lead) => {
       return sum + (lead.valor_pago_consulta || 0)
@@ -164,16 +277,16 @@ export default function HomePage() {
       return sum + (lead.valor_contrato || 0)
     }, 0)
 
-    const taxaConversao = totalLeads > 0 ? (clientesFechados / totalLeads) * 100 : 0
+    const taxaConversao = totalLeads > 0 ? (fechados / totalLeads) * 100 : 0
 
     setMetrics({
       totalLeads,
       novosLeads,
       qualificados,
-      pagamentosRealizados: emAndamento, // Renomeado para ser mais genérico
-      dividasEncontradas,
-      clientesFechados,
-      leadsPerdidos,
+      pagamentosRealizados: emAndamento,
+      dividasEncontradas: casosViaveis,
+      clientesFechados: fechados,
+      leadsPerdidos: perdidos,
       valorTotalConsultas,
       valorTotalContratos,
       taxaConversao
@@ -196,9 +309,11 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">DNX Plataformas</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {dashboardConfig?.title || 'DNX Plataformas'}
+        </h1>
         <p className="text-gray-600 mt-2">
-          Dashboard CRM Multi-Negócios - Bem-vindo, {user?.name}
+          {dashboardConfig?.subtitle || 'Dashboard CRM'} - Bem-vindo, {user?.name}
         </p>
       </div>
 
@@ -260,14 +375,14 @@ export default function HomePage() {
         <MetricCard
           title="Taxa de Conversão"
           value={`${metrics.taxaConversao.toFixed(1)}%`}
-          description={`${metrics.clientesFechados} clientes fechados`}
+          description={`${metrics.clientesFechados} ${dashboardConfig?.metrics?.fechados?.toLowerCase() || 'fechados'}`}
           icon={TrendingUp}
         />
         
         <MetricCard
           title="Receita Total"
           value={formatCurrency(metrics.valorTotalConsultas)}
-          description={`${metrics.pagamentosRealizados} em andamento`}
+          description={`${metrics.pagamentosRealizados} ${dashboardConfig?.metrics?.emAndamento?.toLowerCase() || 'em andamento'}`}
           icon={DollarSign}
         />
         
@@ -292,7 +407,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.novosLeads}</div>
-                <div className="text-xs text-gray-500">Novos Leads</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
               </div>
             </div>
 
@@ -302,7 +417,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.qualificados}</div>
-                <div className="text-xs text-gray-500">Qualificados</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
               </div>
             </div>
 
@@ -312,7 +427,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.pagamentosRealizados}</div>
-                <div className="text-xs text-gray-500">Em Andamento</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
               </div>
             </div>
 
@@ -322,7 +437,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.dividasEncontradas}</div>
-                <div className="text-xs text-gray-500">Casos Viáveis</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
               </div>
             </div>
 
@@ -337,7 +452,7 @@ export default function HomePage() {
                     return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
                   }).length}
                 </div>
-                <div className="text-xs text-gray-500">Em Negociação</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
               </div>
             </div>
 
@@ -347,7 +462,7 @@ export default function HomePage() {
               </div>
               <div className="mt-2">
                 <div className="text-2xl font-bold text-gray-900">{metrics.clientesFechados}</div>
-                <div className="text-xs text-gray-500">Clientes Fechados</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
               </div>
             </div>
 
