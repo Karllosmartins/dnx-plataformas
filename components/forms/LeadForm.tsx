@@ -93,7 +93,7 @@ export default function LeadForm({ leadId, onSuccess, onCancel, initialData, use
 
         if (error) throw error;
         
-        const tiposUsuario = data?.map(item => item.tipos_negocio).filter(Boolean) || [];
+        const tiposUsuario = (data?.map(item => item.tipos_negocio).filter(Boolean) as unknown as TipoNegocio[]) || [];
         setTipos(tiposUsuario);
 
         // Se usuário tem apenas 1 tipo, selecionar automaticamente
