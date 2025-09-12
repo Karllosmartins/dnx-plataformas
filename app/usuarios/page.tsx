@@ -28,6 +28,7 @@ interface UserFormData {
   active: boolean
   cpf?: string
   telefone?: string
+  tipos_negocio?: number[]
 }
 
 interface ConfigCredentials {
@@ -139,8 +140,36 @@ export default function UsuariosPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      
       if (data) {
-        setUsers(data)
+        // Carregar tipos de negócio para cada usuário
+        const usersWithTypes = await Promise.all(
+          data.map(async (user) => {
+            const { data: userTipos, error: tiposError } = await supabase
+              .from('user_tipos_negocio')
+              .select(`
+                tipo_negocio_id,
+                tipos_negocio!inner (
+                  id,
+                  nome_exibicao,
+                  cor
+                )
+              `)
+              .eq('user_id', user.id)
+
+            if (tiposError) {
+              console.error('Erro ao carregar tipos do usuário:', tiposError)
+              return { ...user, tipos_negocio: [] }
+            }
+
+            return {
+              ...user,
+              tipos_negocio: userTipos?.map(ut => ut.tipos_negocio) || []
+            }
+          })
+        )
+        
+        setUsers(usersWithTypes)
       }
     } catch (error) {
       console.error('Erro ao carregar usuários:', error)
@@ -167,8 +196,10 @@ export default function UsuariosPage() {
 
   const saveUser = async (userData: UserFormData, credentials?: ConfigCredentials) => {
     try {
+      // Separar tipos_negocio dos dados do usuário
+      const { tipos_negocio, ...userDataOnly } = userData
       const dataToSave = {
-        ...userData,
+        ...userDataOnly,
         updated_at: new Date().toISOString()
       }
 
@@ -235,6 +266,30 @@ export default function UsuariosPage() {
 
             if (credError) throw credError
           }
+        }
+      }
+
+      // Salvar tipos de negócio do usuário
+      if (userData.tipos_negocio && userId) {
+        // Remover tipos existentes
+        await supabase
+          .from('user_tipos_negocio')
+          .delete()
+          .eq('user_id', userId)
+
+        // Adicionar novos tipos se houver seleções
+        if (userData.tipos_negocio.length > 0) {
+          const userTipos = userData.tipos_negocio.map(tipoId => ({
+            user_id: userId,
+            tipo_negocio_id: tipoId,
+            created_at: new Date().toISOString()
+          }))
+
+          const { error: tiposError } = await supabase
+            .from('user_tipos_negocio')
+            .insert(userTipos)
+
+          if (tiposError) throw tiposError
         }
       }
 
@@ -374,6 +429,26 @@ export default function UsuariosPage() {
                           {user.role === 'admin' ? 'Admin' : 'Usuário'}
                         </span>
                       </div>
+
+                      {/* Tipos de Negócio */}
+                      {user.tipos_negocio && user.tipos_negocio.length > 0 && (
+                        <div className="mb-3">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500 block mb-2">
+                            Tipos de Negócio:
+                          </span>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {user.tipos_negocio.map((tipo: any) => (
+                              <span
+                                key={tipo.id}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium text-white"
+                                style={{ backgroundColor: tipo.cor || '#6B7280' }}
+                              >
+                                {tipo.nome_exibicao}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="text-xs text-gray-500">
                         ID: {user.id} • Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
@@ -589,10 +664,47 @@ function UserModal({
     numero_instancias: user.numero_instancias || 1,
     active: user.active ?? true,
     cpf: user.cpf || '',
-    telefone: user.telefone || ''
+    telefone: user.telefone || '',
+    tipos_negocio: []
   })
 
   const [credentials, setCredentials] = useState<ConfigCredentials>({})
+  const [tiposNegocio, setTiposNegocio] = useState<any[]>([])
+  const [userTiposNegocio, setUserTiposNegocio] = useState<number[]>([])
+
+  // Carregar tipos de negócio e tipos do usuário
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        // Carregar tipos de negócio
+        const { data: tipos, error: tiposError } = await supabase
+          .from('tipos_negocio')
+          .select('id, nome_exibicao, ativo')
+          .eq('ativo', true)
+          .order('ordem', { ascending: true })
+
+        if (tiposError) throw tiposError
+        setTiposNegocio(tipos || [])
+
+        // Carregar tipos do usuário se estiver editando
+        if (user.id && user.id > 0) {
+          const { data: userTipos, error: userTiposError } = await supabase
+            .from('user_tipos_negocio')
+            .select('tipo_negocio_id')
+            .eq('user_id', user.id)
+
+          if (userTiposError) throw userTiposError
+          const tipoIds = userTipos?.map(ut => ut.tipo_negocio_id) || []
+          setUserTiposNegocio(tipoIds)
+          setFormData(prev => ({ ...prev, tipos_negocio: tipoIds }))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      }
+    }
+
+    carregarDados()
+  }, [user.id])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -716,6 +828,50 @@ function UserModal({
                 <option value="enterprise">Enterprise</option>
               </select>
             </div>
+          </div>
+
+          {/* Seleção de Tipos de Negócio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Tipos de Negócio
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {tiposNegocio.map((tipo) => (
+                <div key={tipo.id} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`tipo-${tipo.id}`}
+                    checked={formData.tipos_negocio?.includes(tipo.id) || false}
+                    onChange={(e) => {
+                      const currentTipos = formData.tipos_negocio || []
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          tipos_negocio: [...currentTipos, tipo.id]
+                        })
+                      } else {
+                        setFormData({
+                          ...formData,
+                          tipos_negocio: currentTipos.filter(id => id !== tipo.id)
+                        })
+                      }
+                    }}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label 
+                    htmlFor={`tipo-${tipo.id}`}
+                    className="ml-2 text-sm text-gray-700 cursor-pointer"
+                  >
+                    {tipo.nome_exibicao}
+                  </label>
+                </div>
+              ))}
+            </div>
+            {tiposNegocio.length === 0 && (
+              <p className="text-sm text-gray-500 italic">
+                Nenhum tipo de negócio disponível. Configure os tipos na página administrativa.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

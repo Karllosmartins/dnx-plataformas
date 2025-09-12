@@ -65,7 +65,19 @@ export default function TiposNegocioAdmin() {
         .order('ordem', { ascending: true });
 
       if (error) throw error;
-      setTipos(data || []);
+      
+      // Converter campos JSON string para objetos
+      const tiposProcessados = data?.map(tipo => ({
+        ...tipo,
+        campos_personalizados: typeof tipo.campos_personalizados === 'string' 
+          ? JSON.parse(tipo.campos_personalizados) 
+          : tipo.campos_personalizados,
+        status_personalizados: typeof tipo.status_personalizados === 'string'
+          ? JSON.parse(tipo.status_personalizados)
+          : tipo.status_personalizados
+      })) || [];
+      
+      setTipos(tiposProcessados);
     } catch (error) {
       console.error('Erro ao carregar tipos:', error);
     } finally {

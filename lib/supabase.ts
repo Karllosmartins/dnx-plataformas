@@ -35,6 +35,11 @@ export interface User {
   numero_instancias?: number
   created_at: string
   updated_at: string
+  tipos_negocio?: Array<{
+    id: number
+    nome_exibicao: string
+    cor: string
+  }>
 }
 
 export interface ConfiguracaoCredenciais {
