@@ -968,7 +968,7 @@ export default function LeadsPage() {
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">CRM Limpa Nome</h1>
+          <h1 className="text-3xl font-bold text-gray-900">CRM Multi-Negócios</h1>
           <p className="text-gray-600 mt-2">
             Gestão completa de leads e relatórios de performance
           </p>

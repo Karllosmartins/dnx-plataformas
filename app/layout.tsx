@@ -2,8 +2,8 @@ import './globals.css'
 import AuthWrapper from '../components/AuthWrapper'
 
 export const metadata = {
-  title: 'DNX Plataformas - CRM Limpa Nome',
-  description: 'Sistema de CRM para recuperação de crédito e limpeza de nome',
+  title: 'DNX Plataformas - CRM Multi-Negócios',
+  description: 'Sistema de CRM para múltiplos tipos de negócio',
   icons: {
     icon: '/sublogo.png',
     shortcut: '/sublogo.png',

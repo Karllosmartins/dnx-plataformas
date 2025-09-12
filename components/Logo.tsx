@@ -48,7 +48,7 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
             size === 'md' ? 'text-sm' :
             'text-base'
           }`}>
-            CRM Limpa Nome
+            CRM Multi-Negócios
           </p>
         </div>
       )}
@@ -65,7 +65,7 @@ export function LogoIcon({ size = 'md', className = '' }: Omit<LogoProps, 'showT
 export function LogoWithText({ 
   size = 'md', 
   title = 'DNX Plataformas', 
-  subtitle = 'CRM Limpa Nome',
+  subtitle = 'CRM Multi-Negócios',
   className = '' 
 }: LogoProps & { title?: string; subtitle?: string }) {
   const dimensions = sizeMap[size]

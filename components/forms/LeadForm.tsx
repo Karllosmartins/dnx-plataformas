@@ -93,7 +93,22 @@ export default function LeadForm({ leadId, onSuccess, onCancel, initialData, use
 
         if (error) throw error;
         
-        const tiposUsuario = (data?.map(item => item.tipos_negocio).filter(Boolean) as unknown as TipoNegocio[]) || [];
+        const tiposUsuario = data?.map(item => {
+          const tipo = item.tipos_negocio as any;
+          if (tipo) {
+            return {
+              ...tipo,
+              campos_personalizados: typeof tipo.campos_personalizados === 'string' 
+                ? JSON.parse(tipo.campos_personalizados) 
+                : tipo.campos_personalizados || [],
+              status_personalizados: typeof tipo.status_personalizados === 'string'
+                ? JSON.parse(tipo.status_personalizados)
+                : tipo.status_personalizados || []
+            } as TipoNegocio;
+          }
+          return null;
+        }).filter(Boolean) as TipoNegocio[] || [];
+        
         setTipos(tiposUsuario);
 
         // Se usuário tem apenas 1 tipo, selecionar automaticamente
@@ -115,7 +130,18 @@ export default function LeadForm({ leadId, onSuccess, onCancel, initialData, use
           .order('ordem');
 
         if (error) throw error;
-        setTipos(data || []);
+        
+        const tiposProcessados = data?.map(tipo => ({
+          ...tipo,
+          campos_personalizados: typeof tipo.campos_personalizados === 'string' 
+            ? JSON.parse(tipo.campos_personalizados) 
+            : tipo.campos_personalizados || [],
+          status_personalizados: typeof tipo.status_personalizados === 'string'
+            ? JSON.parse(tipo.status_personalizados)
+            : tipo.status_personalizados || []
+        })) || [];
+        
+        setTipos(tiposProcessados);
       }
     } catch (error) {
       console.error('Erro ao carregar tipos:', error);
