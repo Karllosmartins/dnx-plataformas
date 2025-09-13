@@ -29,12 +29,13 @@ const STATUS_CONFIG = {
 
   // Status B2B
   'novo_contato': { label: 'Novo Contato', color: 'bg-blue-100 text-blue-800', icon: Users },
-  'qualificacao_inicial': { label: 'Qualificação', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  'apresentacao_agendada': { label: 'Apresentação Agendada', color: 'bg-purple-100 text-purple-800', icon: Calendar },
-  'apresentacao_realizada': { label: 'Apresentação Realizada', color: 'bg-orange-100 text-orange-800', icon: Activity },
-  'proposta_enviada': { label: 'Proposta Enviada', color: 'bg-indigo-100 text-indigo-800', icon: FileText },
-  'negociacao': { label: 'Negociação', color: 'bg-yellow-100 text-yellow-800', icon: MessageSquare },
-  'deal_fechado': { label: 'Deal Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+  'qualificacao_inicial': { label: 'Qualificação Inicial', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+  'mapeando_decisor': { label: 'Mapeando Decisor', color: 'bg-orange-100 text-orange-800', icon: User },
+  'contato_decisor': { label: 'Contato Decisor', color: 'bg-purple-100 text-purple-800', icon: MessageSquare },
+  'apresentacao_realizada': { label: 'Apresentação Realizada', color: 'bg-indigo-100 text-indigo-800', icon: Activity },
+  'proposta_enviada': { label: 'Proposta Enviada', color: 'bg-teal-100 text-teal-800', icon: FileText },
+  'negociacao': { label: 'Negociação', color: 'bg-amber-100 text-amber-800', icon: MessageSquare },
+  'negocio_fechado': { label: 'Negócio Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
 }
 
 // Função para gerar config de status dinamicamente baseado no tipo de negócio
@@ -553,7 +554,7 @@ export default function LeadsPage() {
     if (userTipoNegocio.nome === 'previdenciario') {
       return ['novo_caso', 'analise_viabilidade', 'caso_viavel', 'caso_inviavel', 'contrato_enviado', 'contrato_assinado', 'processo_iniciado', 'caso_finalizado']
     } else if (userTipoNegocio.nome === 'b2b') {
-      return ['novo_contato', 'qualificacao_inicial', 'apresentacao_agendada', 'apresentacao_realizada', 'proposta_enviada', 'negociacao', 'deal_fechado', 'desqualificado']
+      return ['novo_contato', 'qualificacao_inicial', 'mapeando_decisor', 'contato_decisor', 'apresentacao_realizada', 'proposta_enviada', 'negociacao', 'negocio_fechado']
     } else {
       // Limpa nome e outros
       return ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
@@ -706,11 +707,9 @@ export default function LeadsPage() {
             status_generico: 'novo_contato',
             tipo_negocio_id: 3,
             dados_personalizados: {
-              empresa: 'TechCorp Solutions',
-              setor: 'Tecnologia',
-              tamanho_empresa: '50-100 funcionários',
-              necessidade: 'Transformação Digital',
-              valor_estimado: 150000.00
+              segmento_empresa: 'tecnologia',
+              porte_empresa: 'media',
+              budget_disponivel: 150000.00
             }
           },
           {
@@ -721,56 +720,87 @@ export default function LeadsPage() {
             status_generico: 'qualificacao_inicial',
             tipo_negocio_id: 3,
             dados_personalizados: {
-              empresa: 'Indústria XYZ Ltda',
-              setor: 'Industrial',
-              tamanho_empresa: '100-500 funcionários',
-              necessidade: 'Automação de Processos',
-              valor_estimado: 250000.00
+              segmento_empresa: 'industria',
+              porte_empresa: 'grande',
+              budget_disponivel: 250000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Health Care Plus',
+            telefone: '(21) 5555-5555',
+            origem: 'Evento',
+            status_generico: 'mapeando_decisor',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              segmento_empresa: 'saude',
+              porte_empresa: 'media',
+              budget_disponivel: 80000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'EduTech Brasil',
+            telefone: '(31) 6666-6666',
+            origem: 'Indicação',
+            status_generico: 'contato_decisor',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              segmento_empresa: 'educacao',
+              porte_empresa: 'pequena',
+              budget_disponivel: 60000.00
             }
           },
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Comercial ABC S.A.',
-            telefone: '(21) 5555-5555',
-            origem: 'Evento',
+            telefone: '(21) 7777-7777',
+            origem: 'Cold Calling',
             status_generico: 'apresentacao_realizada',
             tipo_negocio_id: 3,
             dados_personalizados: {
-              empresa: 'Comercial ABC S.A.',
-              setor: 'Varejo',
-              tamanho_empresa: '20-50 funcionários',
-              necessidade: 'Sistema de Gestão',
-              valor_estimado: 80000.00
+              segmento_empresa: 'varejo',
+              porte_empresa: 'media',
+              budget_disponivel: 90000.00
             }
           },
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Consultoria Premium',
-            telefone: '(31) 7777-7777',
-            origem: 'Indicação',
+            telefone: '(85) 8888-8888',
+            origem: 'LinkedIn',
             status_generico: 'proposta_enviada',
             tipo_negocio_id: 3,
             dados_personalizados: {
-              empresa: 'Consultoria Premium',
-              setor: 'Consultoria',
-              tamanho_empresa: '10-20 funcionários',
-              necessidade: 'Consultoria Estratégica',
-              valor_estimado: 120000.00
+              segmento_empresa: 'servicos',
+              porte_empresa: 'pequena',
+              budget_disponivel: 120000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'FinanceGroup Corp',
+            telefone: '(11) 9999-9999',
+            origem: 'Indicação',
+            status_generico: 'negociacao',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              segmento_empresa: 'financeiro',
+              porte_empresa: 'grande',
+              budget_disponivel: 300000.00
             }
           },
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Grupo Empresarial Mega',
-            telefone: '(85) 8888-8888',
-            origem: 'Cold Calling',
-            status_generico: 'deal_fechado',
+            telefone: '(85) 1111-1111',
+            origem: 'Evento',
+            status_generico: 'negocio_fechado',
             tipo_negocio_id: 3,
             dados_personalizados: {
-              empresa: 'Grupo Empresarial Mega',
-              setor: 'Conglomerado',
-              tamanho_empresa: '500+ funcionários',
-              necessidade: 'Transformação Digital Completa',
-              valor_estimado: 500000.00,
+              segmento_empresa: 'industria',
+              porte_empresa: 'multinacional',
+              budget_disponivel: 500000.00,
               valor_contrato: 480000.00,
               responsavel: 'Especialista B2B'
             }
@@ -1019,28 +1049,29 @@ export default function LeadsPage() {
       // Métricas para B2B
       qualificados = filteredLeads.filter(lead =>
         lead.status_generico === 'qualificacao_inicial' ||
-        lead.status_generico === 'apresentacao_agendada' ||
+        lead.status_generico === 'mapeando_decisor' ||
+        lead.status_generico === 'contato_decisor' ||
         lead.status_generico === 'apresentacao_realizada' ||
         lead.status_generico === 'proposta_enviada' ||
         lead.status_generico === 'negociacao' ||
-        lead.status_generico === 'deal_fechado'
+        lead.status_generico === 'negocio_fechado'
       ).length
 
       pagouConsulta = filteredLeads.filter(lead =>
         lead.status_generico === 'apresentacao_realizada' ||
         lead.status_generico === 'proposta_enviada' ||
         lead.status_generico === 'negociacao' ||
-        lead.status_generico === 'deal_fechado'
+        lead.status_generico === 'negocio_fechado'
       ).length
 
       constaDivida = filteredLeads.filter(lead =>
         lead.status_generico === 'proposta_enviada' ||
         lead.status_generico === 'negociacao' ||
-        lead.status_generico === 'deal_fechado'
+        lead.status_generico === 'negocio_fechado'
       ).length
 
       clientesFechados = filteredLeads.filter(lead =>
-        lead.status_generico === 'deal_fechado'
+        lead.status_generico === 'negocio_fechado'
       ).length
     } else {
       // Métricas para limpa nome (estrutura original)
