@@ -500,13 +500,38 @@ export default function LeadsPage() {
         receitaContratos: 'Receita Casos',
         ticketMedio: 'Valor Médio por Caso'
       }
+    } else if (userTipoNegocio?.nome === 'b2b') {
+      return {
+        total: 'Total de Contatos',
+        qualificados: 'Qualificação Inicial',
+        pagouConsulta: 'Apresentações Realizadas',
+        constaDivida: 'Propostas Enviadas',
+        clientesFechados: 'Deals Fechados',
+        receitaConsultas: 'Receita Apresentações',
+        receitaContratos: 'Receita Contratos',
+        ticketMedio: 'Ticket Médio por Deal'
+      }
+    } else if (userTipoNegocio?.nome === 'limpa_nome') {
+      return {
+        total: 'Total de Leads',
+        qualificados: 'Qualificados',
+        pagouConsulta: 'Pagaram Consulta',
+        constaDivida: 'Consta Dívida',
+        clientesFechados: 'Clientes Fechados',
+        receitaConsultas: 'Receita Consultas',
+        receitaContratos: 'Receita Contratos',
+        ticketMedio: 'Ticket Médio'
+      }
     }
+
+    // Fallback genérico
     return {
       total: 'Total de Leads',
       qualificados: 'Qualificados',
-      pagouConsulta: 'Pagaram Consulta',
-      clientesFechados: 'Clientes Fechados',
-      receitaConsultas: 'Receita Consultas',
+      pagouConsulta: 'Em Andamento',
+      constaDivida: 'Casos Viáveis',
+      clientesFechados: 'Fechados',
+      receitaConsultas: 'Receita Principal',
       receitaContratos: 'Receita Contratos',
       ticketMedio: 'Ticket Médio'
     }
@@ -667,6 +692,87 @@ export default function LeadsPage() {
               valor_estimado_caso: 42000.00,
               valor_contrato: 8500.00,
               responsavel: 'Especialista Previdenciário'
+            }
+          }
+        ]
+      } else if (tipoNegocio === 'b2b') {
+        // Dados para B2B
+        sampleLeads = [
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'TechCorp Solutions',
+            telefone: '(11) 3333-3333',
+            origem: 'LinkedIn',
+            status_generico: 'novo_contato',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              empresa: 'TechCorp Solutions',
+              setor: 'Tecnologia',
+              tamanho_empresa: '50-100 funcionários',
+              necessidade: 'Transformação Digital',
+              valor_estimado: 150000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Indústria XYZ Ltda',
+            telefone: '(11) 4444-4444',
+            origem: 'Site',
+            status_generico: 'qualificacao_inicial',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              empresa: 'Indústria XYZ Ltda',
+              setor: 'Industrial',
+              tamanho_empresa: '100-500 funcionários',
+              necessidade: 'Automação de Processos',
+              valor_estimado: 250000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Comercial ABC S.A.',
+            telefone: '(21) 5555-5555',
+            origem: 'Evento',
+            status_generico: 'apresentacao_realizada',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              empresa: 'Comercial ABC S.A.',
+              setor: 'Varejo',
+              tamanho_empresa: '20-50 funcionários',
+              necessidade: 'Sistema de Gestão',
+              valor_estimado: 80000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Consultoria Premium',
+            telefone: '(31) 7777-7777',
+            origem: 'Indicação',
+            status_generico: 'proposta_enviada',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              empresa: 'Consultoria Premium',
+              setor: 'Consultoria',
+              tamanho_empresa: '10-20 funcionários',
+              necessidade: 'Consultoria Estratégica',
+              valor_estimado: 120000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Grupo Empresarial Mega',
+            telefone: '(85) 8888-8888',
+            origem: 'Cold Calling',
+            status_generico: 'deal_fechado',
+            tipo_negocio_id: 3,
+            dados_personalizados: {
+              empresa: 'Grupo Empresarial Mega',
+              setor: 'Conglomerado',
+              tamanho_empresa: '500+ funcionários',
+              necessidade: 'Transformação Digital Completa',
+              valor_estimado: 500000.00,
+              valor_contrato: 480000.00,
+              responsavel: 'Especialista B2B'
             }
           }
         ]
@@ -908,6 +1014,33 @@ export default function LeadsPage() {
 
       clientesFechados = filteredLeads.filter(lead =>
         lead.status_generico === 'caso_finalizado'
+      ).length
+    } else if (userTipoNegocio?.nome === 'b2b') {
+      // Métricas para B2B
+      qualificados = filteredLeads.filter(lead =>
+        lead.status_generico === 'qualificacao_inicial' ||
+        lead.status_generico === 'apresentacao_agendada' ||
+        lead.status_generico === 'apresentacao_realizada' ||
+        lead.status_generico === 'proposta_enviada' ||
+        lead.status_generico === 'negociacao' ||
+        lead.status_generico === 'deal_fechado'
+      ).length
+
+      pagouConsulta = filteredLeads.filter(lead =>
+        lead.status_generico === 'apresentacao_realizada' ||
+        lead.status_generico === 'proposta_enviada' ||
+        lead.status_generico === 'negociacao' ||
+        lead.status_generico === 'deal_fechado'
+      ).length
+
+      constaDivida = filteredLeads.filter(lead =>
+        lead.status_generico === 'proposta_enviada' ||
+        lead.status_generico === 'negociacao' ||
+        lead.status_generico === 'deal_fechado'
+      ).length
+
+      clientesFechados = filteredLeads.filter(lead =>
+        lead.status_generico === 'deal_fechado'
       ).length
     } else {
       // Métricas para limpa nome (estrutura original)
