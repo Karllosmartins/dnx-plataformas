@@ -36,7 +36,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <Image
             className="h-16 w-auto"
             src="/logo-preta.webp"
-            alt="DNX Plataformas"
+            alt="DNX Operações Inteligentes"
             width={200}
             height={64}
             priority

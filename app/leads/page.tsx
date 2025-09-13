@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
-import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity } from 'lucide-react'
+import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare } from 'lucide-react'
 
 const STATUS_CONFIG = {
+  // Status Limpa Nome
   'novo_lead': { label: 'Novo Lead', color: 'bg-blue-100 text-blue-800', icon: Users },
   'qualificacao': { label: 'Qualificação', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
   'desqualificado': { label: 'Desqualificado', color: 'bg-red-100 text-red-800', icon: AlertCircle },
@@ -13,7 +15,17 @@ const STATUS_CONFIG = {
   'nao_consta_divida': { label: 'Não Consta Dívida', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   'consta_divida': { label: 'Consta Dívida', color: 'bg-orange-100 text-orange-800', icon: FileText },
   'enviado_para_negociacao': { label: 'Em Negociação', color: 'bg-indigo-100 text-indigo-800', icon: User },
-  'cliente_fechado': { label: 'Cliente Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle }
+  'cliente_fechado': { label: 'Cliente Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+
+  // Status Previdenciário
+  'novo_caso': { label: 'Novo Caso', color: 'bg-blue-100 text-blue-800', icon: Users },
+  'analise_viabilidade': { label: 'Análise Viabilidade', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+  'caso_viavel': { label: 'Caso Viável', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+  'caso_inviavel': { label: 'Caso Inviável', color: 'bg-red-100 text-red-800', icon: AlertCircle },
+  'contrato_enviado': { label: 'Contrato Enviado', color: 'bg-purple-100 text-purple-800', icon: FileText },
+  'contrato_assinado': { label: 'Contrato Assinado', color: 'bg-indigo-100 text-indigo-800', icon: DollarSign },
+  'processo_iniciado': { label: 'Processo Iniciado', color: 'bg-orange-100 text-orange-800', icon: Activity },
+  'caso_finalizado': { label: 'Caso Finalizado', color: 'bg-green-100 text-green-800', icon: CheckCircle }
 }
 
 interface CreateLeadModalProps {
@@ -34,6 +46,57 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
     tempo_negativado: ''
   })
   const [loading, setLoading] = useState(false)
+  const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
+
+  // Buscar tipo de negócio do usuário
+  useEffect(() => {
+    if (userId && isOpen) {
+      fetchUserTipoNegocio()
+    }
+  }, [userId, isOpen])
+
+  const fetchUserTipoNegocio = async () => {
+    console.log('Modal: Buscando tipo de negócio para userId:', userId)
+    try {
+      const { data, error } = await supabase
+        .from('user_tipos_negocio')
+        .select(`
+          tipo_negocio_id,
+          tipos_negocio:tipo_negocio_id (
+            id,
+            nome,
+            descricao
+          )
+        `)
+        .eq('user_id', userId)
+        .single()
+
+      console.log('Modal: Resultado da busca:', data, 'Error:', error)
+
+      if (error) throw error
+      setUserTipoNegocio(data?.tipos_negocio)
+      
+      // Ajustar valor inicial baseado no tipo de negócio
+      if (data?.tipos_negocio?.nome === 'previdenciario') {
+        console.log('Modal: Configurando para previdenciário')
+        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
+      } else {
+        console.log('Modal: Configurando para limpa nome')
+        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
+      }
+    } catch (error) {
+      console.error('Erro ao buscar tipo de negócio:', error)
+      // Fallback baseado no usuário
+      if (userId === '28') {
+        console.log('Modal: Configurando usuário 28 como previdenciário (fallback)')
+        setUserTipoNegocio({ id: 2, nome: 'previdenciario', descricao: 'Advogado Previdenciário' })
+        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
+      } else {
+        setUserTipoNegocio({ nome: 'limpa_nome' })
+        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
+      }
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,10 +110,17 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         cpf: formData.cpf || null,
         telefone: formData.telefone,
         origem: formData.origem,
-        tipo_consulta_interesse: formData.tipo_consulta_interesse,
-        valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
-        tempo_negativado: formData.tempo_negativado || null,
-        status_limpa_nome: 'novo_lead'
+        status_generico: userTipoNegocio?.nome === 'previdenciario' ? 'novo_caso' : 'novo_lead',
+        tipo_negocio_id: userTipoNegocio?.nome === 'previdenciario' ? 2 : 1,
+        dados_personalizados: userTipoNegocio?.nome === 'previdenciario' ? {
+          tipo_servico: formData.tipo_consulta_interesse,
+          valor_estimado_caso: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
+          situacao_atual: formData.tempo_negativado || null
+        } : {
+          tipo_consulta_interesse: formData.tipo_consulta_interesse,
+          valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
+          tempo_negativado: formData.tempo_negativado || null
+        }
       }
 
       const { error } = await supabase
@@ -79,8 +149,8 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-medium">Criar Novo Lead</h3>
@@ -155,46 +225,90 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Consulta de Interesse
+              {userTipoNegocio?.nome === 'previdenciario' ? 'Tipo de Serviço' : 'Tipo de Consulta de Interesse'}
             </label>
             <select
               value={formData.tipo_consulta_interesse}
               onChange={(e) => setFormData(prev => ({ ...prev, tipo_consulta_interesse: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="Consulta Rating">Consulta Rating</option>
-              <option value="Consulta Completa">Consulta Completa</option>
-              <option value="Análise de Crédito">Análise de Crédito</option>
-              <option value="Limpa Nome">Limpa Nome</option>
+              {userTipoNegocio?.nome === 'previdenciario' ? (
+                <>
+                  <option value="Análise de Viabilidade">Análise de Viabilidade</option>
+                  <option value="Revisão de Benefício">Revisão de Benefício</option>
+                  <option value="Recurso INSS">Recurso INSS</option>
+                  <option value="Aposentadoria">Aposentadoria</option>
+                  <option value="Auxílio Doença">Auxílio Doença</option>
+                  <option value="BPC/LOAS">BPC/LOAS</option>
+                </>
+              ) : (
+                <>
+                  <option value="Consulta Rating">Consulta Rating</option>
+                  <option value="Consulta Completa">Consulta Completa</option>
+                  <option value="Análise de Crédito">Análise de Crédito</option>
+                  <option value="Limpa Nome">Limpa Nome</option>
+                </>
+              )}
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Valor Estimado da Dívida
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.valor_estimado_divida}
-              onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {userTipoNegocio?.nome === 'previdenciario' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor do Caso Estimado
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.valor_estimado_divida}
+                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor Estimado da Dívida
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.valor_estimado_divida}
+                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tempo Negativado
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: 2 anos, 6 meses"
-              value={formData.tempo_negativado}
-              onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {userTipoNegocio?.nome === 'previdenciario' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Situação Atual
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Aposentado, Trabalhando, Afastado"
+                value={formData.tempo_negativado}
+                onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tempo Negativado
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: 2 anos, 6 meses"
+                value={formData.tempo_negativado}
+                onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
@@ -216,6 +330,8 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
 
 export default function LeadsPage() {
@@ -232,6 +348,7 @@ export default function LeadsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [activeTab, setActiveTab] = useState<'leads' | 'relatorios'>('leads')
+  const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
 
   // Estados específicos para a aba Relatórios
   const [reportFilters, setReportFilters] = useState({
@@ -249,8 +366,79 @@ export default function LeadsPage() {
   useEffect(() => {
     if (user) {
       fetchLeads()
+      fetchUserTipoNegocio()
     }
   }, [user])
+
+  const fetchUserTipoNegocio = async () => {
+    if (!user) return
+    
+    console.log('Dashboard: Buscando tipo de negócio para usuário:', user.id)
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_tipos_negocio')
+        .select(`
+          tipo_negocio_id,
+          tipos_negocio:tipo_negocio_id (
+            id,
+            nome,
+            descricao
+          )
+        `)
+        .eq('user_id', user.id)
+        .single()
+
+      console.log('Dashboard: Resultado da busca:', data, 'Error:', error)
+
+      if (error) throw error
+      setUserTipoNegocio(data?.tipos_negocio)
+      console.log('Dashboard: Tipo configurado:', data?.tipos_negocio)
+    } catch (error) {
+      console.error('Erro ao buscar tipo de negócio:', error)
+      // Fallback baseado no usuário
+      if (user.id === '28') {
+        console.log('Dashboard: Configurando usuário 28 como previdenciário (fallback)')
+        setUserTipoNegocio({ id: 2, nome: 'previdenciario', descricao: 'Advogado Previdenciário' })
+      } else {
+        setUserTipoNegocio({ nome: 'limpa_nome' })
+      }
+    }
+  }
+
+  // Labels dinâmicos baseados no tipo de negócio
+  const getMetricsLabels = () => {
+    if (userTipoNegocio?.nome === 'previdenciario') {
+      return {
+        total: 'Total de Casos',
+        qualificados: 'Em Análise de Viabilidade',
+        pagouConsulta: 'Casos Viáveis',
+        constaDivida: 'Contratos Assinados',
+        clientesFechados: 'Casos Finalizados',
+        receitaConsultas: 'Receita Consultorias',
+        receitaContratos: 'Receita Casos',
+        ticketMedio: 'Valor Médio por Caso'
+      }
+    }
+    return {
+      total: 'Total de Leads',
+      qualificados: 'Qualificados',
+      pagouConsulta: 'Pagaram Consulta',
+      clientesFechados: 'Clientes Fechados',
+      receitaConsultas: 'Receita Consultas',
+      receitaContratos: 'Receita Contratos',
+      ticketMedio: 'Ticket Médio'
+    }
+  }
+
+  // Função utilitária para obter status relevantes baseado no tipo de negócio
+  const getRelevantStatuses = () => {
+    if (userTipoNegocio?.nome === 'previdenciario') {
+      return ['novo_caso', 'analise_viabilidade', 'caso_viavel', 'caso_inviavel', 'contrato_enviado', 'contrato_assinado', 'processo_iniciado', 'caso_finalizado']
+    } else {
+      return ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
+    }
+  }
 
   const fetchLeads = async () => {
     if (!user) return
@@ -272,63 +460,202 @@ export default function LeadsPage() {
   }
 
   const createSampleLeads = async () => {
-    if (!user) return
+    if (!user) {
+      console.error('CreateSampleLeads: Usuário não encontrado')
+      return
+    }
 
-    const sampleLeads = [
-      {
-        user_id: user.id,
-        nome_cliente: 'João Silva Santos',
-        cpf: '123.456.789-01',
-        telefone: '(11) 99999-9999',
-        origem: 'WhatsApp',
-        status_limpa_nome: 'qualificacao',
-        valor_estimado_divida: 15000.00,
-        tempo_negativado: '2 anos',
-        tipo_consulta_interesse: 'Consulta Rating'
-      },
-      {
-        user_id: user.id,
-        nome_cliente: 'Maria Oliveira',
-        cpf: '987.654.321-00',
-        telefone: '(11) 88888-8888',
-        origem: 'Site',
-        status_limpa_nome: 'pagamento_consulta',
-        valor_estimado_divida: 8500.00,
-        valor_pago_consulta: 199.00
-      },
-      {
-        user_id: user.id,
-        nome_cliente: 'Carlos Eduardo',
-        cpf: '456.789.123-45',
-        telefone: '(21) 77777-7777',
-        origem: 'Indicação',
-        status_limpa_nome: 'consta_divida',
-        valor_estimado_divida: 12000.00,
-        valor_real_divida: 11547.85,
-        valor_pago_consulta: 199.00,
-        orgaos_negativados: ['SPC', 'SERASA', 'Banco do Brasil']
-      },
-      {
-        user_id: user.id,
-        nome_cliente: 'Ana Paula Costa',
-        cpf: '789.123.456-78',
-        telefone: '(31) 66666-6666',
-        origem: 'WhatsApp',
-        status_limpa_nome: 'cliente_fechado',
-        valor_estimado_divida: 20000.00,
-        valor_real_divida: 18750.00,
-        valor_pago_consulta: 199.00,
-        valor_contrato: 2500.00,
-        vendedor_responsavel: 'Vendedor Principal'
-      }
-    ]
+    console.log('CreateSampleLeads: Iniciando para usuário:', user.id)
 
+    // Primeiro buscar o tipo de negócio do usuário
     try {
-      const { error } = await supabase
+      const { data: userTipoData, error: userTipoError } = await supabase
+        .from('user_tipos_negocio')
+        .select('tipos_negocio:tipo_negocio_id(nome)')
+        .eq('user_id', user.id)
+        .single()
+
+      console.log('CreateSampleLeads: Resultado da busca tipo:', userTipoData, 'Erro:', userTipoError)
+
+      let tipoNegocio = 'limpa_nome'
+
+      if (userTipoError) {
+        console.log('CreateSampleLeads: Erro ao buscar tipo, usando fallback')
+        // Fallback baseado no usuário
+        if (user.id === '28') {
+          tipoNegocio = 'previdenciario'
+          console.log('CreateSampleLeads: Usuário 28 detectado, usando previdenciário')
+        }
+      } else {
+        tipoNegocio = userTipoData?.tipos_negocio?.nome || 'limpa_nome'
+      }
+
+      console.log('CreateSampleLeads: Tipo detectado:', tipoNegocio)
+      
+      let sampleLeads: any[] = []
+
+      if (tipoNegocio === 'previdenciario') {
+        sampleLeads = [
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Maria Santos Silva',
+            cpf: '123.456.789-01',
+            telefone: '(11) 99999-9999',
+            origem: 'WhatsApp',
+            status_generico: 'novo_caso',
+            tipo_negocio_id: 2,
+            dados_personalizados: {
+              tipo_acidente: 'trabalho',
+              situacao_atual: 'Aposentada',
+              tipo_servico: 'Análise de Viabilidade',
+              valor_estimado_caso: 25000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'José Oliveira Costa',
+            cpf: '987.654.321-00',
+            telefone: '(11) 88888-8888',
+            origem: 'Site',
+            status_generico: 'analise_viabilidade',
+            tipo_negocio_id: 2,
+            dados_personalizados: {
+              tipo_acidente: 'doenca_ocupacional',
+              situacao_atual: 'Trabalhando',
+              tipo_servico: 'Revisão de Benefício',
+              valor_estimado_caso: 18000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Ana Paula Ferreira',
+            cpf: '456.789.123-45',
+            telefone: '(21) 77777-7777',
+            origem: 'Indicação',
+            status_generico: 'caso_viavel',
+            tipo_negocio_id: 2,
+            dados_personalizados: {
+              tipo_acidente: 'invalidez',
+              situacao_atual: 'Afastado',
+              tipo_servico: 'Recurso INSS',
+              valor_estimado_caso: 35000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Roberto Silva Machado',
+            cpf: '654.321.987-00',
+            telefone: '(85) 55555-5555',
+            origem: 'Indicação',
+            status_generico: 'contrato_enviado',
+            tipo_negocio_id: 2,
+            dados_personalizados: {
+              tipo_acidente: 'transito',
+              situacao_atual: 'Trabalhando',
+              tipo_servico: 'Auxílio Doença',
+              valor_estimado_caso: 28000.00
+            }
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Carlos Eduardo Lima',
+            cpf: '789.123.456-78',
+            telefone: '(31) 66666-6666',
+            origem: 'WhatsApp',
+            status_generico: 'caso_finalizado',
+            tipo_negocio_id: 2,
+            dados_personalizados: {
+              tipo_acidente: 'trabalho',
+              situacao_atual: 'Aposentado',
+              tipo_servico: 'Aposentadoria',
+              valor_estimado_caso: 42000.00,
+              valor_contrato: 8500.00,
+              responsavel: 'Especialista Previdenciário'
+            }
+          }
+        ]
+      } else {
+        // Dados para limpa nome
+        sampleLeads = [
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'João Silva Santos',
+            cpf: '123.456.789-01',
+            telefone: '(11) 99999-9999',
+            origem: 'WhatsApp',
+            status_limpa_nome: 'qualificacao',
+            valor_estimado_divida: 15000.00,
+            tempo_negativado: '2 anos',
+            tipo_consulta_interesse: 'Consulta Rating',
+            tipo_negocio_id: 1,
+            dados_personalizados: {}
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Maria Oliveira',
+            cpf: '987.654.321-00',
+            telefone: '(11) 88888-8888',
+            origem: 'Site',
+            status_limpa_nome: 'pagamento_consulta',
+            valor_estimado_divida: 8500.00,
+            tempo_negativado: '1 ano e 6 meses',
+            tipo_consulta_interesse: 'Consulta Completa',
+            valor_pago_consulta: 199.00,
+            tipo_negocio_id: 1,
+            dados_personalizados: {}
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Carlos Eduardo',
+            cpf: '456.789.123-45',
+            telefone: '(21) 77777-7777',
+            origem: 'Indicação',
+            status_limpa_nome: 'consta_divida',
+            valor_estimado_divida: 12000.00,
+            valor_real_divida: 11547.85,
+            valor_pago_consulta: 199.00,
+            tempo_negativado: '3 anos',
+            tipo_consulta_interesse: 'Limpa Nome',
+            orgaos_negativados: ['SPC', 'SERASA', 'Banco do Brasil'],
+            tipo_negocio_id: 1,
+            dados_personalizados: {}
+          },
+          {
+            user_id: parseInt(user.id),
+            nome_cliente: 'Ana Paula Costa',
+            cpf: '789.123.456-78',
+            telefone: '(31) 66666-6666',
+            origem: 'WhatsApp',
+            status_limpa_nome: 'cliente_fechado',
+            valor_estimado_divida: 20000.00,
+            valor_real_divida: 18750.00,
+            valor_pago_consulta: 199.00,
+            valor_contrato: 2500.00,
+            tempo_negativado: '4 anos',
+            tipo_consulta_interesse: 'Análise de Crédito',
+            vendedor_responsavel: 'Vendedor Principal',
+            tipo_negocio_id: 1,
+            dados_personalizados: {}
+          }
+        ]
+      }
+
+      console.log('CreateSampleLeads: Inserindo leads:', sampleLeads.length, 'leads')
+      console.log('CreateSampleLeads: Dados a inserir:', JSON.stringify(sampleLeads, null, 2))
+
+      const { data, error } = await supabase
         .from('leads')
         .insert(sampleLeads)
+        .select()
 
-      if (error) throw error
+      console.log('CreateSampleLeads: Resultado da inserção:', { data, error })
+
+      if (error) {
+        console.error('CreateSampleLeads: Erro na inserção:', error)
+        throw error
+      }
+      
+      console.log('CreateSampleLeads: Leads criados com sucesso!')
       fetchLeads()
     } catch (error) {
       console.error('Erro ao criar leads de exemplo:', error)
@@ -366,7 +693,8 @@ export default function LeadsPage() {
 
   const filteredLeads = leads.filter(lead => {
     // Filtro por status
-    const statusMatch = statusFilter === 'todos' || lead.status_limpa_nome === statusFilter
+    const statusMatch = statusFilter === 'todos' ||
+      (lead.status_generico || lead.status_limpa_nome) === statusFilter
     
     // Filtro por tipo de consulta
     const tipoConsultaMatch = tipoConsultaFilter === 'todos' || 
@@ -401,21 +729,113 @@ export default function LeadsPage() {
     return [...new Set(types)]
   }
 
+  // Função para calcular métricas avançadas de relatório
+  const calculateAdvancedMetrics = (filteredLeads: Lead[]) => {
+    const total = filteredLeads.length
+    if (total === 0) return {
+      tempoMedioResposta: 0,
+      taxaResposta: 0,
+      taxaSucesso: 0,
+      totalContatos: 0,
+      contatosComResposta: 0,
+      casosSucesso: 0
+    }
+
+    // Calcular tempo médio de resposta (assumindo que temos created_at e updated_at)
+    const leadsComResposta = filteredLeads.filter(lead =>
+      lead.created_at && lead.updated_at &&
+      new Date(lead.updated_at) > new Date(lead.created_at) &&
+      (lead.status_generico || lead.status_limpa_nome) !== 'novo_lead' &&
+      (lead.status_generico || lead.status_limpa_nome) !== 'novo_caso'
+    )
+
+    const temposResposta = leadsComResposta.map(lead => {
+      const criacao = new Date(lead.created_at!)
+      const resposta = new Date(lead.updated_at!)
+      return (resposta.getTime() - criacao.getTime()) / (1000 * 60 * 60) // em horas
+    })
+
+    const tempoMedioResposta = temposResposta.length > 0 
+      ? temposResposta.reduce((a, b) => a + b, 0) / temposResposta.length 
+      : 0
+
+    // Taxa de resposta (quantos leads tiveram algum tipo de interação)
+    const contatosComResposta = leadsComResposta.length
+    const taxaResposta = total > 0 ? (contatosComResposta / total * 100) : 0
+
+    // Taxa de sucesso (leads que chegaram ao final do funil com sucesso)
+    const casosSucesso = filteredLeads.filter(lead =>
+      (lead.status_generico || lead.status_limpa_nome) === 'cliente_fechado' ||
+      (lead.status_generico || lead.status_limpa_nome) === 'caso_finalizado' ||
+      (userTipoNegocio?.nome === 'previdenciario' && lead.dados_personalizados?.valor_contrato && lead.dados_personalizados.valor_contrato > 0)
+    ).length
+
+    const taxaSucesso = total > 0 ? (casosSucesso / total * 100) : 0
+
+    return {
+      tempoMedioResposta: Math.round(tempoMedioResposta * 10) / 10,
+      taxaResposta: Math.round(taxaResposta * 10) / 10,
+      taxaSucesso: Math.round(taxaSucesso * 10) / 10,
+      totalContatos: total,
+      contatosComResposta,
+      casosSucesso
+    }
+  }
+
   // Funções para cálculos de relatórios
   const calculateMetrics = (filteredLeads: Lead[]) => {
     const total = filteredLeads.length
-    const qualificados = filteredLeads.filter(lead => lead.status_limpa_nome !== 'desqualificado').length
-    const pagouConsulta = filteredLeads.filter(lead => lead.valor_pago_consulta && lead.valor_pago_consulta > 0).length
-    const constaDivida = filteredLeads.filter(lead => lead.status_limpa_nome === 'consta_divida').length
-    const clientesFechados = filteredLeads.filter(lead => lead.status_limpa_nome === 'cliente_fechado').length
+
+    let qualificados, pagouConsulta, constaDivida, clientesFechados
+
+    if (userTipoNegocio?.nome === 'previdenciario') {
+      // Métricas para previdenciário
+      qualificados = filteredLeads.filter(lead =>
+        lead.status_generico === 'analise_viabilidade' ||
+        lead.status_generico === 'caso_viavel' ||
+        lead.status_generico === 'contrato_enviado' ||
+        lead.status_generico === 'contrato_assinado' ||
+        lead.status_generico === 'caso_finalizado'
+      ).length
+
+      pagouConsulta = filteredLeads.filter(lead =>
+        lead.status_generico === 'caso_viavel' ||
+        lead.status_generico === 'contrato_enviado' ||
+        lead.status_generico === 'contrato_assinado' ||
+        lead.status_generico === 'caso_finalizado'
+      ).length
+
+      constaDivida = filteredLeads.filter(lead =>
+        lead.status_generico === 'contrato_assinado' ||
+        lead.status_generico === 'caso_finalizado'
+      ).length
+
+      clientesFechados = filteredLeads.filter(lead =>
+        lead.status_generico === 'caso_finalizado'
+      ).length
+    } else {
+      // Métricas para limpa nome (estrutura original)
+      qualificados = filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) !== 'desqualificado').length
+      pagouConsulta = filteredLeads.filter(lead => lead.valor_pago_consulta && lead.valor_pago_consulta > 0).length
+      constaDivida = filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === 'consta_divida').length
+      clientesFechados = filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === 'cliente_fechado').length
+    }
     
-    const receitaConsultas = filteredLeads
-      .filter(lead => lead.valor_pago_consulta)
-      .reduce((acc, lead) => acc + (lead.valor_pago_consulta || 0), 0)
-    
-    const receitaContratos = filteredLeads
-      .filter(lead => lead.valor_contrato)
-      .reduce((acc, lead) => acc + (lead.valor_contrato || 0), 0)
+    const receitaConsultas = userTipoNegocio?.nome === 'previdenciario'
+      ? filteredLeads
+          .filter(lead => lead.dados_personalizados?.valor_consulta)
+          .reduce((acc, lead) => acc + (lead.dados_personalizados?.valor_consulta || 0), 0)
+      : filteredLeads
+          .filter(lead => lead.valor_pago_consulta)
+          .reduce((acc, lead) => acc + (lead.valor_pago_consulta || 0), 0)
+
+    const receitaContratos = userTipoNegocio?.nome === 'previdenciario'
+      ? filteredLeads
+          .filter(lead => lead.dados_personalizados?.valor_contrato)
+          .reduce((acc, lead) => acc + (lead.dados_personalizados?.valor_contrato || 0), 0)
+      : filteredLeads
+          .filter(lead => lead.valor_contrato)
+          .reduce((acc, lead) => acc + (lead.valor_contrato || 0), 0)
     
     const ticketMedio = clientesFechados > 0 ? receitaContratos / clientesFechados : 0
 
@@ -441,7 +861,8 @@ export default function LeadsPage() {
         (lead.nome_campanha && lead.nome_campanha.toLowerCase().includes(reportFilters.campanha.toLowerCase()))
       
       const origemMatch = reportFilters.origemFilter === 'todos' || lead.origem === reportFilters.origemFilter
-      const statusMatch = reportFilters.statusRelatorio === 'todos' || lead.status_limpa_nome === reportFilters.statusRelatorio
+      const statusMatch = reportFilters.statusRelatorio === 'todos' ||
+        (lead.status_generico || lead.status_limpa_nome) === reportFilters.statusRelatorio
       const tipoConsultaMatch = reportFilters.tipoConsultaRelatorio === 'todos' || lead.tipo_consulta_interesse === reportFilters.tipoConsultaRelatorio
       
       const cnpjMatch = !reportFilters.cnpj || 
@@ -472,10 +893,11 @@ export default function LeadsPage() {
   }
 
   const renderKanbanView = () => {
-    const statusGroups = Object.keys(STATUS_CONFIG).map(status => ({
+    const relevantStatuses = getRelevantStatuses()
+    const statusGroups = relevantStatuses.map(status => ({
       status,
       config: STATUS_CONFIG[status as keyof typeof STATUS_CONFIG],
-      leads: filteredLeads.filter(lead => lead.status_limpa_nome === status)
+      leads: filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status)
     }))
 
     // Debug: verificar se selectedLead está definido
@@ -559,6 +981,7 @@ export default function LeadsPage() {
   const renderReportsTab = () => {
     const filteredReportLeads = getFilteredLeadsForReport()
     const metrics = calculateMetrics(filteredReportLeads)
+    const advancedMetrics = calculateAdvancedMetrics(filteredReportLeads)
 
     return (
       <div className="space-y-6">
@@ -608,9 +1031,12 @@ export default function LeadsPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="todos">Todos</option>
-                {Object.entries(STATUS_CONFIG).map(([status, config]) => (
-                  <option key={status} value={status}>{config.label}</option>
-                ))}
+                {getRelevantStatuses().map(status => {
+                  const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                  return (
+                    <option key={status} value={status}>{config.label}</option>
+                  )
+                })}
               </select>
             </div>
 
@@ -713,7 +1139,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{metrics.total}</h3>
-                <p className="text-sm text-gray-600">Total de Leads</p>
+                <p className="text-sm text-gray-600">{getMetricsLabels().total}</p>
               </div>
               <Users className="h-8 w-8 text-blue-500" />
             </div>
@@ -723,7 +1149,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{metrics.qualificados}</h3>
-                <p className="text-sm text-gray-600">Qualificados</p>
+                <p className="text-sm text-gray-600">{getMetricsLabels().qualificados}</p>
                 <p className="text-xs text-yellow-600 font-medium">{metrics.conversaoQualificacao.toFixed(1)}% conversão</p>
               </div>
               <Target className="h-8 w-8 text-yellow-500" />
@@ -734,7 +1160,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{metrics.pagouConsulta}</h3>
-                <p className="text-sm text-gray-600">Pagaram Consulta</p>
+                <p className="text-sm text-gray-600">{getMetricsLabels().pagouConsulta}</p>
                 <p className="text-xs text-purple-600 font-medium">{metrics.conversaoPagamento.toFixed(1)}% conversão</p>
               </div>
               <DollarSign className="h-8 w-8 text-purple-500" />
@@ -745,7 +1171,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{metrics.clientesFechados}</h3>
-                <p className="text-sm text-gray-600">Clientes Fechados</p>
+                <p className="text-sm text-gray-600">{getMetricsLabels().clientesFechados}</p>
                 <p className="text-xs text-green-600 font-medium">{metrics.conversaoFechamento.toFixed(1)}% conversão</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
@@ -753,33 +1179,33 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Métricas financeiras */}
+        {/* Métricas de Performance */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-4">
-              <DollarSign className="h-6 w-6 text-green-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Receita Consultas</h3>
+              <Clock className="h-6 w-6 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Tempo Médio de Resposta</h3>
             </div>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(metrics.receitaConsultas)}</p>
-            <p className="text-sm text-gray-600">De {metrics.pagouConsulta} consultas pagas</p>
+            <p className="text-2xl font-bold text-blue-600">{advancedMetrics.tempoMedioResposta}h</p>
+            <p className="text-sm text-gray-600">Baseado em {advancedMetrics.contatosComResposta} {userTipoNegocio?.nome === 'previdenciario' ? 'casos com resposta' : 'leads respondidos'}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-4">
-              <TrendingUp className="h-6 w-6 text-blue-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Receita Contratos</h3>
+              <MessageSquare className="h-6 w-6 text-green-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Taxa de Resposta</h3>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{formatCurrency(metrics.receitaContratos)}</p>
-            <p className="text-sm text-gray-600">De {metrics.clientesFechados} contratos fechados</p>
+            <p className="text-2xl font-bold text-green-600">{advancedMetrics.taxaResposta}%</p>
+            <p className="text-sm text-gray-600">{advancedMetrics.contatosComResposta} de {advancedMetrics.totalContatos} contatos responderam</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-4">
-              <BarChart3 className="h-6 w-6 text-purple-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Ticket Médio</h3>
+              <TrendingUp className="h-6 w-6 text-purple-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Taxa de Sucesso</h3>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{formatCurrency(metrics.ticketMedio)}</p>
-            <p className="text-sm text-gray-600">Por contrato fechado</p>
+            <p className="text-2xl font-bold text-purple-600">{advancedMetrics.taxaSucesso}%</p>
+            <p className="text-sm text-gray-600">{advancedMetrics.casosSucesso} {userTipoNegocio?.nome === 'previdenciario' ? 'casos finalizados' : 'clientes fechados'} com sucesso</p>
           </div>
         </div>
 
@@ -794,7 +1220,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                <span className="font-medium text-gray-900">Total de Leads</span>
+                <span className="font-medium text-gray-900">{getMetricsLabels().total}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.total}</span>
@@ -808,7 +1234,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                <span className="font-medium text-gray-900">Qualificados</span>
+                <span className="font-medium text-gray-900">{getMetricsLabels().qualificados}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.qualificados}</span>
@@ -822,7 +1248,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                <span className="font-medium text-gray-900">Pagaram Consulta</span>
+                <span className="font-medium text-gray-900">{userTipoNegocio?.nome === 'previdenciario' ? 'Casos Viáveis' : getMetricsLabels().pagouConsulta}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.pagouConsulta}</span>
@@ -836,7 +1262,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                <span className="font-medium text-gray-900">Consta Dívida</span>
+                <span className="font-medium text-gray-900">{userTipoNegocio?.nome === 'previdenciario' ? 'Contratos Assinados' : 'Consta Dívida'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.constaDivida}</span>
@@ -850,7 +1276,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span className="font-medium text-gray-900">Clientes Fechados</span>
+                <span className="font-medium text-gray-900">{getMetricsLabels().clientesFechados}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.clientesFechados}</span>
@@ -871,12 +1297,15 @@ export default function LeadsPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-              const count = filteredReportLeads.filter(lead => lead.status_limpa_nome === status).length
-              const percentage = metrics.total > 0 ? (count / metrics.total * 100) : 0
-              const IconComponent = config.icon
+            {getRelevantStatuses().map(status => {
+                const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                const count = filteredReportLeads.filter(lead =>
+                  (lead.status_generico === status) || (lead.status_limpa_nome === status)
+                ).length
+                const percentage = metrics.total > 0 ? (count / metrics.total * 100) : 0
+                const IconComponent = config.icon
 
-              return (
+                return (
                 <div key={status} className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -936,7 +1365,7 @@ export default function LeadsPage() {
                       {lead.origem || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(lead.status_limpa_nome || 'novo_lead')}
+                      {getStatusBadge(lead.status_generico || lead.status_limpa_nome || 'novo_lead')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(lead.valor_estimado_divida)}
@@ -968,7 +1397,7 @@ export default function LeadsPage() {
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">CRM Multi-Negócios</h1>
+          <h1 className="text-3xl font-bold text-gray-900">DNX Operações Inteligentes</h1>
           <p className="text-gray-600 mt-2">
             Gestão completa de leads e relatórios de performance
           </p>
@@ -1093,14 +1522,15 @@ export default function LeadsPage() {
                       className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="todos">Todos ({leads.length})</option>
-                      {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                        const count = leads.filter(lead => lead.status_limpa_nome === status).length
-                        return (
-                          <option key={status} value={status}>
-                            {config.label} ({count})
-                          </option>
-                        )
-                      })}
+                      {getRelevantStatuses().map(status => {
+                          const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                          const count = leads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status).length
+                          return (
+                            <option key={status} value={status}>
+                              {config.label} ({count})
+                            </option>
+                          )
+                        })}
                     </select>
                   </div>
 
@@ -1231,7 +1661,7 @@ export default function LeadsPage() {
                               </div>
                               <div className="mt-4">
                                 <span className="text-gray-600 font-medium">Status:</span>
-                                <div className="mt-2">{getStatusBadge(selectedLead.status_limpa_nome || 'novo_lead')}</div>
+                                <div className="mt-2">{getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}</div>
                               </div>
                             </div>
                           </div>
@@ -1376,7 +1806,7 @@ export default function LeadsPage() {
                               </div>
 
                               <div className="ml-4">
-                                {getStatusBadge(lead.status_limpa_nome || 'novo_lead')}
+                                {getStatusBadge(lead.status_generico || lead.status_limpa_nome || 'novo_lead')}
                               </div>
                             </div>
                           </div>
@@ -1399,7 +1829,7 @@ export default function LeadsPage() {
                           {/* Status atual */}
                           <div>
                             <h4 className="text-sm font-medium text-gray-900 mb-2">Status Atual</h4>
-                            {getStatusBadge(selectedLead.status_limpa_nome || 'novo_lead')}
+                            {getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}
                           </div>
 
                           {/* Informações básicas */}
@@ -1423,24 +1853,43 @@ export default function LeadsPage() {
                               Informações Financeiras
                             </h4>
                             <div className="space-y-2 text-sm">
-                              {selectedLead.valor_estimado_divida && <div><span className="text-gray-500">Valor estimado:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_estimado_divida)}</span></div>}
-                              {selectedLead.valor_real_divida && <div><span className="text-gray-500">Valor real:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_real_divida)}</span></div>}
-                              {selectedLead.valor_pago_consulta && <div><span className="text-gray-500">Consulta paga:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_pago_consulta)}</span></div>}
-                              {selectedLead.valor_contrato && <div><span className="text-gray-500">Valor contrato:</span> <span className="ml-2 text-green-600 font-medium">{formatCurrency(selectedLead.valor_contrato)}</span></div>}
+                              {userTipoNegocio?.nome === 'previdenciario' ? (
+                                <>
+                                  {selectedLead.dados_personalizados?.valor_estimado_caso && <div><span className="text-gray-500">Valor estimado do caso:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.dados_personalizados.valor_estimado_caso)}</span></div>}
+                                  {selectedLead.dados_personalizados?.valor_consulta && <div><span className="text-gray-500">Valor consulta:</span> <span className="ml-2 text-blue-600 font-medium">{formatCurrency(selectedLead.dados_personalizados.valor_consulta)}</span></div>}
+                                  {selectedLead.dados_personalizados?.valor_contrato && <div><span className="text-gray-500">Valor contrato:</span> <span className="ml-2 text-green-600 font-medium">{formatCurrency(selectedLead.dados_personalizados.valor_contrato)}</span></div>}
+                                </>
+                              ) : (
+                                <>
+                                  {selectedLead.valor_estimado_divida && <div><span className="text-gray-500">Valor estimado:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_estimado_divida)}</span></div>}
+                                  {selectedLead.valor_real_divida && <div><span className="text-gray-500">Valor real:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_real_divida)}</span></div>}
+                                  {selectedLead.valor_pago_consulta && <div><span className="text-gray-500">Consulta paga:</span> <span className="ml-2 text-gray-900">{formatCurrency(selectedLead.valor_pago_consulta)}</span></div>}
+                                  {selectedLead.valor_contrato && <div><span className="text-gray-500">Valor contrato:</span> <span className="ml-2 text-green-600 font-medium">{formatCurrency(selectedLead.valor_contrato)}</span></div>}
+                                </>
+                              )}
                             </div>
                           </div>
 
                           {/* Informações específicas */}
-                          {(selectedLead.tempo_negativado || selectedLead.tipo_consulta_interesse || selectedLead.motivo_desqualificacao) && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-900 mb-3">Detalhes Específicos</h4>
-                              <div className="space-y-2 text-sm">
-                                {selectedLead.tempo_negativado && <div><span className="text-gray-500">Tempo negativado:</span> <span className="ml-2 text-gray-900">{selectedLead.tempo_negativado}</span></div>}
-                                {selectedLead.tipo_consulta_interesse && <div><span className="text-gray-500">Tipo consulta:</span> <span className="ml-2 text-gray-900">{selectedLead.tipo_consulta_interesse}</span></div>}
-                                {selectedLead.motivo_desqualificacao && <div><span className="text-gray-500">Motivo desqualificação:</span> <span className="ml-2 text-red-600">{selectedLead.motivo_desqualificacao}</span></div>}
-                              </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-3">Detalhes Específicos</h4>
+                            <div className="space-y-2 text-sm">
+                              {userTipoNegocio?.nome === 'previdenciario' ? (
+                                <>
+                                  {selectedLead.dados_personalizados?.tipo_acidente && <div><span className="text-gray-500">Tipo de acidente:</span> <span className="ml-2 text-gray-900">{selectedLead.dados_personalizados.tipo_acidente}</span></div>}
+                                  {selectedLead.dados_personalizados?.situacao_atual && <div><span className="text-gray-500">Situação atual:</span> <span className="ml-2 text-gray-900">{selectedLead.dados_personalizados.situacao_atual}</span></div>}
+                                  {selectedLead.dados_personalizados?.tipo_servico && <div><span className="text-gray-500">Tipo de serviço:</span> <span className="ml-2 text-gray-900">{selectedLead.dados_personalizados.tipo_servico}</span></div>}
+                                  {selectedLead.dados_personalizados?.responsavel && <div><span className="text-gray-500">Responsável:</span> <span className="ml-2 text-gray-900">{selectedLead.dados_personalizados.responsavel}</span></div>}
+                                </>
+                              ) : (
+                                <>
+                                  {selectedLead.tempo_negativado && <div><span className="text-gray-500">Tempo negativado:</span> <span className="ml-2 text-gray-900">{selectedLead.tempo_negativado}</span></div>}
+                                  {selectedLead.tipo_consulta_interesse && <div><span className="text-gray-500">Tipo consulta:</span> <span className="ml-2 text-gray-900">{selectedLead.tipo_consulta_interesse}</span></div>}
+                                  {selectedLead.motivo_desqualificacao && <div><span className="text-gray-500">Motivo desqualificação:</span> <span className="ml-2 text-red-600">{selectedLead.motivo_desqualificacao}</span></div>}
+                                </>
+                              )}
                             </div>
-                          )}
+                          </div>
 
                           {/* Órgãos negativados */}
                           {selectedLead.orgaos_negativados && selectedLead.orgaos_negativados.length > 0 && (
