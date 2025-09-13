@@ -123,54 +123,70 @@ export default function HomePage() {
 
   const configureDashboard = (businessType: any) => {
     const config: any = {}
-    
-    if (businessType.nome === 'limpa_nome') {
-      config.title = 'Dashboard Limpa Nome'
-      config.subtitle = 'Recuperação de crédito'
+
+    // Usar configuração de métricas do banco se disponível
+    if (businessType.metricas_config && typeof businessType.metricas_config === 'object') {
+      const metricasConfig = businessType.metricas_config
+      config.title = `Dashboard ${businessType.nome_exibicao}`
+      config.subtitle = businessType.descricao || 'Gestão de leads'
       config.metrics = {
-        novosLeads: 'Novos Leads',
-        qualificados: 'Qualificados', 
-        emAndamento: 'Pagou Consulta',
-        casosViaveis: 'Dívidas Encontradas',
-        fechados: 'Clientes Fechados',
-        negociacao: 'Em Negociação'
-      }
-    } else if (businessType.nome === 'previdenciario') {
-      config.title = 'Dashboard Previdenciário'
-      config.subtitle = 'Casos previdenciários'
-      config.metrics = {
-        novosLeads: 'Novos Casos',
-        qualificados: 'Análise Viabilidade',
-        emAndamento: 'Contratos Enviados', 
-        casosViaveis: 'Casos Viáveis',
-        fechados: 'Casos Finalizados',
-        negociacao: 'Processos Iniciados'
-      }
-    } else if (businessType.nome === 'b2b') {
-      config.title = 'Dashboard B2B'
-      config.subtitle = 'Prospecção empresarial'
-      config.metrics = {
-        novosLeads: 'Novos Contatos',
-        qualificados: 'Qualificação',
-        emAndamento: 'Apresentações',
-        casosViaveis: 'Propostas Enviadas', 
-        fechados: 'Deals Fechados',
-        negociacao: 'Em Negociação'
+        novosLeads: metricasConfig.label_novos || 'Novos',
+        qualificados: metricasConfig.label_qualificados || 'Qualificados',
+        emAndamento: metricasConfig.label_em_andamento || 'Em Andamento',
+        casosViaveis: metricasConfig.label_casos_viaveis || 'Casos Viáveis',
+        fechados: metricasConfig.label_fechados || 'Fechados',
+        negociacao: metricasConfig.label_negociacao || 'Em Negociação'
       }
     } else {
-      // Fallback genérico
-      config.title = 'Dashboard CRM'
-      config.subtitle = 'Gestão de leads'
-      config.metrics = {
-        novosLeads: 'Novos Leads',
-        qualificados: 'Qualificados',
-        emAndamento: 'Em Andamento',
-        casosViaveis: 'Casos Viáveis',
-        fechados: 'Fechados',
-        negociacao: 'Em Negociação'
+      // Fallback baseado no nome do tipo
+      if (businessType.nome === 'limpa_nome') {
+        config.title = 'Dashboard Limpa Nome'
+        config.subtitle = 'Recuperação de crédito'
+        config.metrics = {
+          novosLeads: 'Novos Leads',
+          qualificados: 'Qualificados',
+          emAndamento: 'Pagou Consulta',
+          casosViaveis: 'Dívidas Encontradas',
+          fechados: 'Clientes Fechados',
+          negociacao: 'Em Negociação'
+        }
+      } else if (businessType.nome === 'previdenciario') {
+        config.title = 'Dashboard Previdenciário'
+        config.subtitle = 'Casos previdenciários'
+        config.metrics = {
+          novosLeads: 'Novos Casos',
+          qualificados: 'Análise Viabilidade',
+          emAndamento: 'Contratos Enviados',
+          casosViaveis: 'Casos Viáveis',
+          fechados: 'Casos Finalizados',
+          negociacao: 'Processos Iniciados'
+        }
+      } else if (businessType.nome === 'b2b') {
+        config.title = 'Dashboard B2B'
+        config.subtitle = 'Prospecção empresarial'
+        config.metrics = {
+          novosLeads: 'Novos Contatos',
+          qualificados: 'Qualificação',
+          emAndamento: 'Apresentações',
+          casosViaveis: 'Propostas Enviadas',
+          fechados: 'Deals Fechados',
+          negociacao: 'Em Negociação'
+        }
+      } else {
+        // Fallback genérico
+        config.title = `Dashboard ${businessType.nome_exibicao || 'CRM'}`
+        config.subtitle = businessType.descricao || 'Gestão de leads'
+        config.metrics = {
+          novosLeads: 'Novos Leads',
+          qualificados: 'Qualificados',
+          emAndamento: 'Em Andamento',
+          casosViaveis: 'Casos Viáveis',
+          fechados: 'Fechados',
+          negociacao: 'Em Negociação'
+        }
       }
     }
-    
+
     setDashboardConfig(config)
   }
 
@@ -208,7 +224,7 @@ export default function HomePage() {
 
   const calculateMetrics = (leadsData: Lead[]) => {
     const totalLeads = leadsData.length
-    
+
     if (userBusinessTypes.length === 0) {
       // Fallback se não conseguir carregar tipos de negócio
       return setMetrics({
@@ -227,10 +243,10 @@ export default function HomePage() {
 
     const businessType = userBusinessTypes[0] // Usar primeiro tipo do usuário
     const statusPersonalizados = businessType.status_personalizados || []
-    
+
     console.log('Tipo de negócio:', businessType.nome)
     console.log('Status personalizados:', statusPersonalizados)
-    
+
     // Usar status_generico (novo sistema) ou status_limpa_nome (fallback para limpa nome)
     const getStatus = (lead: Lead) => {
       if (businessType.nome === 'limpa_nome') {
@@ -238,37 +254,67 @@ export default function HomePage() {
       }
       return lead.status_generico || 'novo_lead'
     }
-    
+
     // Debug: ver todos os status existentes nos leads
     const allStatus = [...new Set(leadsData.map(l => getStatus(l)))]
     console.log('Status encontrados nos leads:', allStatus)
-    
+
     // Calcular métricas baseado nos status específicos do tipo de negócio
     let novosLeads = 0, qualificados = 0, emAndamento = 0, casosViaveis = 0, fechados = 0, perdidos = 0
-    
-    if (businessType.nome === 'limpa_nome') {
-      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_lead').length
-      qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao').length
-      emAndamento = leadsData.filter(l => getStatus(l) === 'pagamento_consulta').length
-      casosViaveis = leadsData.filter(l => getStatus(l) === 'consta_divida').length
-      fechados = leadsData.filter(l => getStatus(l) === 'cliente_fechado').length
-      perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
-    } else if (businessType.nome === 'previdenciario') {
-      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_caso').length
-      qualificados = leadsData.filter(l => getStatus(l) === 'analise_viabilidade').length
-      emAndamento = leadsData.filter(l => getStatus(l) === 'contrato_enviado').length
-      casosViaveis = leadsData.filter(l => getStatus(l) === 'caso_viavel').length
-      fechados = leadsData.filter(l => getStatus(l) === 'caso_finalizado').length
-      perdidos = leadsData.filter(l => getStatus(l) === 'caso_inviavel').length
-    } else if (businessType.nome === 'b2b') {
-      novosLeads = leadsData.filter(l => getStatus(l) === 'novo_contato').length
-      qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao_inicial').length
-      emAndamento = leadsData.filter(l => getStatus(l) === 'apresentacao_realizada').length
-      casosViaveis = leadsData.filter(l => getStatus(l) === 'proposta_enviada').length
-      fechados = leadsData.filter(l => getStatus(l) === 'deal_fechado').length
-      perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
+
+    // Se há status personalizados, usar mapeamento dinâmico
+    if (statusPersonalizados.length > 0) {
+      // Mapear status baseado na posição e nomenclatura comum
+      const primeiroStatus = statusPersonalizados[0] // Geralmente 'novo_*'
+      const segundoStatus = statusPersonalizados[1] // Geralmente qualificação/análise
+
+      // Encontrar status que indicam progresso
+      const statusAndamento = statusPersonalizados.find(s =>
+        s.includes('contrato') || s.includes('pagamento') || s.includes('apresentacao')
+      )
+      const statusViavel = statusPersonalizados.find(s =>
+        s.includes('viavel') || s.includes('divida') || s.includes('proposta')
+      )
+      const statusFechado = statusPersonalizados.find(s =>
+        s.includes('finalizado') || s.includes('fechado') || s.includes('deal')
+      )
+      const statusPerdido = statusPersonalizados.find(s =>
+        s.includes('inviavel') || s.includes('desqualificado') || s.includes('perdido')
+      )
+
+      novosLeads = leadsData.filter(l => getStatus(l) === primeiroStatus).length
+      qualificados = segundoStatus ? leadsData.filter(l => getStatus(l) === segundoStatus).length : 0
+      emAndamento = statusAndamento ? leadsData.filter(l => getStatus(l) === statusAndamento).length : 0
+      casosViaveis = statusViavel ? leadsData.filter(l => getStatus(l) === statusViavel).length : 0
+      fechados = statusFechado ? leadsData.filter(l => getStatus(l) === statusFechado).length : 0
+      perdidos = statusPerdido ? leadsData.filter(l => getStatus(l) === statusPerdido).length : 0
+
+    } else {
+      // Fallback para tipos conhecidos
+      if (businessType.nome === 'limpa_nome') {
+        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_lead').length
+        qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao').length
+        emAndamento = leadsData.filter(l => getStatus(l) === 'pagamento_consulta').length
+        casosViaveis = leadsData.filter(l => getStatus(l) === 'consta_divida').length
+        fechados = leadsData.filter(l => getStatus(l) === 'cliente_fechado').length
+        perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
+      } else if (businessType.nome === 'previdenciario') {
+        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_caso').length
+        qualificados = leadsData.filter(l => getStatus(l) === 'analise_viabilidade').length
+        emAndamento = leadsData.filter(l => getStatus(l) === 'contrato_enviado').length
+        casosViaveis = leadsData.filter(l => getStatus(l) === 'caso_viavel').length
+        fechados = leadsData.filter(l => getStatus(l) === 'caso_finalizado').length
+        perdidos = leadsData.filter(l => getStatus(l) === 'caso_inviavel').length
+      } else if (businessType.nome === 'b2b') {
+        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_contato').length
+        qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao_inicial').length
+        emAndamento = leadsData.filter(l => getStatus(l) === 'apresentacao_realizada').length
+        casosViaveis = leadsData.filter(l => getStatus(l) === 'proposta_enviada').length
+        fechados = leadsData.filter(l => getStatus(l) === 'deal_fechado').length
+        perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
+      }
     }
-    
+
     const valorTotalConsultas = leadsData.reduce((sum, lead) => {
       return sum + (lead.valor_pago_consulta || 0)
     }, 0)

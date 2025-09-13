@@ -25,7 +25,61 @@ const STATUS_CONFIG = {
   'contrato_enviado': { label: 'Contrato Enviado', color: 'bg-purple-100 text-purple-800', icon: FileText },
   'contrato_assinado': { label: 'Contrato Assinado', color: 'bg-indigo-100 text-indigo-800', icon: DollarSign },
   'processo_iniciado': { label: 'Processo Iniciado', color: 'bg-orange-100 text-orange-800', icon: Activity },
-  'caso_finalizado': { label: 'Caso Finalizado', color: 'bg-green-100 text-green-800', icon: CheckCircle }
+  'caso_finalizado': { label: 'Caso Finalizado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+
+  // Status B2B
+  'novo_contato': { label: 'Novo Contato', color: 'bg-blue-100 text-blue-800', icon: Users },
+  'qualificacao_inicial': { label: 'Qualificação', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+  'apresentacao_agendada': { label: 'Apresentação Agendada', color: 'bg-purple-100 text-purple-800', icon: Calendar },
+  'apresentacao_realizada': { label: 'Apresentação Realizada', color: 'bg-orange-100 text-orange-800', icon: Activity },
+  'proposta_enviada': { label: 'Proposta Enviada', color: 'bg-indigo-100 text-indigo-800', icon: FileText },
+  'negociacao': { label: 'Negociação', color: 'bg-yellow-100 text-yellow-800', icon: MessageSquare },
+  'deal_fechado': { label: 'Deal Fechado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+}
+
+// Função para gerar config de status dinamicamente baseado no tipo de negócio
+const generateStatusConfig = (status: string) => {
+  // Se já existe no config estático, usar ele
+  if (STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]) {
+    return STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+  }
+
+  // Gerar config baseado na nomenclatura do status
+  let label = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  let color = 'bg-gray-100 text-gray-800'
+  let icon = FileText
+
+  // Mapear cores e ícones baseados em palavras-chave
+  if (status.includes('novo')) {
+    color = 'bg-blue-100 text-blue-800'
+    icon = Users
+  } else if (status.includes('analise') || status.includes('qualific')) {
+    color = 'bg-yellow-100 text-yellow-800'
+    icon = Clock
+  } else if (status.includes('viavel') || status.includes('divida') || status.includes('proposta')) {
+    color = 'bg-orange-100 text-orange-800'
+    icon = FileText
+  } else if (status.includes('contrato') || status.includes('pagamento')) {
+    color = 'bg-purple-100 text-purple-800'
+    icon = DollarSign
+  } else if (status.includes('negociacao') || status.includes('apresentacao')) {
+    color = 'bg-indigo-100 text-indigo-800'
+    icon = MessageSquare
+  } else if (status.includes('finalizado') || status.includes('fechado') || status.includes('assinado')) {
+    color = 'bg-green-100 text-green-800'
+    icon = CheckCircle
+  } else if (status.includes('inviavel') || status.includes('desqualificado') || status.includes('perdido')) {
+    color = 'bg-red-100 text-red-800'
+    icon = AlertCircle
+  } else if (status.includes('processo') || status.includes('iniciado')) {
+    color = 'bg-blue-100 text-blue-800'
+    icon = Activity
+  } else if (status.includes('agendada') || status.includes('agenda')) {
+    color = 'bg-purple-100 text-purple-800'
+    icon = Calendar
+  }
+
+  return { label, color, icon }
 }
 
 interface CreateLeadModalProps {
@@ -373,18 +427,17 @@ export default function LeadsPage() {
 
   const fetchUserTipoNegocio = async () => {
     if (!user) return
-    
+
     console.log('Dashboard: Buscando tipo de negócio para usuário:', user.id)
-    
+
     try {
       const { data, error } = await supabase
         .from('user_tipos_negocio')
         .select(`
           tipo_negocio_id,
           tipos_negocio!inner (
-            id,
-            nome,
-            descricao
+            id, nome, nome_exibicao, descricao, cor, icone,
+            status_personalizados, campos_personalizados, metricas_config
           )
         `)
         .eq('user_id', user.id)
@@ -393,16 +446,43 @@ export default function LeadsPage() {
       console.log('Dashboard: Resultado da busca:', data, 'Error:', error)
 
       if (error) throw error
-      setUserTipoNegocio(data?.tipos_negocio)
-      console.log('Dashboard: Tipo configurado:', data?.tipos_negocio)
+
+      const tipoNegocio = data?.tipos_negocio
+      if (tipoNegocio) {
+        // Processar campos JSON
+        const tipoProcessado = {
+          ...tipoNegocio,
+          status_personalizados: typeof tipoNegocio.status_personalizados === 'string'
+            ? JSON.parse(tipoNegocio.status_personalizados)
+            : tipoNegocio.status_personalizados || [],
+          campos_personalizados: typeof tipoNegocio.campos_personalizados === 'string'
+            ? JSON.parse(tipoNegocio.campos_personalizados)
+            : tipoNegocio.campos_personalizados || [],
+          metricas_config: typeof tipoNegocio.metricas_config === 'string'
+            ? JSON.parse(tipoNegocio.metricas_config)
+            : tipoNegocio.metricas_config || {}
+        }
+        setUserTipoNegocio(tipoProcessado)
+        console.log('Dashboard: Tipo configurado:', tipoProcessado)
+      }
     } catch (error) {
       console.error('Erro ao buscar tipo de negócio:', error)
       // Fallback baseado no usuário
       if (user.id === '28') {
         console.log('Dashboard: Configurando usuário 28 como previdenciário (fallback)')
-        setUserTipoNegocio({ id: 2, nome: 'previdenciario', descricao: 'Advogado Previdenciário' })
+        setUserTipoNegocio({
+          id: 2,
+          nome: 'previdenciario',
+          nome_exibicao: 'Advogado Previdenciário',
+          descricao: 'Advogado Previdenciário',
+          status_personalizados: ['novo_caso', 'analise_viabilidade', 'caso_viavel', 'caso_inviavel', 'contrato_enviado', 'contrato_assinado', 'processo_iniciado', 'caso_finalizado']
+        })
       } else {
-        setUserTipoNegocio({ nome: 'limpa_nome' })
+        setUserTipoNegocio({
+          nome: 'limpa_nome',
+          nome_exibicao: 'Limpa Nome',
+          status_personalizados: ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
+        })
       }
     }
   }
@@ -434,9 +514,23 @@ export default function LeadsPage() {
 
   // Função utilitária para obter status relevantes baseado no tipo de negócio
   const getRelevantStatuses = () => {
-    if (userTipoNegocio?.nome === 'previdenciario') {
+    if (!userTipoNegocio) {
+      // Fallback para quando não há tipo de negócio carregado
+      return ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
+    }
+
+    // Se há status personalizados definidos no banco, usar eles
+    if (userTipoNegocio.status_personalizados && userTipoNegocio.status_personalizados.length > 0) {
+      return userTipoNegocio.status_personalizados
+    }
+
+    // Fallback baseado no nome do tipo
+    if (userTipoNegocio.nome === 'previdenciario') {
       return ['novo_caso', 'analise_viabilidade', 'caso_viavel', 'caso_inviavel', 'contrato_enviado', 'contrato_assinado', 'processo_iniciado', 'caso_finalizado']
+    } else if (userTipoNegocio.nome === 'b2b') {
+      return ['novo_contato', 'qualificacao_inicial', 'apresentacao_agendada', 'apresentacao_realizada', 'proposta_enviada', 'negociacao', 'deal_fechado', 'desqualificado']
     } else {
+      // Limpa nome e outros
       return ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
     }
   }
@@ -682,9 +776,9 @@ export default function LeadsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.novo_lead
+    const config = generateStatusConfig(status)
     const IconComponent = config.icon
-    
+
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         <IconComponent className="h-3 w-3 mr-1" />
@@ -898,7 +992,7 @@ export default function LeadsPage() {
     const relevantStatuses = getRelevantStatuses()
     const statusGroups = relevantStatuses.map(status => ({
       status,
-      config: STATUS_CONFIG[status as keyof typeof STATUS_CONFIG],
+      config: generateStatusConfig(status),
       leads: filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status)
     }))
 
@@ -1034,7 +1128,7 @@ export default function LeadsPage() {
               >
                 <option value="todos">Todos</option>
                 {getRelevantStatuses().map(status => {
-                  const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                  const config = generateStatusConfig(status)
                   return (
                     <option key={status} value={status}>{config.label}</option>
                   )
@@ -1300,7 +1394,7 @@ export default function LeadsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {getRelevantStatuses().map(status => {
-                const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                const config = generateStatusConfig(status)
                 const count = filteredReportLeads.filter(lead =>
                   (lead.status_generico === status) || (lead.status_limpa_nome === status)
                 ).length
@@ -1525,7 +1619,7 @@ export default function LeadsPage() {
                     >
                       <option value="todos">Todos ({leads.length})</option>
                       {getRelevantStatuses().map(status => {
-                          const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                          const config = generateStatusConfig(status)
                           const count = leads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status).length
                           return (
                             <option key={status} value={status}>
