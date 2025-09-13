@@ -62,7 +62,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         .from('user_tipos_negocio')
         .select(`
           tipo_negocio_id,
-          tipos_negocio:tipo_negocio_id (
+          tipos_negocio!inner (
             id,
             nome,
             descricao
@@ -380,7 +380,7 @@ export default function LeadsPage() {
         .from('user_tipos_negocio')
         .select(`
           tipo_negocio_id,
-          tipos_negocio:tipo_negocio_id (
+          tipos_negocio!inner (
             id,
             nome,
             descricao
@@ -471,7 +471,7 @@ export default function LeadsPage() {
     try {
       const { data: userTipoData, error: userTipoError } = await supabase
         .from('user_tipos_negocio')
-        .select('tipos_negocio:tipo_negocio_id(nome)')
+        .select('tipos_negocio!inner(nome)')
         .eq('user_id', user.id)
         .single()
 
