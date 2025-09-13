@@ -269,16 +269,16 @@ export default function HomePage() {
       const segundoStatus = statusPersonalizados[1] // Geralmente qualificação/análise
 
       // Encontrar status que indicam progresso
-      const statusAndamento = statusPersonalizados.find(s =>
+      const statusAndamento = statusPersonalizados.find((s: string) =>
         s.includes('contrato') || s.includes('pagamento') || s.includes('apresentacao')
       )
-      const statusViavel = statusPersonalizados.find(s =>
+      const statusViavel = statusPersonalizados.find((s: string) =>
         s.includes('viavel') || s.includes('divida') || s.includes('proposta')
       )
-      const statusFechado = statusPersonalizados.find(s =>
+      const statusFechado = statusPersonalizados.find((s: string) =>
         s.includes('finalizado') || s.includes('fechado') || s.includes('deal')
       )
-      const statusPerdido = statusPersonalizados.find(s =>
+      const statusPerdido = statusPersonalizados.find((s: string) =>
         s.includes('inviavel') || s.includes('desqualificado') || s.includes('perdido')
       )
 

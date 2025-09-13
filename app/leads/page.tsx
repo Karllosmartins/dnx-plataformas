@@ -447,7 +447,7 @@ export default function LeadsPage() {
 
       if (error) throw error
 
-      const tipoNegocio = data?.tipos_negocio
+      const tipoNegocio = data?.tipos_negocio as any
       if (tipoNegocio) {
         // Processar campos JSON
         const tipoProcessado = {
@@ -990,7 +990,7 @@ export default function LeadsPage() {
 
   const renderKanbanView = () => {
     const relevantStatuses = getRelevantStatuses()
-    const statusGroups = relevantStatuses.map(status => ({
+    const statusGroups = relevantStatuses.map((status: string) => ({
       status,
       config: generateStatusConfig(status),
       leads: filteredLeads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status)
@@ -1001,7 +1001,7 @@ export default function LeadsPage() {
 
     return (
       <div className="flex gap-6 overflow-x-auto pb-4">
-        {statusGroups.map(({ status, config, leads: statusLeads }) => (
+        {statusGroups.map(({ status, config, leads: statusLeads }: { status: string, config: any, leads: any[] }) => (
           <div key={status} className="flex-shrink-0 w-80">
             <div className="bg-white rounded-lg shadow">
               <div className="px-4 py-3 border-b border-gray-200">
@@ -1127,7 +1127,7 @@ export default function LeadsPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="todos">Todos</option>
-                {getRelevantStatuses().map(status => {
+                {getRelevantStatuses().map((status: string) => {
                   const config = generateStatusConfig(status)
                   return (
                     <option key={status} value={status}>{config.label}</option>
@@ -1393,7 +1393,7 @@ export default function LeadsPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {getRelevantStatuses().map(status => {
+            {getRelevantStatuses().map((status: string) => {
                 const config = generateStatusConfig(status)
                 const count = filteredReportLeads.filter(lead =>
                   (lead.status_generico === status) || (lead.status_limpa_nome === status)
@@ -1618,7 +1618,7 @@ export default function LeadsPage() {
                       className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="todos">Todos ({leads.length})</option>
-                      {getRelevantStatuses().map(status => {
+                      {getRelevantStatuses().map((status: string) => {
                           const config = generateStatusConfig(status)
                           const count = leads.filter(lead => (lead.status_generico || lead.status_limpa_nome) === status).length
                           return (
