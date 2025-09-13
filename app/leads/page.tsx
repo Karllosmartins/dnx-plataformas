@@ -507,7 +507,7 @@ export default function LeadsPage() {
         qualificados: 'Qualificação Inicial',
         pagouConsulta: 'Apresentações Realizadas',
         constaDivida: 'Propostas Enviadas',
-        clientesFechados: 'Deals Fechados',
+        clientesFechados: 'Negócios Fechados',
         receitaConsultas: 'Receita Apresentações',
         receitaContratos: 'Receita Contratos',
         ticketMedio: 'Ticket Médio por Deal'
@@ -1522,7 +1522,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                <span className="font-medium text-gray-900">{userTipoNegocio?.nome === 'previdenciario' ? 'Contratos Assinados' : 'Consta Dívida'}</span>
+                <span className="font-medium text-gray-900">{getMetricsLabels().constaDivida}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-gray-900">{metrics.constaDivida}</span>
