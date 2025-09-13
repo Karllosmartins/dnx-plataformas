@@ -46,7 +46,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           Faça login em sua conta
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Acesse sua plataforma CRM
+          DNX Operações Inteligentes
         </p>
       </div>
 
