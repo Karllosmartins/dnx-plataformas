@@ -48,7 +48,7 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
             size === 'md' ? 'text-sm' :
             'text-base'
           }`}>
-            Operações Inteligentes
+            DNX Operações Inteligentes
           </p>
         </div>
       )}
@@ -64,8 +64,8 @@ export function LogoIcon({ size = 'md', className = '' }: Omit<LogoProps, 'showT
 // Componente com texto personalizado
 export function LogoWithText({ 
   size = 'md', 
-  title = 'DNX Operações Inteligentes', 
-  subtitle = 'Operações Inteligentes',
+  title = 'DNX Operações Inteligentes',
+  subtitle = 'DNX Operações Inteligentes',
   className = '' 
 }: LogoProps & { title?: string; subtitle?: string }) {
   const dimensions = sizeMap[size]
