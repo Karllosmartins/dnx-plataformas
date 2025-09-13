@@ -75,9 +75,10 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
       if (error) throw error
       setUserTipoNegocio(data?.tipos_negocio)
-      
+
       // Ajustar valor inicial baseado no tipo de negócio
-      if (data?.tipos_negocio?.nome === 'previdenciario') {
+      const tipoNegocio = Array.isArray(data?.tipos_negocio) ? data?.tipos_negocio[0] : data?.tipos_negocio
+      if (tipoNegocio?.nome === 'previdenciario') {
         console.log('Modal: Configurando para previdenciário')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
       } else {
@@ -487,7 +488,8 @@ export default function LeadsPage() {
           console.log('CreateSampleLeads: Usuário 28 detectado, usando previdenciário')
         }
       } else {
-        tipoNegocio = userTipoData?.tipos_negocio?.nome || 'limpa_nome'
+        const tipoNegocioData = Array.isArray(userTipoData?.tipos_negocio) ? userTipoData?.tipos_negocio[0] : userTipoData?.tipos_negocio
+        tipoNegocio = tipoNegocioData?.nome || 'limpa_nome'
       }
 
       console.log('CreateSampleLeads: Tipo detectado:', tipoNegocio)
