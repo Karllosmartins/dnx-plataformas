@@ -140,11 +140,15 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
   const [formData, setFormData] = useState({
     nome_cliente: '',
     cpf: '',
+    cpf_cnpj: '',
+    nome_empresa: '',
     telefone: '',
     origem: 'WhatsApp',
     tipo_consulta_interesse: 'Consulta Rating',
     valor_estimado_divida: '',
-    tempo_negativado: ''
+    tempo_negativado: '',
+    segmento_empresa: '',
+    porte_empresa: 'pequena'
   })
   const [loading, setLoading] = useState(false)
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
@@ -182,6 +186,9 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
       if (tipoNegocio?.nome === 'previdenciario') {
         console.log('Modal: Configurando para previdenciário')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
+      } else if (tipoNegocio?.nome === 'b2b') {
+        console.log('Modal: Configurando para B2B')
+        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Prospecção', origem: 'LinkedIn' }))
       } else {
         console.log('Modal: Configurando para limpa nome')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
@@ -206,22 +213,50 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
     setLoading(true)
     try {
-      const leadData = {
+      let leadData: any = {
         user_id: parseInt(userId || '0'),
         nome_cliente: formData.nome_cliente,
-        cpf: formData.cpf || null,
         telefone: formData.telefone,
         origem: formData.origem,
         status_generico: userTipoNegocio?.nome === 'previdenciario' ? 'novo_caso' : (userTipoNegocio?.nome === 'b2b' ? 'novo_contato' : 'novo_lead'),
-        tipo_negocio_id: userTipoNegocio?.nome === 'previdenciario' ? 2 : 1,
-        dados_personalizados: userTipoNegocio?.nome === 'previdenciario' ? {
-          tipo_servico: formData.tipo_consulta_interesse,
-          valor_estimado_caso: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
-          situacao_atual: formData.tempo_negativado || null
-        } : {
-          tipo_consulta_interesse: formData.tipo_consulta_interesse,
-          valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
-          tempo_negativado: formData.tempo_negativado || null
+        tipo_negocio_id: userTipoNegocio?.nome === 'previdenciario' ? 2 : (userTipoNegocio?.nome === 'b2b' ? 3 : 1)
+      }
+
+      // Campos específicos baseados no tipo de negócio
+      if (userTipoNegocio?.nome === 'b2b') {
+        leadData = {
+          ...leadData,
+          cpf_cnpj: formData.cpf_cnpj || null,
+          nome_empresa: formData.nome_empresa || null,
+          tipo_pessoa: 'pj',
+          responsavel_encontrado: false,
+          falando_com_responsavel: false,
+          dados_personalizados: {
+            segmento_empresa: formData.segmento_empresa,
+            porte_empresa: formData.porte_empresa,
+            tipo_servico: formData.tipo_consulta_interesse
+          }
+        }
+      } else if (userTipoNegocio?.nome === 'previdenciario') {
+        leadData = {
+          ...leadData,
+          cpf: formData.cpf || null,
+          dados_personalizados: {
+            tipo_servico: formData.tipo_consulta_interesse,
+            valor_estimado_caso: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
+            situacao_atual: formData.tempo_negativado || null
+          }
+        }
+      } else {
+        // Limpa nome
+        leadData = {
+          ...leadData,
+          cpf: formData.cpf || null,
+          dados_personalizados: {
+            tipo_consulta_interesse: formData.tipo_consulta_interesse,
+            valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
+            tempo_negativado: formData.tempo_negativado || null
+          }
         }
       }
 
@@ -236,11 +271,15 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
       setFormData({
         nome_cliente: '',
         cpf: '',
+        cpf_cnpj: '',
+        nome_empresa: '',
         telefone: '',
         origem: 'WhatsApp',
         tipo_consulta_interesse: 'Consulta Rating',
         valor_estimado_divida: '',
-        tempo_negativado: ''
+        tempo_negativado: '',
+        segmento_empresa: '',
+        porte_empresa: 'pequena'
       })
     } catch (error) {
       console.error('Erro ao criar lead:', error)
@@ -278,18 +317,50 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              CPF
-            </label>
-            <input
-              type="text"
-              placeholder="000.000.000-00"
-              value={formData.cpf}
-              onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {userTipoNegocio?.nome === 'b2b' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CNPJ *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="00.000.000/0001-00"
+                  value={formData.cpf_cnpj}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome da Empresa *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nome da empresa"
+                  value={formData.nome_empresa}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nome_empresa: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CPF
+              </label>
+              <input
+                type="text"
+                placeholder="000.000.000-00"
+                value={formData.cpf}
+                onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -314,20 +385,36 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
               onChange={(e) => setFormData(prev => ({ ...prev, origem: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="WhatsApp">WhatsApp</option>
-              <option value="Site">Site</option>
-              <option value="Indicação">Indicação</option>
-              <option value="Telefone">Telefone</option>
-              <option value="Facebook">Facebook</option>
-              <option value="Instagram">Instagram</option>
-              <option value="Google">Google</option>
-              <option value="Outros">Outros</option>
+              {userTipoNegocio?.nome === 'b2b' ? (
+                <>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Cold Calling">Cold Calling</option>
+                  <option value="E-mail">E-mail</option>
+                  <option value="Evento">Evento</option>
+                  <option value="Indicação">Indicação</option>
+                  <option value="Site">Site</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Outros">Outros</option>
+                </>
+              ) : (
+                <>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Site">Site</option>
+                  <option value="Indicação">Indicação</option>
+                  <option value="Telefone">Telefone</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Google">Google</option>
+                  <option value="Outros">Outros</option>
+                </>
+              )}
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {userTipoNegocio?.nome === 'previdenciario' ? 'Tipo de Serviço' : 'Tipo de Consulta de Interesse'}
+              {userTipoNegocio?.nome === 'previdenciario' ? 'Tipo de Serviço' :
+               userTipoNegocio?.nome === 'b2b' ? 'Tipo de Serviço' : 'Tipo de Consulta de Interesse'}
             </label>
             <select
               value={formData.tipo_consulta_interesse}
@@ -342,6 +429,16 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
                   <option value="Aposentadoria">Aposentadoria</option>
                   <option value="Auxílio Doença">Auxílio Doença</option>
                   <option value="BPC/LOAS">BPC/LOAS</option>
+                </>
+              ) : userTipoNegocio?.nome === 'b2b' ? (
+                <>
+                  <option value="Prospecção">Prospecção</option>
+                  <option value="Consultoria">Consultoria</option>
+                  <option value="Software">Software/Tecnologia</option>
+                  <option value="Marketing Digital">Marketing Digital</option>
+                  <option value="Vendas">Vendas</option>
+                  <option value="Treinamento">Treinamento</option>
+                  <option value="Outros Serviços">Outros Serviços</option>
                 </>
               ) : (
                 <>
@@ -358,6 +455,20 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Valor do Caso Estimado
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.valor_estimado_divida}
+                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : userTipoNegocio?.nome === 'b2b' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Budget Estimado
               </label>
               <input
                 type="number"
@@ -397,6 +508,44 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          ) : userTipoNegocio?.nome === 'b2b' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Segmento da Empresa
+                </label>
+                <select
+                  value={formData.segmento_empresa}
+                  onChange={(e) => setFormData(prev => ({ ...prev, segmento_empresa: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione o segmento</option>
+                  <option value="tecnologia">Tecnologia</option>
+                  <option value="saude">Saúde</option>
+                  <option value="educacao">Educação</option>
+                  <option value="industria">Indústria</option>
+                  <option value="varejo">Varejo</option>
+                  <option value="servicos">Serviços</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Porte da Empresa
+                </label>
+                <select
+                  value={formData.porte_empresa}
+                  onChange={(e) => setFormData(prev => ({ ...prev, porte_empresa: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="pequena">Pequena (até 99 funcionários)</option>
+                  <option value="media">Média (100-499 funcionários)</option>
+                  <option value="grande">Grande (500+ funcionários)</option>
+                </select>
+              </div>
+            </>
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
