@@ -83,6 +83,45 @@ const generateStatusConfig = (status: string) => {
   return { label, color, icon }
 }
 
+// Função para lógica automática de status B2B
+// Deve ser chamada sempre que um lead B2B for atualizado
+// Automaticamente muda status para 'contato_decisor' quando falando_com_responsavel = true
+// E marca responsavel_encontrado = true em todos os contatos da mesma empresa
+const handleB2BStatusLogic = async (leadData: any, isB2B: boolean) => {
+  if (!isB2B || !leadData.falando_com_responsavel) {
+    return leadData
+  }
+
+  // Se falando_com_responsavel for true, mudar status automaticamente
+  if (leadData.falando_com_responsavel) {
+    leadData.status_generico = 'contato_decisor'
+  }
+
+  // Atualizar demais contatos da mesma empresa com responsavel_encontrado
+  if (leadData.nome_empresa || leadData.id_empresa) {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ responsavel_encontrado: true })
+        .neq('id', leadData.id)
+        .or(
+          leadData.nome_empresa ? `nome_empresa.eq.${leadData.nome_empresa}` : '',
+          leadData.id_empresa ? `id_empresa.eq.${leadData.id_empresa}` : ''
+        )
+
+      if (error) {
+        console.error('Erro ao atualizar responsavel_encontrado:', error)
+      } else {
+        console.log('Demais contatos da empresa atualizados com responsavel_encontrado = true')
+      }
+    } catch (err) {
+      console.error('Erro na atualização automática:', err)
+    }
+  }
+
+  return leadData
+}
+
 interface CreateLeadModalProps {
   isOpen: boolean
   onClose: () => void
@@ -166,7 +205,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         cpf: formData.cpf || null,
         telefone: formData.telefone,
         origem: formData.origem,
-        status_generico: userTipoNegocio?.nome === 'previdenciario' ? 'novo_caso' : 'novo_lead',
+        status_generico: userTipoNegocio?.nome === 'previdenciario' ? 'novo_caso' : (userTipoNegocio?.nome === 'b2b' ? 'novo_contato' : 'novo_lead'),
         tipo_negocio_id: userTipoNegocio?.nome === 'previdenciario' ? 2 : 1,
         dados_personalizados: userTipoNegocio?.nome === 'previdenciario' ? {
           tipo_servico: formData.tipo_consulta_interesse,
@@ -701,10 +740,16 @@ export default function LeadsPage() {
         sampleLeads = [
           {
             user_id: parseInt(user.id),
-            nome_cliente: 'TechCorp Solutions',
+            nome_cliente: 'João Silva - TechCorp',
+            cnpj: '12.345.678/0001-90',
             telefone: '(11) 3333-3333',
             origem: 'LinkedIn',
             status_generico: 'novo_contato',
+            tipo_pessoa: 'pj',
+            nome_empresa: 'TechCorp Solutions Ltda',
+            id_empresa: 'TECH001',
+            responsavel_encontrado: false,
+            falando_com_responsavel: false,
             tipo_negocio_id: 3,
             dados_personalizados: {
               segmento_empresa: 'tecnologia',
@@ -714,10 +759,16 @@ export default function LeadsPage() {
           },
           {
             user_id: parseInt(user.id),
-            nome_cliente: 'Indústria XYZ Ltda',
+            nome_cliente: 'Maria Santos - Ind. XYZ',
+            cnpj: '23.456.789/0001-01',
             telefone: '(11) 4444-4444',
             origem: 'Site',
             status_generico: 'qualificacao_inicial',
+            tipo_pessoa: 'pj',
+            nome_empresa: 'Indústria XYZ Ltda',
+            id_empresa: 'IND001',
+            responsavel_encontrado: true,
+            falando_com_responsavel: false,
             tipo_negocio_id: 3,
             dados_personalizados: {
               segmento_empresa: 'industria',
@@ -727,10 +778,16 @@ export default function LeadsPage() {
           },
           {
             user_id: parseInt(user.id),
-            nome_cliente: 'Health Care Plus',
+            nome_cliente: 'Carlos Oliveira - HealthCare',
+            cnpj: '34.567.890/0001-12',
             telefone: '(21) 5555-5555',
             origem: 'Evento',
-            status_generico: 'mapeando_decisor',
+            status_generico: 'contato_decisor',
+            tipo_pessoa: 'pj',
+            nome_empresa: 'Health Care Plus S.A.',
+            id_empresa: 'HEALTH001',
+            responsavel_encontrado: true,
+            falando_com_responsavel: true,
             tipo_negocio_id: 3,
             dados_personalizados: {
               segmento_empresa: 'saude',
@@ -740,10 +797,16 @@ export default function LeadsPage() {
           },
           {
             user_id: parseInt(user.id),
-            nome_cliente: 'EduTech Brasil',
+            nome_cliente: 'Ana Costa - EduTech',
+            cnpj: '45.678.901/0001-23',
             telefone: '(31) 6666-6666',
             origem: 'Indicação',
             status_generico: 'contato_decisor',
+            tipo_pessoa: 'pj',
+            nome_empresa: 'EduTech Brasil Ltda',
+            id_empresa: 'EDU001',
+            responsavel_encontrado: true,
+            falando_com_responsavel: true,
             tipo_negocio_id: 3,
             dados_personalizados: {
               segmento_empresa: 'educacao',
@@ -753,10 +816,16 @@ export default function LeadsPage() {
           },
           {
             user_id: parseInt(user.id),
-            nome_cliente: 'Comercial ABC S.A.',
+            nome_cliente: 'Roberto Lima - Comercial ABC',
+            cnpj: '56.789.012/0001-34',
             telefone: '(21) 7777-7777',
             origem: 'Cold Calling',
             status_generico: 'apresentacao_realizada',
+            tipo_pessoa: 'pj',
+            nome_empresa: 'Comercial ABC S.A.',
+            id_empresa: 'COM001',
+            responsavel_encontrado: true,
+            falando_com_responsavel: false,
             tipo_negocio_id: 3,
             dados_personalizados: {
               segmento_empresa: 'varejo',
@@ -1233,6 +1302,12 @@ export default function LeadsPage() {
                           {lead.Agente_ID && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full" title="Agente atribuído"></div>
                           )}
+                          {userTipoNegocio?.nome === 'b2b' && lead.responsavel_encontrado && (
+                            <div className="w-2 h-2 bg-purple-500 rounded-full" title="Responsável encontrado"></div>
+                          )}
+                          {userTipoNegocio?.nome === 'b2b' && lead.falando_com_responsavel && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full" title="Falando com responsável"></div>
+                          )}
                         </div>
                       </div>
 
@@ -1250,6 +1325,27 @@ export default function LeadsPage() {
                           <span>Origem:</span>
                           <span className="text-gray-900 font-medium">{lead.origem || '-'}</span>
                         </div>
+
+                        {/* Informações específicas para B2B */}
+                        {userTipoNegocio?.nome === 'b2b' && (
+                          <>
+                            {lead.nome_empresa && (
+                              <div className="flex items-center justify-between">
+                                <span>Empresa:</span>
+                                <span className="text-gray-900 font-medium text-right text-xs truncate ml-1" title={lead.nome_empresa}>
+                                  {lead.nome_empresa.length > 12 ? `${lead.nome_empresa.substring(0, 12)}...` : lead.nome_empresa}
+                                </span>
+                              </div>
+                            )}
+                            {lead.cnpj && (
+                              <div className="flex items-center justify-between">
+                                <span>CNPJ:</span>
+                                <span className="text-gray-900 font-medium">{lead.cnpj}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         {lead.nome_campanha && (
                           <div className="flex items-center justify-between">
                             <span>Campanha:</span>
@@ -2183,7 +2279,11 @@ export default function LeadsPage() {
                             </h4>
                             <div className="space-y-2 text-sm">
                               <div><span className="text-gray-500">Nome:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_cliente || '-'}</span></div>
-                              <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf || '-'}</span></div>
+                              {selectedLead.tipo_pessoa === 'pj' ? (
+                                <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cnpj || '-'}</span></div>
+                              ) : (
+                                <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf || '-'}</span></div>
+                              )}
                               <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
                               <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>
                               {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente ID:</span> <span className="ml-2 text-gray-900">{selectedLead.Agente_ID}</span></div>}
@@ -2191,6 +2291,40 @@ export default function LeadsPage() {
                               <div><span className="text-gray-500">WhatsApp:</span> <span className="ml-2 text-gray-900">{selectedLead.existe_whatsapp ? 'Sim' : 'Não'}</span></div>
                             </div>
                           </div>
+
+                          {/* Informações B2B */}
+                          {selectedLead.tipo_pessoa === 'pj' && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                                <User className="h-4 w-4 mr-2" />
+                                Informações Empresariais
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {selectedLead.nome_empresa && (
+                                  <div><span className="text-gray-500">Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_empresa}</span></div>
+                                )}
+                                {selectedLead.id_empresa && (
+                                  <div><span className="text-gray-500">ID Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.id_empresa}</span></div>
+                                )}
+                                {selectedLead.responsavel_encontrado !== null && (
+                                  <div>
+                                    <span className="text-gray-500">Responsável encontrado:</span>
+                                    <span className={`ml-2 font-medium ${selectedLead.responsavel_encontrado ? 'text-green-600' : 'text-red-600'}`}>
+                                      {selectedLead.responsavel_encontrado ? 'Sim' : 'Não'}
+                                    </span>
+                                  </div>
+                                )}
+                                {selectedLead.falando_com_responsavel !== null && (
+                                  <div>
+                                    <span className="text-gray-500">Falando com responsável:</span>
+                                    <span className={`ml-2 font-medium ${selectedLead.falando_com_responsavel ? 'text-green-600' : 'text-orange-600'}`}>
+                                      {selectedLead.falando_com_responsavel ? 'Sim' : 'Não'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Informações financeiras */}
                           <div>

@@ -247,8 +247,10 @@ export interface Lead {
   id_card: string | null
   existe_whatsapp: boolean | null
   responsavel_encontrado: boolean | null
+  falando_com_responsavel: boolean | null
   responsavel_seguro: boolean | null
   efetuar_disparo: boolean | null
+  tipo_pessoa: 'pf' | 'pj' | null
   nome_empresa: string | null
   id_empresa: string | null
   nome_campanha: string | null
@@ -256,6 +258,7 @@ export interface Lead {
   
   // Campos Limpa Nome
   cpf?: string
+  cnpj?: string
   telefone?: string
   origem?: string
   status_limpa_nome?: 'novo_lead' | 'qualificacao' | 'desqualificado' | 'pagamento_consulta' | 'nao_consta_divida' | 'consta_divida' | 'enviado_para_negociacao' | 'cliente_fechado'
