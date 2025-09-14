@@ -250,7 +250,6 @@ export interface Lead {
   falando_com_responsavel: boolean | null
   responsavel_seguro: boolean | null
   efetuar_disparo: boolean | null
-  tipo_pessoa: 'pf' | 'pj' | null
   nome_empresa: string | null
   id_empresa: string | null
   nome_campanha: string | null

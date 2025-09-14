@@ -228,7 +228,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
           ...leadData,
           cpf_cnpj: formData.cpf_cnpj || null,
           nome_empresa: formData.nome_empresa || null,
-          tipo_pessoa: 'pj',
           responsavel_encontrado: false,
           falando_com_responsavel: false,
           dados_personalizados: {
@@ -901,7 +900,6 @@ export default function LeadsPage() {
             telefone: '(11) 3333-3333',
             origem: 'LinkedIn',
             status_generico: 'novo_contato',
-            tipo_pessoa: 'pj',
             nome_empresa: 'TechCorp Solutions Ltda',
             id_empresa: 'TECH001',
             responsavel_encontrado: false,
@@ -920,7 +918,6 @@ export default function LeadsPage() {
             telefone: '(11) 4444-4444',
             origem: 'Site',
             status_generico: 'qualificacao_inicial',
-            tipo_pessoa: 'pj',
             nome_empresa: 'Indústria XYZ Ltda',
             id_empresa: 'IND001',
             responsavel_encontrado: true,
@@ -939,7 +936,6 @@ export default function LeadsPage() {
             telefone: '(21) 5555-5555',
             origem: 'Evento',
             status_generico: 'contato_decisor',
-            tipo_pessoa: 'pj',
             nome_empresa: 'Health Care Plus S.A.',
             id_empresa: 'HEALTH001',
             responsavel_encontrado: true,
@@ -958,7 +954,6 @@ export default function LeadsPage() {
             telefone: '(31) 6666-6666',
             origem: 'Indicação',
             status_generico: 'contato_decisor',
-            tipo_pessoa: 'pj',
             nome_empresa: 'EduTech Brasil Ltda',
             id_empresa: 'EDU001',
             responsavel_encontrado: true,
@@ -977,7 +972,6 @@ export default function LeadsPage() {
             telefone: '(21) 7777-7777',
             origem: 'Cold Calling',
             status_generico: 'apresentacao_realizada',
-            tipo_pessoa: 'pj',
             nome_empresa: 'Comercial ABC S.A.',
             id_empresa: 'COM001',
             responsavel_encontrado: true,
@@ -1495,7 +1489,7 @@ export default function LeadsPage() {
                             )}
                             {lead.cpf_cnpj && (
                               <div className="flex items-center justify-between">
-                                <span>{lead.tipo_pessoa === 'pj' ? 'CNPJ:' : 'CPF:'}</span>
+                                <span>{(lead.nome_empresa || (lead.cpf_cnpj && lead.cpf_cnpj.includes('/'))) ? 'CNPJ:' : 'CPF:'}</span>
                                 <span className="text-gray-900 font-medium">{lead.cpf_cnpj}</span>
                               </div>
                             )}
@@ -2435,7 +2429,7 @@ export default function LeadsPage() {
                             </h4>
                             <div className="space-y-2 text-sm">
                               <div><span className="text-gray-500">Nome:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_cliente || '-'}</span></div>
-                              {selectedLead.tipo_pessoa === 'pj' ? (
+                              {(selectedLead.nome_empresa || (selectedLead.cpf_cnpj && selectedLead.cpf_cnpj.includes('/'))) ? (
                                 <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || '-'}</span></div>
                               ) : (
                                 <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || selectedLead.cpf || '-'}</span></div>
@@ -2449,7 +2443,7 @@ export default function LeadsPage() {
                           </div>
 
                           {/* Informações B2B */}
-                          {selectedLead.tipo_pessoa === 'pj' && (
+                          {(selectedLead.nome_empresa || selectedLead.responsavel_encontrado !== null || selectedLead.falando_com_responsavel !== null) && (
                             <div>
                               <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <User className="h-4 w-4 mr-2" />
