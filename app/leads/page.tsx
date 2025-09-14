@@ -741,7 +741,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'João Silva - TechCorp',
-            cnpj: '12.345.678/0001-90',
+            cpf_cnpj: '12.345.678/0001-90',
             telefone: '(11) 3333-3333',
             origem: 'LinkedIn',
             status_generico: 'novo_contato',
@@ -760,7 +760,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Maria Santos - Ind. XYZ',
-            cnpj: '23.456.789/0001-01',
+            cpf_cnpj: '23.456.789/0001-01',
             telefone: '(11) 4444-4444',
             origem: 'Site',
             status_generico: 'qualificacao_inicial',
@@ -779,7 +779,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Carlos Oliveira - HealthCare',
-            cnpj: '34.567.890/0001-12',
+            cpf_cnpj: '34.567.890/0001-12',
             telefone: '(21) 5555-5555',
             origem: 'Evento',
             status_generico: 'contato_decisor',
@@ -798,7 +798,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Ana Costa - EduTech',
-            cnpj: '45.678.901/0001-23',
+            cpf_cnpj: '45.678.901/0001-23',
             telefone: '(31) 6666-6666',
             origem: 'Indicação',
             status_generico: 'contato_decisor',
@@ -817,7 +817,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Roberto Lima - Comercial ABC',
-            cnpj: '56.789.012/0001-34',
+            cpf_cnpj: '56.789.012/0001-34',
             telefone: '(21) 7777-7777',
             origem: 'Cold Calling',
             status_generico: 'apresentacao_realizada',
@@ -1337,10 +1337,10 @@ export default function LeadsPage() {
                                 </span>
                               </div>
                             )}
-                            {lead.cnpj && (
+                            {lead.cpf_cnpj && (
                               <div className="flex items-center justify-between">
-                                <span>CNPJ:</span>
-                                <span className="text-gray-900 font-medium">{lead.cnpj}</span>
+                                <span>{lead.tipo_pessoa === 'pj' ? 'CNPJ:' : 'CPF:'}</span>
+                                <span className="text-gray-900 font-medium">{lead.cpf_cnpj}</span>
                               </div>
                             )}
                           </>
@@ -2280,9 +2280,9 @@ export default function LeadsPage() {
                             <div className="space-y-2 text-sm">
                               <div><span className="text-gray-500">Nome:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_cliente || '-'}</span></div>
                               {selectedLead.tipo_pessoa === 'pj' ? (
-                                <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cnpj || '-'}</span></div>
+                                <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || '-'}</span></div>
                               ) : (
-                                <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf || '-'}</span></div>
+                                <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || selectedLead.cpf || '-'}</span></div>
                               )}
                               <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
                               <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>

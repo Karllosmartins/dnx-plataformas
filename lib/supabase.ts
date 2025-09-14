@@ -258,7 +258,7 @@ export interface Lead {
   
   // Campos Limpa Nome
   cpf?: string
-  cnpj?: string
+  cpf_cnpj?: string
   telefone?: string
   origem?: string
   status_limpa_nome?: 'novo_lead' | 'qualificacao' | 'desqualificado' | 'pagamento_consulta' | 'nao_consta_divida' | 'consta_divida' | 'enviado_para_negociacao' | 'cliente_fechado'
