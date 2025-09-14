@@ -973,26 +973,40 @@ export default function LeadsPage() {
       casosSucesso: 0
     }
 
-    // Calcular tempo médio de resposta (assumindo que temos created_at e updated_at)
-    const leadsComResposta = filteredLeads.filter(lead =>
-      lead.created_at && lead.updated_at &&
-      new Date(lead.updated_at) > new Date(lead.created_at) &&
-      (lead.status_generico || lead.status_limpa_nome) !== 'novo_lead' &&
-      (lead.status_generico || lead.status_limpa_nome) !== 'novo_caso'
-    )
+    // Calcular tempo médio de resposta usando user_lastinteraction quando disponível
+    const leadsComResposta = filteredLeads.filter(lead => {
+      // Usar user_lastinteraction se disponível, senão usar updated_at
+      const hasInteraction = lead.user_lastinteraction ||
+        (lead.updated_at && new Date(lead.updated_at) > new Date(lead.created_at || ''))
+
+      const notNewLead = (lead.status_generico || lead.status_limpa_nome) !== 'novo_lead' &&
+        (lead.status_generico || lead.status_limpa_nome) !== 'novo_caso' &&
+        (lead.status_generico || lead.status_limpa_nome) !== 'novo_contato'
+
+      return lead.created_at && hasInteraction && notNewLead
+    })
 
     const temposResposta = leadsComResposta.map(lead => {
       const criacao = new Date(lead.created_at!)
-      const resposta = new Date(lead.updated_at!)
+      // Priorizar user_lastinteraction sobre updated_at para calcular tempo real de resposta do usuário
+      const resposta = new Date(lead.user_lastinteraction || lead.updated_at!)
       return (resposta.getTime() - criacao.getTime()) / (1000 * 60 * 60) // em horas
     })
 
-    const tempoMedioResposta = temposResposta.length > 0 
-      ? temposResposta.reduce((a, b) => a + b, 0) / temposResposta.length 
+    const tempoMedioResposta = temposResposta.length > 0
+      ? temposResposta.reduce((a, b) => a + b, 0) / temposResposta.length
       : 0
 
-    // Taxa de resposta (quantos leads tiveram algum tipo de interação)
-    const contatosComResposta = leadsComResposta.length
+    // Taxa de resposta mais precisa: leads que tiveram user_lastinteraction ou mudança de status
+    const leadsComInteracaoUsuario = filteredLeads.filter(lead =>
+      lead.user_lastinteraction ||
+      ((lead.status_generico || lead.status_limpa_nome) &&
+       (lead.status_generico || lead.status_limpa_nome) !== 'novo_lead' &&
+       (lead.status_generico || lead.status_limpa_nome) !== 'novo_caso' &&
+       (lead.status_generico || lead.status_limpa_nome) !== 'novo_contato')
+    )
+
+    const contatosComResposta = leadsComInteracaoUsuario.length
     const taxaResposta = total > 0 ? (contatosComResposta / total * 100) : 0
 
     // Taxa de sucesso (leads que chegaram ao final do funil com sucesso)
@@ -1004,12 +1018,18 @@ export default function LeadsPage() {
 
     const taxaSucesso = total > 0 ? (casosSucesso / total * 100) : 0
 
+    // Taxa específica de interação do usuário (apenas user_lastinteraction)
+    const leadsComInteracaoReal = filteredLeads.filter(lead => lead.user_lastinteraction)
+    const taxaInteracaoUsuario = total > 0 ? (leadsComInteracaoReal.length / total * 100) : 0
+
     return {
       tempoMedioResposta: Math.round(tempoMedioResposta * 10) / 10,
       taxaResposta: Math.round(taxaResposta * 10) / 10,
       taxaSucesso: Math.round(taxaSucesso * 10) / 10,
+      taxaInteracaoUsuario: Math.round(taxaInteracaoUsuario * 10) / 10,
       totalContatos: total,
       contatosComResposta,
+      leadsComInteracaoReal: leadsComInteracaoReal.length,
       casosSucesso
     }
   }
@@ -1197,29 +1217,83 @@ export default function LeadsPage() {
                       setSelectedLead(lead)
                     }}
                   >
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900">
-                        {lead.nome_cliente || 'Nome não informado'}
-                      </h4>
+                    <div className="space-y-3">
+                      {/* Cabeçalho do card com indicadores visuais */}
+                      <div className="flex items-start justify-between">
+                        <h4 className="font-medium text-gray-900 text-sm leading-tight">
+                          {lead.nome_cliente || 'Nome não informado'}
+                        </h4>
+                        <div className="flex space-x-1 ml-2">
+                          {lead.existe_whatsapp && (
+                            <div className="w-2 h-2 bg-green-500 rounded-full" title="WhatsApp disponível"></div>
+                          )}
+                          {lead.folowup_solicitado && (
+                            <div className="w-2 h-2 bg-orange-500 rounded-full" title="Follow-up solicitado"></div>
+                          )}
+                          {lead.Agente_ID && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full" title="Agente atribuído"></div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Informações de contato */}
                       {lead.telefone && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {lead.telefone}
+                        <div className="flex items-center text-xs text-gray-600">
+                          <Phone className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{lead.telefone}</span>
                         </div>
                       )}
-                      <div className="text-sm text-gray-600">
-                        <div>Origem: {lead.origem || '-'}</div>
-                        {lead.tipo_consulta_interesse && (
-                          <div>Consulta: {lead.tipo_consulta_interesse}</div>
+
+                      {/* Informações do negócio */}
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span>Origem:</span>
+                          <span className="text-gray-900 font-medium">{lead.origem || '-'}</span>
+                        </div>
+                        {lead.nome_campanha && (
+                          <div className="flex items-center justify-between">
+                            <span>Campanha:</span>
+                            <span className="text-gray-900 font-medium text-right text-xs truncate ml-1" title={lead.nome_campanha}>
+                              {lead.nome_campanha.length > 15 ? `${lead.nome_campanha.substring(0, 15)}...` : lead.nome_campanha}
+                            </span>
+                          </div>
+                        )}
+                        {lead.Agente_ID && (
+                          <div className="flex items-center justify-between">
+                            <span>Agente:</span>
+                            <span className="text-blue-600 font-medium">{lead.Agente_ID}</span>
+                          </div>
                         )}
                       </div>
+
+                      {/* Valor financeiro */}
                       {lead.valor_estimado_divida && (
-                        <div className="text-sm font-medium text-green-600">
+                        <div className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
                           {formatCurrency(lead.valor_estimado_divida)}
                         </div>
                       )}
-                      <div className="text-xs text-gray-500">
-                        {formatDate(lead.created_at)}
+
+                      {/* Follow-up e última interação */}
+                      {(lead.data_folowup_solicitado || lead.user_lastinteraction) && (
+                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded space-y-1">
+                          {lead.data_folowup_solicitado && (
+                            <div className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1 text-orange-500" />
+                              <span>Follow-up: {formatDate(lead.data_folowup_solicitado)}</span>
+                            </div>
+                          )}
+                          {lead.user_lastinteraction && (
+                            <div className="flex items-center">
+                              <Activity className="h-3 w-3 mr-1 text-gray-400" />
+                              <span>Última: {formatDate(lead.user_lastinteraction)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Data de criação */}
+                      <div className="text-xs text-gray-400">
+                        Criado: {formatDate(lead.created_at)}
                       </div>
                     </div>
                   </div>
@@ -1466,6 +1540,15 @@ export default function LeadsPage() {
             </div>
             <p className="text-2xl font-bold text-purple-600">{advancedMetrics.taxaSucesso}%</p>
             <p className="text-sm text-gray-600">{advancedMetrics.casosSucesso} {userTipoNegocio?.nome === 'previdenciario' ? 'casos finalizados' : 'clientes fechados'} com sucesso</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <Activity className="h-6 w-6 text-indigo-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Interação do Usuário</h3>
+            </div>
+            <p className="text-2xl font-bold text-indigo-600">{advancedMetrics.taxaInteracaoUsuario}%</p>
+            <p className="text-sm text-gray-600">{advancedMetrics.leadsComInteracaoReal} de {advancedMetrics.totalContatos} leads tiveram interação</p>
           </div>
         </div>
 
@@ -2103,6 +2186,9 @@ export default function LeadsPage() {
                               <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf || '-'}</span></div>
                               <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
                               <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>
+                              {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente ID:</span> <span className="ml-2 text-gray-900">{selectedLead.Agente_ID}</span></div>}
+                              {selectedLead.nome_campanha && <div><span className="text-gray-500">Campanha:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_campanha}</span></div>}
+                              <div><span className="text-gray-500">WhatsApp:</span> <span className="ml-2 text-gray-900">{selectedLead.existe_whatsapp ? 'Sim' : 'Não'}</span></div>
                             </div>
                           </div>
 
@@ -2150,6 +2236,30 @@ export default function LeadsPage() {
                               )}
                             </div>
                           </div>
+
+                          {/* Informações de Follow-up e Contato */}
+                          {(selectedLead.folowup_solicitado || selectedLead.data_folowup_solicitado || selectedLead.status_disparo || selectedLead.user_lastinteraction) && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Agendamentos e Contatos
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {selectedLead.folowup_solicitado && (
+                                  <div><span className="text-gray-500">Follow-up solicitado:</span> <span className="ml-2 text-green-600 font-medium">Sim</span></div>
+                                )}
+                                {selectedLead.data_folowup_solicitado && (
+                                  <div><span className="text-gray-500">Data follow-up:</span> <span className="ml-2 text-gray-900">{formatDate(selectedLead.data_folowup_solicitado)}</span></div>
+                                )}
+                                {selectedLead.status_disparo && (
+                                  <div><span className="text-gray-500">Status disparo:</span> <span className="ml-2 text-gray-900">{selectedLead.status_disparo}</span></div>
+                                )}
+                                {selectedLead.user_lastinteraction && (
+                                  <div><span className="text-gray-500">Última interação:</span> <span className="ml-2 text-gray-900">{formatDate(selectedLead.user_lastinteraction)}</span></div>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Órgãos negativados */}
                           {selectedLead.orgaos_negativados && selectedLead.orgaos_negativados.length > 0 && (

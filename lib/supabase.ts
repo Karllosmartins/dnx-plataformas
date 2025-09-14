@@ -252,6 +252,7 @@ export interface Lead {
   nome_empresa: string | null
   id_empresa: string | null
   nome_campanha: string | null
+  status_disparo: string | null
   
   // Campos Limpa Nome
   cpf?: string
