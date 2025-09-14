@@ -100,14 +100,21 @@ const handleB2BStatusLogic = async (leadData: any, isB2B: boolean) => {
   // Atualizar demais contatos da mesma empresa com responsavel_encontrado
   if (leadData.nome_empresa || leadData.id_empresa) {
     try {
-      const { error } = await supabase
+      let query = supabase
         .from('leads')
         .update({ responsavel_encontrado: true })
         .neq('id', leadData.id)
-        .or(
-          leadData.nome_empresa ? `nome_empresa.eq.${leadData.nome_empresa}` : '',
-          leadData.id_empresa ? `id_empresa.eq.${leadData.id_empresa}` : ''
-        )
+
+      // Construir a condição OR baseada nos campos disponíveis
+      if (leadData.nome_empresa && leadData.id_empresa) {
+        query = query.or(`nome_empresa.eq.${leadData.nome_empresa},id_empresa.eq.${leadData.id_empresa}`)
+      } else if (leadData.nome_empresa) {
+        query = query.eq('nome_empresa', leadData.nome_empresa)
+      } else if (leadData.id_empresa) {
+        query = query.eq('id_empresa', leadData.id_empresa)
+      }
+
+      const { error } = await query
 
       if (error) {
         console.error('Erro ao atualizar responsavel_encontrado:', error)
