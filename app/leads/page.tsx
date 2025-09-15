@@ -604,6 +604,10 @@ export default function LeadsPage() {
   const [isEditingLead, setIsEditingLead] = useState(false)
   const [editLeadData, setEditLeadData] = useState<any>({})
 
+  // Estados para drag and drop
+  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
+  const [dragOverStatus, setDragOverStatus] = useState<string | null>(null)
+
   // Estados específicos para a aba Relatórios
   const [reportFilters, setReportFilters] = useState({
     campanha: '',
@@ -1677,6 +1681,34 @@ export default function LeadsPage() {
     })
   }
 
+  // Função para mover lead entre estágios
+  const moveLeadToStatus = async (leadId: number, newStatus: string) => {
+    try {
+      const statusField = userTipoNegocio?.nome === 'b2b' ? 'status_generico' : 'status_limpa_nome'
+
+      const { error } = await supabase
+        .from('leads')
+        .update({ [statusField]: newStatus })
+        .eq('id', leadId)
+
+      if (error) {
+        console.error('Erro ao mover lead:', error)
+        return
+      }
+
+      // Atualizar estado local
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === leadId
+            ? { ...lead, [statusField]: newStatus }
+            : lead
+        )
+      )
+    } catch (error) {
+      console.error('Erro ao mover lead:', error)
+    }
+  }
+
   const renderKanbanView = () => {
     const relevantStatuses = getRelevantStatuses()
     const statusGroups = relevantStatuses.map((status: string) => ({
@@ -1691,8 +1723,29 @@ export default function LeadsPage() {
     return (
       <div className="flex gap-6 overflow-x-auto pb-4">
         {statusGroups.map(({ status, config, leads: statusLeads }: { status: string, config: any, leads: any[] }) => (
-          <div key={status} className="flex-shrink-0 w-80">
-            <div className="bg-white rounded-lg shadow">
+          <div
+            key={status}
+            className="flex-shrink-0 w-80"
+            onDragOver={(e) => {
+              e.preventDefault()
+              setDragOverStatus(status)
+            }}
+            onDragLeave={() => setDragOverStatus(null)}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (draggedLead && draggedLead.id) {
+                const currentStatus = draggedLead.status_generico || draggedLead.status_limpa_nome
+                if (currentStatus !== status) {
+                  moveLeadToStatus(draggedLead.id, status)
+                }
+              }
+              setDraggedLead(null)
+              setDragOverStatus(null)
+            }}
+          >
+            <div className={`bg-white rounded-lg shadow transition-all duration-200 ${
+              dragOverStatus === status ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+            }`}>
               <div className="px-4 py-3 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1708,14 +1761,22 @@ export default function LeadsPage() {
                 {statusLeads.map((lead) => (
                   <div
                     key={lead.id}
-                    className={`rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border-l-4 ${
+                    draggable
+                    onDragStart={() => setDraggedLead(lead)}
+                    onDragEnd={() => {
+                      setDraggedLead(null)
+                      setDragOverStatus(null)
+                    }}
+                    className={`rounded-lg p-4 cursor-pointer transition-all duration-200 border-l-4 ${
                       selectedLead?.id === lead.id ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50'
+                    } ${
+                      draggedLead?.id === lead.id ? 'opacity-50 scale-95' : 'hover:bg-gray-100 hover:shadow-md'
                     }`}
-                    style={{ borderLeftColor: config.color.includes('blue') ? '#3B82F6' : 
-                             config.color.includes('yellow') ? '#F59E0B' : 
-                             config.color.includes('red') ? '#EF4444' : 
-                             config.color.includes('purple') ? '#8B5CF6' : 
-                             config.color.includes('orange') ? '#F97316' : 
+                    style={{ borderLeftColor: config.color.includes('blue') ? '#3B82F6' :
+                             config.color.includes('yellow') ? '#F59E0B' :
+                             config.color.includes('red') ? '#EF4444' :
+                             config.color.includes('purple') ? '#8B5CF6' :
+                             config.color.includes('orange') ? '#F97316' :
                              config.color.includes('indigo') ? '#6366F1' : '#10B981' }}
                     onClick={() => {
                       console.log('Card clicado:', lead.nome_cliente, lead.id)
@@ -2973,9 +3034,6 @@ export default function LeadsPage() {
                                   {selectedLead.nome_empresa && (
                                     <div><span className="text-gray-500">Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_empresa}</span></div>
                                   )}
-                                  {selectedLead.id_empresa && (
-                                    <div><span className="text-gray-500">ID Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.id_empresa}</span></div>
-                                  )}
                                   {selectedLead.responsavel_encontrado !== null && (
                                     <div>
                                       <span className="text-gray-500">Responsável encontrado:</span>
@@ -2996,25 +3054,15 @@ export default function LeadsPage() {
                               ) : (
                                 <div className="space-y-3">
                                   <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">ID Empresa</label>
-                                    <input
-                                      type="text"
-                                      value={editLeadData.id_empresa || ''}
-                                      onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, id_empresa: e.target.value }))}
-                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                  </div>
-                                  <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Responsável encontrado</label>
                                     <select
-                                      value={editLeadData.responsavel_encontrado === null ? 'null' : editLeadData.responsavel_encontrado ? 'true' : 'false'}
+                                      value={editLeadData.responsavel_encontrado ? 'true' : 'false'}
                                       onChange={(e) => setEditLeadData((prev: any) => ({
                                         ...prev,
-                                        responsavel_encontrado: e.target.value === 'null' ? null : e.target.value === 'true'
+                                        responsavel_encontrado: e.target.value === 'true'
                                       }))}
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="null">Não definido</option>
                                       <option value="false">Não</option>
                                       <option value="true">Sim</option>
                                     </select>
@@ -3022,14 +3070,13 @@ export default function LeadsPage() {
                                   <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Falando com responsável</label>
                                     <select
-                                      value={editLeadData.falando_com_responsavel === null ? 'null' : editLeadData.falando_com_responsavel ? 'true' : 'false'}
+                                      value={editLeadData.falando_com_responsavel ? 'true' : 'false'}
                                       onChange={(e) => setEditLeadData((prev: any) => ({
                                         ...prev,
-                                        falando_com_responsavel: e.target.value === 'null' ? null : e.target.value === 'true'
+                                        falando_com_responsavel: e.target.value === 'true'
                                       }))}
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="null">Não definido</option>
                                       <option value="false">Não</option>
                                       <option value="true">Sim</option>
                                     </select>
