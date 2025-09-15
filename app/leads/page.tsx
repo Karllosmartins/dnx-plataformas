@@ -226,7 +226,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
       if (userTipoNegocio?.nome === 'b2b') {
         leadData = {
           ...leadData,
-          cpf_cnpj: formData.cpf_cnpj || null,
+          cpf_cnpj: formData.cpf_cnpj ? formData.cpf_cnpj.replace(/[^0-9]/g, '') : null,
           nome_empresa: formData.nome_empresa || null,
           responsavel_encontrado: false,
           falando_com_responsavel: false,
@@ -239,7 +239,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
       } else if (userTipoNegocio?.nome === 'previdenciario') {
         leadData = {
           ...leadData,
-          cpf: formData.cpf || null,
+          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
           dados_personalizados: {
             tipo_servico: formData.tipo_consulta_interesse,
             valor_estimado_caso: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
@@ -250,7 +250,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         // Limpa nome
         leadData = {
           ...leadData,
-          cpf: formData.cpf || null,
+          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
           dados_personalizados: {
             tipo_consulta_interesse: formData.tipo_consulta_interesse,
             valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
@@ -815,7 +815,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Maria Santos Silva',
-            cpf: '123.456.789-01',
+            cpf: '12345678901',
             telefone: '(11) 99999-9999',
             origem: 'WhatsApp',
             status_generico: 'novo_caso',
@@ -830,7 +830,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'José Oliveira Costa',
-            cpf: '987.654.321-00',
+            cpf: '98765432100',
             telefone: '(11) 88888-8888',
             origem: 'Site',
             status_generico: 'analise_viabilidade',
@@ -845,7 +845,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Ana Paula Ferreira',
-            cpf: '456.789.123-45',
+            cpf: '45678912345',
             telefone: '(21) 77777-7777',
             origem: 'Indicação',
             status_generico: 'caso_viavel',
@@ -860,7 +860,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Roberto Silva Machado',
-            cpf: '654.321.987-00',
+            cpf: '65432198700',
             telefone: '(85) 55555-5555',
             origem: 'Indicação',
             status_generico: 'contrato_enviado',
@@ -875,7 +875,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Carlos Eduardo Lima',
-            cpf: '789.123.456-78',
+            cpf: '78912345678',
             telefone: '(31) 66666-6666',
             origem: 'WhatsApp',
             status_generico: 'caso_finalizado',
@@ -896,7 +896,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'João Silva - TechCorp',
-            cpf_cnpj: '12.345.678/0001-90',
+            cpf_cnpj: '12345678000190',
             telefone: '(11) 3333-3333',
             origem: 'LinkedIn',
             status_generico: 'novo_contato',
@@ -914,7 +914,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Maria Santos - Ind. XYZ',
-            cpf_cnpj: '23.456.789/0001-01',
+            cpf_cnpj: '23456789000101',
             telefone: '(11) 4444-4444',
             origem: 'Site',
             status_generico: 'qualificacao_inicial',
@@ -932,7 +932,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Carlos Oliveira - HealthCare',
-            cpf_cnpj: '34.567.890/0001-12',
+            cpf_cnpj: '34567890000112',
             telefone: '(21) 5555-5555',
             origem: 'Evento',
             status_generico: 'contato_decisor',
@@ -950,7 +950,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Ana Costa - EduTech',
-            cpf_cnpj: '45.678.901/0001-23',
+            cpf_cnpj: '45678901000123',
             telefone: '(31) 6666-6666',
             origem: 'Indicação',
             status_generico: 'contato_decisor',
@@ -968,7 +968,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Roberto Lima - Comercial ABC',
-            cpf_cnpj: '56.789.012/0001-34',
+            cpf_cnpj: '56789012000134',
             telefone: '(21) 7777-7777',
             origem: 'Cold Calling',
             status_generico: 'apresentacao_realizada',
@@ -1031,7 +1031,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'João Silva Santos',
-            cpf: '123.456.789-01',
+            cpf: '12345678901',
             telefone: '(11) 99999-9999',
             origem: 'WhatsApp',
             status_limpa_nome: 'qualificacao',
@@ -1044,7 +1044,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Maria Oliveira',
-            cpf: '987.654.321-00',
+            cpf: '98765432100',
             telefone: '(11) 88888-8888',
             origem: 'Site',
             status_limpa_nome: 'pagamento_consulta',
@@ -1058,7 +1058,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Carlos Eduardo',
-            cpf: '456.789.123-45',
+            cpf: '45678912345',
             telefone: '(21) 77777-7777',
             origem: 'Indicação',
             status_limpa_nome: 'consta_divida',
@@ -1074,7 +1074,7 @@ export default function LeadsPage() {
           {
             user_id: parseInt(user.id),
             nome_cliente: 'Ana Paula Costa',
-            cpf: '789.123.456-78',
+            cpf: '78912345678',
             telefone: '(31) 66666-6666',
             origem: 'WhatsApp',
             status_limpa_nome: 'cliente_fechado',
