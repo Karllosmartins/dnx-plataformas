@@ -789,7 +789,9 @@ export default function LeadsPage() {
       const searchMatch = searchTerm === '' ||
         (lead.nome_cliente && lead.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (lead.telefone && lead.telefone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase()))
+        (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lead.cpf_cnpj && lead.cpf_cnpj.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lead.nome_empresa && lead.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()))
 
       // Filtro por data
       let dateMatch = true
@@ -1347,10 +1349,12 @@ export default function LeadsPage() {
       (lead.tipo_consulta_interesse && lead.tipo_consulta_interesse.toLowerCase().includes(tipoConsultaFilter.toLowerCase()))
     
     // Filtro por nome e telefone (busca)
-    const searchMatch = searchTerm === '' || 
+    const searchMatch = searchTerm === '' ||
       (lead.nome_cliente && lead.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (lead.telefone && lead.telefone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase()))
+      (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.cpf_cnpj && lead.cpf_cnpj.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.nome_empresa && lead.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()))
     
     // Filtro por data
     let dateMatch = true
@@ -1559,8 +1563,9 @@ export default function LeadsPage() {
         (lead.status_generico || lead.status_limpa_nome) === reportFilters.statusRelatorio
       const tipoConsultaMatch = reportFilters.tipoConsultaRelatorio === 'todos' || lead.tipo_consulta_interesse === reportFilters.tipoConsultaRelatorio
       
-      const cnpjMatch = !reportFilters.cnpj || 
-        (lead.cpf && lead.cpf.replace(/\D/g, '').includes(reportFilters.cnpj.replace(/\D/g, '')))
+      const cnpjMatch = !reportFilters.cnpj ||
+        (lead.cpf && lead.cpf.replace(/\D/g, '').includes(reportFilters.cnpj.replace(/\D/g, ''))) ||
+        (lead.cpf_cnpj && lead.cpf_cnpj.replace(/\D/g, '').includes(reportFilters.cnpj.replace(/\D/g, '')))
       
       let valorMatch = true
       if (reportFilters.valorMinimo && lead.valor_estimado_divida) {
