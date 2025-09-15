@@ -1686,27 +1686,51 @@ export default function LeadsPage() {
 
   // Função para renderizar campos personalizados
   const renderCustomFields = (lead: Lead) => {
-    if (!userTipoNegocio?.campos_personalizados || !lead.dados_personalizados) {
+    if (!lead.dados_personalizados) {
       return <div className="text-gray-500 text-sm">Nenhum campo personalizado</div>
     }
 
     try {
-      const customFields = JSON.parse(userTipoNegocio.campos_personalizados)
       const leadData = typeof lead.dados_personalizados === 'string'
         ? JSON.parse(lead.dados_personalizados)
         : lead.dados_personalizados
 
+      // Se não há dados, mostrar mensagem
+      if (!leadData || Object.keys(leadData).length === 0) {
+        return <div className="text-gray-500 text-sm">Nenhum campo personalizado</div>
+      }
+
+      // Mapeamento de labels bonitos para os campos
+      const fieldLabels: Record<string, string> = {
+        'tipo_servico': 'Tipo de Serviço',
+        'tipo_acidente': 'Tipo de Acidente',
+        'situacao_atual': 'Situação Atual',
+        'valor_estimado_caso': 'Valor Estimado do Caso',
+        'segmento_empresa': 'Segmento da Empresa',
+        'porte_empresa': 'Porte da Empresa',
+        'budget_disponivel': 'Budget Disponível',
+        'contrato_assinado': 'Contrato Assinado',
+        'beneficios_interesse': 'Benefícios de Interesse',
+        'tempo_negativado': 'Tempo Negativado',
+        'orgaos_negativados': 'Órgãos Negativados'
+      }
+
       return (
         <div className="space-y-3">
-          {customFields.map((field: any) => {
-            const value = leadData[field.nome]
+          {Object.entries(leadData).map(([key, value]) => {
             if (!value) return null
 
+            const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+
             return (
-              <div key={field.nome} className="flex justify-between">
-                <span className="text-gray-600 font-medium">{field.label}:</span>
+              <div key={key} className="flex justify-between">
+                <span className="text-gray-600 font-medium">{label}:</span>
                 <span className="text-gray-900">
-                  {Array.isArray(value) ? value.join(', ') : value}
+                  {typeof value === 'number' && key.includes('valor')
+                    ? `R$ ${value.toLocaleString('pt-BR')}`
+                    : Array.isArray(value)
+                    ? value.join(', ')
+                    : String(value)}
                 </span>
               </div>
             )
@@ -1714,7 +1738,39 @@ export default function LeadsPage() {
         </div>
       )
     } catch (error) {
+      console.error('Erro ao processar dados personalizados:', error)
       return <div className="text-gray-500 text-sm">Erro ao carregar dados personalizados</div>
+    }
+  }
+
+  // Função para salvar edição do lead
+  const saveLeadEdition = async () => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update(editLeadData)
+        .eq('id', editLeadData.id)
+
+      if (error) {
+        console.error('Erro ao salvar lead:', error)
+        return
+      }
+
+      // Atualizar estado local
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === editLeadData.id
+            ? { ...lead, ...editLeadData }
+            : lead
+        )
+      )
+
+      // Atualizar lead selecionado
+      setSelectedLead({ ...selectedLead, ...editLeadData })
+      setIsEditingLead(false)
+
+    } catch (error) {
+      console.error('Erro ao salvar lead:', error)
     }
   }
 
@@ -2633,144 +2689,8 @@ export default function LeadsPage() {
           ) : (
             <>
               {viewMode === 'kanban' ? (
-                <div className="space-y-6">
+                <div>
                   {renderKanbanView()}
-                  
-                  {/* Detalhes do Lead - versão expandida para Kanban */}
-                  {selectedLead ? (
-                    <div className="bg-white rounded-lg shadow border-t-4 border-blue-500 mt-6">
-                      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                          <User className="h-5 w-5 mr-2" />
-                          Detalhes: {selectedLead.nome_cliente || 'Lead Selecionado'}
-                        </h3>
-                        <button
-                          onClick={() => setSelectedLead(null)}
-                          className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      
-                      <div className="p-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                          {/* Coluna 1: Informações Pessoais */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                              <User className="h-4 w-4 mr-2 text-blue-600" />
-                              Informações Pessoais
-                            </h4>
-                            <div className="space-y-3 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 font-medium">Nome:</span>
-                                <span className="text-gray-900">{selectedLead.nome_cliente || '-'}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 font-medium">CPF:</span>
-                                <span className="text-gray-900">{selectedLead.cpf || '-'}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 font-medium">Telefone:</span>
-                                <span className="text-gray-900">{selectedLead.telefone || '-'}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 font-medium">Origem:</span>
-                                <span className="text-gray-900">{selectedLead.origem || '-'}</span>
-                              </div>
-                              <div className="mt-4">
-                                <span className="text-gray-600 font-medium">Status:</span>
-                                <div className="mt-2">{getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Coluna 2: Informações Financeiras */}
-                          <div className="bg-green-50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                              <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-                              Informações Financeiras
-                            </h4>
-                            <div className="space-y-3 text-sm">
-                              {selectedLead.valor_estimado_divida ? (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600 font-medium">Valor estimado:</span>
-                                  <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_estimado_divida)}</span>
-                                </div>
-                              ) : (
-                                <div className="text-gray-500">Sem valor estimado</div>
-                              )}
-                              {selectedLead.valor_real_divida && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600 font-medium">Valor real:</span>
-                                  <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_real_divida)}</span>
-                                </div>
-                              )}
-                              {selectedLead.valor_pago_consulta && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600 font-medium">Consulta paga:</span>
-                                  <span className="text-blue-600 font-semibold">{formatCurrency(selectedLead.valor_pago_consulta)}</span>
-                                </div>
-                              )}
-                              {selectedLead.valor_contrato && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600 font-medium">Valor contrato:</span>
-                                  <span className="text-green-600 font-bold">{formatCurrency(selectedLead.valor_contrato)}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Coluna 3: Detalhes Específicos */}
-                          <div className="bg-blue-50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                              <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                              Detalhes Específicos
-                            </h4>
-                            <div className="space-y-3 text-sm">
-                              {selectedLead.tempo_negativado && (
-                                <div>
-                                  <span className="text-gray-600 font-medium">Tempo negativado:</span>
-                                  <div className="text-gray-900 mt-1">{selectedLead.tempo_negativado}</div>
-                                </div>
-                              )}
-                              {selectedLead.tipo_consulta_interesse && (
-                                <div>
-                                  <span className="text-gray-600 font-medium">Tipo consulta:</span>
-                                  <div className="text-gray-900 mt-1">{selectedLead.tipo_consulta_interesse}</div>
-                                </div>
-                              )}
-                              {selectedLead.motivo_desqualificacao && (
-                                <div>
-                                  <span className="text-gray-600 font-medium">Motivo desqualificação:</span>
-                                  <div className="text-red-600 mt-1">{selectedLead.motivo_desqualificacao}</div>
-                                </div>
-                              )}
-                              {selectedLead.orgaos_negativados && selectedLead.orgaos_negativados.length > 0 && (
-                                <div>
-                                  <span className="text-gray-600 font-medium">Órgãos negativados:</span>
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {selectedLead.orgaos_negativados.map((orgao, index) => (
-                                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800">
-                                        {orgao}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="text-xs text-gray-500 mt-4">
-                                Criado em: {formatDate(selectedLead.created_at)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-8 text-center mt-6">
-                      <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Clique em um lead no Kanban para ver os detalhes</p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -3242,7 +3162,7 @@ export default function LeadsPage() {
 
       {/* Modal de detalhes do lead */}
       {showLeadModal && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{zIndex: 9999}}>
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             {/* Header do Modal */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
@@ -3257,7 +3177,10 @@ export default function LeadsPage() {
                 <div className="flex items-center space-x-3">
                   {!isEditingLead && (
                     <button
-                      onClick={() => setIsEditingLead(true)}
+                      onClick={() => {
+                        setEditLeadData(selectedLead)
+                        setIsEditingLead(true)
+                      }}
                       className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -3280,98 +3203,189 @@ export default function LeadsPage() {
 
             {/* Conteúdo do Modal */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Informações Pessoais */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                    <User className="h-4 w-4 mr-2 text-blue-600" />
-                    Informações Pessoais
-                  </h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Nome:</span>
-                      <span className="text-gray-900">{selectedLead.nome_cliente || '-'}</span>
-                    </div>
-                    {selectedLead.cpf && (
+              {!isEditingLead ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Informações Pessoais */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                      <User className="h-4 w-4 mr-2 text-blue-600" />
+                      Informações Pessoais
+                    </h4>
+                    <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">CPF:</span>
-                        <span className="text-gray-900">{selectedLead.cpf}</span>
+                        <span className="text-gray-600 font-medium">Nome:</span>
+                        <span className="text-gray-900">{selectedLead.nome_cliente || '-'}</span>
                       </div>
-                    )}
-                    {selectedLead.cpf_cnpj && (
+                      {selectedLead.cpf && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">CPF:</span>
+                          <span className="text-gray-900">{selectedLead.cpf}</span>
+                        </div>
+                      )}
+                      {selectedLead.cpf_cnpj && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">{selectedLead.nome_empresa ? 'CNPJ:' : 'CPF/CNPJ:'}</span>
+                          <span className="text-gray-900">{selectedLead.cpf_cnpj}</span>
+                        </div>
+                      )}
+                      {selectedLead.nome_empresa && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">Empresa:</span>
+                          <span className="text-gray-900">{selectedLead.nome_empresa}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">{selectedLead.nome_empresa ? 'CNPJ:' : 'CPF/CNPJ:'}</span>
-                        <span className="text-gray-900">{selectedLead.cpf_cnpj}</span>
+                        <span className="text-gray-600 font-medium">Telefone:</span>
+                        <span className="text-gray-900">{selectedLead.telefone || '-'}</span>
                       </div>
-                    )}
-                    {selectedLead.nome_empresa && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Empresa:</span>
-                        <span className="text-gray-900">{selectedLead.nome_empresa}</span>
+                        <span className="text-gray-600 font-medium">Origem:</span>
+                        <span className="text-gray-900">{selectedLead.origem || '-'}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Telefone:</span>
-                      <span className="text-gray-900">{selectedLead.telefone || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Origem:</span>
-                      <span className="text-gray-900">{selectedLead.origem || '-'}</span>
-                    </div>
-                    <div className="mt-4">
-                      <span className="text-gray-600 font-medium">Status:</span>
-                      <div className="mt-2">{getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}</div>
+                      <div className="mt-4">
+                        <span className="text-gray-600 font-medium">Status:</span>
+                        <div className="mt-2">{getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Informações Financeiras */}
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                    <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-                    Informações Financeiras
-                  </h4>
-                  <div className="space-y-3 text-sm">
-                    {selectedLead.valor_estimado_divida ? (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Valor estimado:</span>
-                        <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_estimado_divida)}</span>
-                      </div>
-                    ) : (
-                      <div className="text-gray-500">Sem informações financeiras</div>
-                    )}
-                    {selectedLead.valor_real_divida && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Valor real:</span>
-                        <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_real_divida)}</span>
-                      </div>
-                    )}
-                    {selectedLead.valor_pago_consulta && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Consulta paga:</span>
-                        <span className="text-blue-600 font-semibold">{formatCurrency(selectedLead.valor_pago_consulta)}</span>
-                      </div>
-                    )}
-                    {selectedLead.valor_contrato && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Valor contrato:</span>
-                        <span className="text-green-600 font-bold">{formatCurrency(selectedLead.valor_contrato)}</span>
-                      </div>
-                    )}
+                  {/* Informações Financeiras */}
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                      <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                      Informações Financeiras
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      {selectedLead.valor_estimado_divida ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">Valor estimado:</span>
+                          <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_estimado_divida)}</span>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500">Sem informações financeiras</div>
+                      )}
+                      {selectedLead.valor_real_divida && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">Valor real:</span>
+                          <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_real_divida)}</span>
+                        </div>
+                      )}
+                      {selectedLead.valor_pago_consulta && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">Consulta paga:</span>
+                          <span className="text-blue-600 font-semibold">{formatCurrency(selectedLead.valor_pago_consulta)}</span>
+                        </div>
+                      )}
+                      {selectedLead.valor_contrato && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-medium">Valor contrato:</span>
+                          <span className="text-green-600 font-bold">{formatCurrency(selectedLead.valor_contrato)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Campos Personalizados */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                    <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                    Detalhes Específicos
-                  </h4>
-                  <div className="text-sm">
-                    {renderCustomFields(selectedLead)}
+                  {/* Campos Personalizados */}
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                      Detalhes Específicos
+                    </h4>
+                    <div className="text-sm">
+                      {renderCustomFields(selectedLead)}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-6">
+                  <h4 className="text-lg font-medium text-gray-900">Editando Lead</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                      <input
+                        type="text"
+                        value={editLeadData.nome_cliente || ''}
+                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_cliente: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                      <input
+                        type="text"
+                        value={editLeadData.telefone || ''}
+                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, telefone: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
+                      <select
+                        value={editLeadData.origem || ''}
+                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, origem: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Site">Site</option>
+                        <option value="Indicação">Indicação</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Telefone">Telefone</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Google">Google</option>
+                        <option value="Cold Calling">Cold Calling</option>
+                        <option value="Evento">Evento</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <select
+                        value={editLeadData.status_generico || editLeadData.status_limpa_nome || ''}
+                        onChange={(e) => {
+                          const newStatus = e.target.value
+                          if (userTipoNegocio?.nome === 'b2b' || userTipoNegocio?.nome === 'previdenciario') {
+                            setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
+                          } else {
+                            setEditLeadData((prev: any) => ({ ...prev, status_limpa_nome: newStatus, status_generico: null }))
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {getRelevantStatuses().map((status: string) => {
+                          const config = generateStatusConfig(status)
+                          return (
+                            <option key={status} value={status}>{config.label}</option>
+                          )
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer com botões quando está editando */}
+              {isEditingLead && (
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                  <button
+                    onClick={() => setIsEditingLead(false)}
+                    className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveLeadEdition}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
