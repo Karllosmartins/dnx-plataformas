@@ -971,6 +971,33 @@ export default function LeadsPage() {
     document.body.removeChild(link)
   }
 
+  const toggleAtendimentoFinalizado = async (leadId: number, currentValue: boolean | null) => {
+    try {
+      const newValue = !currentValue
+
+      const { error } = await supabase
+        .from('leads')
+        .update({ atendimentofinalizado: newValue })
+        .eq('id', leadId)
+
+      if (error) {
+        console.error('Erro ao atualizar atendimento finalizado:', error)
+        return
+      }
+
+      // Atualizar o estado local
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === leadId
+            ? { ...lead, atendimentofinalizado: newValue }
+            : lead
+        )
+      )
+    } catch (error) {
+      console.error('Erro ao alterar atendimento finalizado:', error)
+    }
+  }
+
   const createSampleLeads = async () => {
     if (!user) {
       console.error('CreateSampleLeads: Usuário não encontrado')
@@ -1642,22 +1669,43 @@ export default function LeadsPage() {
                         <h4 className="font-medium text-gray-900 text-sm leading-tight">
                           {lead.nome_cliente || 'Nome não informado'}
                         </h4>
-                        <div className="flex space-x-1 ml-2">
-                          {lead.existe_whatsapp && (
-                            <div className="w-2 h-2 bg-green-500 rounded-full" title="WhatsApp disponível"></div>
-                          )}
-                          {lead.folowup_solicitado && (
-                            <div className="w-2 h-2 bg-orange-500 rounded-full" title="Follow-up solicitado"></div>
-                          )}
-                          {lead.Agente_ID && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" title="Agente atribuído"></div>
-                          )}
-                          {userTipoNegocio?.nome === 'b2b' && lead.responsavel_encontrado && (
-                            <div className="w-2 h-2 bg-purple-500 rounded-full" title="Responsável encontrado"></div>
-                          )}
-                          {userTipoNegocio?.nome === 'b2b' && lead.falando_com_responsavel && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full" title="Falando com responsável"></div>
-                          )}
+                        <div className="flex items-center space-x-2 ml-2">
+                          <div className="flex space-x-1">
+                            {lead.existe_whatsapp && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full" title="WhatsApp disponível"></div>
+                            )}
+                            {lead.folowup_solicitado && (
+                              <div className="w-2 h-2 bg-orange-500 rounded-full" title="Follow-up solicitado"></div>
+                            )}
+                            {lead.Agente_ID && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full" title="Agente atribuído"></div>
+                            )}
+                            {userTipoNegocio?.nome === 'b2b' && lead.responsavel_encontrado && (
+                              <div className="w-2 h-2 bg-purple-500 rounded-full" title="Responsável encontrado"></div>
+                            )}
+                            {userTipoNegocio?.nome === 'b2b' && lead.falando_com_responsavel && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full" title="Falando com responsável"></div>
+                            )}
+                          </div>
+                          {/* Toggle Atendimento IA */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleAtendimentoFinalizado(lead.id, lead.atendimentofinalizado)
+                            }}
+                            className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              lead.atendimentofinalizado
+                                ? 'bg-red-500'
+                                : 'bg-green-500'
+                            }`}
+                            title={lead.atendimentofinalizado ? 'IA Desativada (Clique para ativar)' : 'IA Ativa (Clique para desativar)'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                lead.atendimentofinalizado ? 'translate-x-3' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
                         </div>
                       </div>
 
@@ -2573,10 +2621,29 @@ export default function LeadsPage() {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
+                                <div className="flex items-center justify-between mb-2">
                                   <h4 className="text-lg font-medium text-gray-900">
                                     {lead.nome_cliente || 'Nome não informado'}
                                   </h4>
+                                  {/* Toggle Atendimento IA */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleAtendimentoFinalizado(lead.id, lead.atendimentofinalizado)
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                      lead.atendimentofinalizado
+                                        ? 'bg-red-500'
+                                        : 'bg-green-500'
+                                    }`}
+                                    title={lead.atendimentofinalizado ? 'IA Desativada (Clique para ativar)' : 'IA Ativa (Clique para desativar)'}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        lead.atendimentofinalizado ? 'translate-x-4' : 'translate-x-0'
+                                      }`}
+                                    />
+                                  </button>
                                 </div>
                                 
                                 <div className="space-y-1 text-sm text-gray-600">
