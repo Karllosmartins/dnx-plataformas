@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
-import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download } from 'lucide-react'
+import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit } from 'lucide-react'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome
@@ -1825,6 +1825,19 @@ export default function LeadsPage() {
                                 lead.atendimentofinalizado ? 'translate-x-3' : 'translate-x-0'
                               }`}
                             />
+                          </button>
+                          {/* Botão de Edição */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedLead(lead)
+                              setEditLeadData(lead)
+                              setIsEditingLead(true)
+                            }}
+                            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Editar lead"
+                          >
+                            <Edit className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
