@@ -600,6 +600,10 @@ export default function LeadsPage() {
   const [activeTab, setActiveTab] = useState<'leads' | 'relatorios'>('leads')
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
 
+  // Estados para edição de lead
+  const [isEditingLead, setIsEditingLead] = useState(false)
+  const [editLeadData, setEditLeadData] = useState<any>({})
+
   // Estados específicos para a aba Relatórios
   const [reportFilters, setReportFilters] = useState({
     campanha: '',
@@ -995,6 +999,61 @@ export default function LeadsPage() {
       )
     } catch (error) {
       console.error('Erro ao alterar atendimento finalizado:', error)
+    }
+  }
+
+  const startEditingLead = (lead: Lead) => {
+    setEditLeadData({ ...lead })
+    setIsEditingLead(true)
+  }
+
+  const cancelEditingLead = () => {
+    setIsEditingLead(false)
+    setEditLeadData({})
+  }
+
+  const saveEditedLead = async () => {
+    if (!editLeadData.id) return
+
+    try {
+      // Preparar dados para atualização, removendo formatação se necessário
+      const updateData = { ...editLeadData }
+
+      // Remover formatação de CPF/CNPJ
+      if (updateData.cpf) {
+        updateData.cpf = updateData.cpf.replace(/[^0-9]/g, '')
+      }
+      if (updateData.cpf_cnpj) {
+        updateData.cpf_cnpj = updateData.cpf_cnpj.replace(/[^0-9]/g, '')
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .update(updateData)
+        .eq('id', editLeadData.id)
+
+      if (error) {
+        console.error('Erro ao atualizar lead:', error)
+        return
+      }
+
+      // Atualizar o estado local
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === editLeadData.id ? { ...lead, ...updateData } : lead
+        )
+      )
+
+      // Atualizar o lead selecionado
+      if (selectedLead?.id === editLeadData.id) {
+        setSelectedLead({ ...selectedLead, ...updateData })
+      }
+
+      // Sair do modo de edição
+      setIsEditingLead(false)
+      setEditLeadData({})
+    } catch (error) {
+      console.error('Erro ao salvar edição do lead:', error)
     }
   }
 
@@ -2684,10 +2743,33 @@ export default function LeadsPage() {
                   <div className="lg:col-span-1">
                     {selectedLead ? (
                       <div className="bg-white rounded-lg shadow">
-                        <div className="px-6 py-4 border-b border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                           <h3 className="text-lg font-medium text-gray-900">
                             Detalhes do Lead
                           </h3>
+                          {!isEditingLead ? (
+                            <button
+                              onClick={() => startEditingLead(selectedLead)}
+                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              Editar
+                            </button>
+                          ) : (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={saveEditedLead}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={cancelEditingLead}
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="p-6 space-y-6">
@@ -2703,19 +2785,123 @@ export default function LeadsPage() {
                               <User className="h-4 w-4 mr-2" />
                               Informações Pessoais
                             </h4>
-                            <div className="space-y-2 text-sm">
-                              <div><span className="text-gray-500">Nome:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_cliente || '-'}</span></div>
-                              {(selectedLead.nome_empresa || (selectedLead.cpf_cnpj && selectedLead.cpf_cnpj.includes('/'))) ? (
-                                <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || '-'}</span></div>
-                              ) : (
-                                <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || selectedLead.cpf || '-'}</span></div>
-                              )}
-                              <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
-                              <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>
-                              {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente ID:</span> <span className="ml-2 text-gray-900">{selectedLead.Agente_ID}</span></div>}
-                              {selectedLead.nome_campanha && <div><span className="text-gray-500">Campanha:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_campanha}</span></div>}
-                              <div><span className="text-gray-500">WhatsApp:</span> <span className="ml-2 text-gray-900">{selectedLead.existe_whatsapp ? 'Sim' : 'Não'}</span></div>
-                            </div>
+                            {!isEditingLead ? (
+                              <div className="space-y-2 text-sm">
+                                <div><span className="text-gray-500">Nome:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_cliente || '-'}</span></div>
+                                {(selectedLead.nome_empresa || (selectedLead.cpf_cnpj && selectedLead.cpf_cnpj.includes('/'))) ? (
+                                  <div><span className="text-gray-500">CNPJ:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || '-'}</span></div>
+                                ) : (
+                                  <div><span className="text-gray-500">CPF:</span> <span className="ml-2 text-gray-900">{selectedLead.cpf_cnpj || selectedLead.cpf || '-'}</span></div>
+                                )}
+                                <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
+                                <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>
+                                {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente ID:</span> <span className="ml-2 text-gray-900">{selectedLead.Agente_ID}</span></div>}
+                                {selectedLead.nome_campanha && <div><span className="text-gray-500">Campanha:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_campanha}</span></div>}
+                                <div><span className="text-gray-500">WhatsApp:</span> <span className="ml-2 text-gray-900">{selectedLead.existe_whatsapp ? 'Sim' : 'Não'}</span></div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Nome</label>
+                                  <input
+                                    type="text"
+                                    value={editLeadData.nome_cliente || ''}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_cliente: e.target.value }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                                {userTipoNegocio?.nome === 'b2b' ? (
+                                  <>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">CNPJ</label>
+                                      <input
+                                        type="text"
+                                        value={editLeadData.cpf_cnpj || ''}
+                                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, cpf_cnpj: e.target.value }))}
+                                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="00.000.000/0001-00"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Nome da Empresa</label>
+                                      <input
+                                        type="text"
+                                        value={editLeadData.nome_empresa || ''}
+                                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_empresa: e.target.value }))}
+                                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">CPF</label>
+                                    <input
+                                      type="text"
+                                      value={editLeadData.cpf || ''}
+                                      onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, cpf: e.target.value }))}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      placeholder="000.000.000-00"
+                                    />
+                                  </div>
+                                )}
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Telefone</label>
+                                  <input
+                                    type="text"
+                                    value={editLeadData.telefone || ''}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, telefone: e.target.value }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="(11) 99999-9999"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Origem</label>
+                                  <select
+                                    value={editLeadData.origem || ''}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, origem: e.target.value }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="">Selecione</option>
+                                    <option value="WhatsApp">WhatsApp</option>
+                                    <option value="Site">Site</option>
+                                    <option value="Indicação">Indicação</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                    <option value="Cold Calling">Cold Calling</option>
+                                    <option value="Evento">Evento</option>
+                                    <option value="Outros">Outros</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Agente ID</label>
+                                  <input
+                                    type="text"
+                                    value={editLeadData.Agente_ID || ''}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, Agente_ID: e.target.value }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Campanha</label>
+                                  <input
+                                    type="text"
+                                    value={editLeadData.nome_campanha || ''}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_campanha: e.target.value }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">WhatsApp</label>
+                                  <select
+                                    value={editLeadData.existe_whatsapp ? 'true' : 'false'}
+                                    onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, existe_whatsapp: e.target.value === 'true' }))}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="false">Não</option>
+                                    <option value="true">Sim</option>
+                                  </select>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Informações B2B */}
