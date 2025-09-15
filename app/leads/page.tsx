@@ -3162,7 +3162,7 @@ export default function LeadsPage() {
 
       {/* Modal de detalhes do lead */}
       {showLeadModal && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{zIndex: 9999}}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{zIndex: 99999}}>
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             {/* Header do Modal */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
@@ -3300,62 +3300,24 @@ export default function LeadsPage() {
                 <div className="space-y-6">
                   <h4 className="text-lg font-medium text-gray-900">Editando Lead</h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Status atual */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Status Atual</h4>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                      <input
-                        type="text"
-                        value={editLeadData.nome_cliente || ''}
-                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_cliente: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                      <input
-                        type="text"
-                        value={editLeadData.telefone || ''}
-                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, telefone: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
-                      <select
-                        value={editLeadData.origem || ''}
-                        onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, origem: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Selecione</option>
-                        <option value="WhatsApp">WhatsApp</option>
-                        <option value="Site">Site</option>
-                        <option value="Indicação">Indicação</option>
-                        <option value="LinkedIn">LinkedIn</option>
-                        <option value="Telefone">Telefone</option>
-                        <option value="Facebook">Facebook</option>
-                        <option value="Instagram">Instagram</option>
-                        <option value="Google">Google</option>
-                        <option value="Cold Calling">Cold Calling</option>
-                        <option value="Evento">Evento</option>
-                        <option value="Outros">Outros</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Alterar Status</label>
                       <select
                         value={editLeadData.status_generico || editLeadData.status_limpa_nome || ''}
                         onChange={(e) => {
                           const newStatus = e.target.value
-                          if (userTipoNegocio?.nome === 'b2b' || userTipoNegocio?.nome === 'previdenciario') {
+                          if (userTipoNegocio?.nome === 'b2b') {
+                            setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
+                          } else if (userTipoNegocio?.nome === 'previdenciario') {
                             setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
                           } else {
                             setEditLeadData((prev: any) => ({ ...prev, status_limpa_nome: newStatus, status_generico: null }))
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         {getRelevantStatuses().map((status: string) => {
                           const config = generateStatusConfig(status)
@@ -3366,6 +3328,155 @@ export default function LeadsPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Informações básicas */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                      <User className="h-4 w-4 mr-2" />
+                      Informações Pessoais
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Nome</label>
+                        <input
+                          type="text"
+                          value={editLeadData.nome_cliente || ''}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_cliente: e.target.value }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      {userTipoNegocio?.nome === 'b2b' ? (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">CNPJ</label>
+                            <input
+                              type="text"
+                              value={editLeadData.cpf_cnpj || ''}
+                              onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, cpf_cnpj: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="00.000.000/0001-00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Nome da Empresa</label>
+                            <input
+                              type="text"
+                              value={editLeadData.nome_empresa || ''}
+                              onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_empresa: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">CPF</label>
+                          <input
+                            type="text"
+                            value={editLeadData.cpf || editLeadData.cpf_cnpj || ''}
+                            onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, cpf: e.target.value }))}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="000.000.000-00"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Telefone</label>
+                        <input
+                          type="text"
+                          value={editLeadData.telefone || ''}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, telefone: e.target.value }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="(11) 99999-9999"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Origem</label>
+                        <select
+                          value={editLeadData.origem || ''}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, origem: e.target.value }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Selecione</option>
+                          <option value="WhatsApp">WhatsApp</option>
+                          <option value="Site">Site</option>
+                          <option value="Indicação">Indicação</option>
+                          <option value="LinkedIn">LinkedIn</option>
+                          <option value="Cold Calling">Cold Calling</option>
+                          <option value="Evento">Evento</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Agente ID</label>
+                        <input
+                          type="text"
+                          value={editLeadData.Agente_ID || ''}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, Agente_ID: e.target.value }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Campanha</label>
+                        <input
+                          type="text"
+                          value={editLeadData.nome_campanha || ''}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, nome_campanha: e.target.value }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">WhatsApp</label>
+                        <select
+                          value={editLeadData.existe_whatsapp ? 'true' : 'false'}
+                          onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, existe_whatsapp: e.target.value === 'true' }))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="false">Não</option>
+                          <option value="true">Sim</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informações B2B */}
+                  {userTipoNegocio?.nome === 'b2b' && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        Informações Empresariais
+                      </h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Responsável encontrado</label>
+                          <select
+                            value={editLeadData.responsavel_encontrado ? 'true' : 'false'}
+                            onChange={(e) => setEditLeadData((prev: any) => ({
+                              ...prev,
+                              responsavel_encontrado: e.target.value === 'true'
+                            }))}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="false">Não</option>
+                            <option value="true">Sim</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Falando com responsável</label>
+                          <select
+                            value={editLeadData.falando_com_responsavel ? 'true' : 'false'}
+                            onChange={(e) => setEditLeadData((prev: any) => ({
+                              ...prev,
+                              falando_com_responsavel: e.target.value === 'true'
+                            }))}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="false">Não</option>
+                            <option value="true">Sim</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
