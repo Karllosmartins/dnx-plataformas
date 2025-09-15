@@ -2776,7 +2776,64 @@ export default function LeadsPage() {
                           {/* Status atual */}
                           <div>
                             <h4 className="text-sm font-medium text-gray-900 mb-2">Status Atual</h4>
-                            {getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}
+                            {!isEditingLead ? (
+                              getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')
+                            ) : (
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Alterar Status</label>
+                                <select
+                                  value={editLeadData.status_generico || editLeadData.status_limpa_nome || ''}
+                                  onChange={(e) => {
+                                    const newStatus = e.target.value
+                                    if (userTipoNegocio?.nome === 'b2b') {
+                                      setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
+                                    } else if (userTipoNegocio?.nome === 'previdenciario') {
+                                      setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
+                                    } else {
+                                      setEditLeadData((prev: any) => ({ ...prev, status_limpa_nome: newStatus, status_generico: null }))
+                                    }
+                                  }}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                  {userTipoNegocio?.nome === 'b2b' && (
+                                    <>
+                                      <option value="novo_contato">Novo Contato</option>
+                                      <option value="qualificacao_inicial">Qualificação Inicial</option>
+                                      <option value="mapeando_decisor">Mapeando Decisor</option>
+                                      <option value="contato_decisor">Contato Decisor</option>
+                                      <option value="apresentacao_realizada">Apresentação Realizada</option>
+                                      <option value="proposta_enviada">Proposta Enviada</option>
+                                      <option value="negociacao">Negociação</option>
+                                      <option value="negocio_fechado">Negócio Fechado</option>
+                                    </>
+                                  )}
+                                  {userTipoNegocio?.nome === 'previdenciario' && (
+                                    <>
+                                      <option value="novo_caso">Novo Caso</option>
+                                      <option value="analise_viabilidade">Análise Viabilidade</option>
+                                      <option value="caso_viavel">Caso Viável</option>
+                                      <option value="caso_inviavel">Caso Inviável</option>
+                                      <option value="contrato_enviado">Contrato Enviado</option>
+                                      <option value="contrato_assinado">Contrato Assinado</option>
+                                      <option value="processo_iniciado">Processo Iniciado</option>
+                                      <option value="caso_finalizado">Caso Finalizado</option>
+                                    </>
+                                  )}
+                                  {(!userTipoNegocio?.nome || userTipoNegocio?.nome === 'limpa_nome') && (
+                                    <>
+                                      <option value="novo_lead">Novo Lead</option>
+                                      <option value="qualificacao">Qualificação</option>
+                                      <option value="desqualificado">Desqualificado</option>
+                                      <option value="pagamento_consulta">Pagamento Consulta</option>
+                                      <option value="nao_consta_divida">Não Consta Dívida</option>
+                                      <option value="consta_divida">Consta Dívida</option>
+                                      <option value="enviado_para_negociacao">Em Negociação</option>
+                                      <option value="cliente_fechado">Cliente Fechado</option>
+                                    </>
+                                  )}
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           {/* Informações básicas */}
@@ -2905,36 +2962,80 @@ export default function LeadsPage() {
                           </div>
 
                           {/* Informações B2B */}
-                          {(selectedLead.nome_empresa || selectedLead.responsavel_encontrado !== null || selectedLead.falando_com_responsavel !== null) && (
+                          {(selectedLead.nome_empresa || selectedLead.responsavel_encontrado !== null || selectedLead.falando_com_responsavel !== null || userTipoNegocio?.nome === 'b2b') && (
                             <div>
                               <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <User className="h-4 w-4 mr-2" />
                                 Informações Empresariais
                               </h4>
-                              <div className="space-y-2 text-sm">
-                                {selectedLead.nome_empresa && (
-                                  <div><span className="text-gray-500">Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_empresa}</span></div>
-                                )}
-                                {selectedLead.id_empresa && (
-                                  <div><span className="text-gray-500">ID Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.id_empresa}</span></div>
-                                )}
-                                {selectedLead.responsavel_encontrado !== null && (
+                              {!isEditingLead ? (
+                                <div className="space-y-2 text-sm">
+                                  {selectedLead.nome_empresa && (
+                                    <div><span className="text-gray-500">Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_empresa}</span></div>
+                                  )}
+                                  {selectedLead.id_empresa && (
+                                    <div><span className="text-gray-500">ID Empresa:</span> <span className="ml-2 text-gray-900">{selectedLead.id_empresa}</span></div>
+                                  )}
+                                  {selectedLead.responsavel_encontrado !== null && (
+                                    <div>
+                                      <span className="text-gray-500">Responsável encontrado:</span>
+                                      <span className={`ml-2 font-medium ${selectedLead.responsavel_encontrado ? 'text-green-600' : 'text-red-600'}`}>
+                                        {selectedLead.responsavel_encontrado ? 'Sim' : 'Não'}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {selectedLead.falando_com_responsavel !== null && (
+                                    <div>
+                                      <span className="text-gray-500">Falando com responsável:</span>
+                                      <span className={`ml-2 font-medium ${selectedLead.falando_com_responsavel ? 'text-green-600' : 'text-orange-600'}`}>
+                                        {selectedLead.falando_com_responsavel ? 'Sim' : 'Não'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
                                   <div>
-                                    <span className="text-gray-500">Responsável encontrado:</span>
-                                    <span className={`ml-2 font-medium ${selectedLead.responsavel_encontrado ? 'text-green-600' : 'text-red-600'}`}>
-                                      {selectedLead.responsavel_encontrado ? 'Sim' : 'Não'}
-                                    </span>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">ID Empresa</label>
+                                    <input
+                                      type="text"
+                                      value={editLeadData.id_empresa || ''}
+                                      onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, id_empresa: e.target.value }))}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
                                   </div>
-                                )}
-                                {selectedLead.falando_com_responsavel !== null && (
                                   <div>
-                                    <span className="text-gray-500">Falando com responsável:</span>
-                                    <span className={`ml-2 font-medium ${selectedLead.falando_com_responsavel ? 'text-green-600' : 'text-orange-600'}`}>
-                                      {selectedLead.falando_com_responsavel ? 'Sim' : 'Não'}
-                                    </span>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Responsável encontrado</label>
+                                    <select
+                                      value={editLeadData.responsavel_encontrado === null ? 'null' : editLeadData.responsavel_encontrado ? 'true' : 'false'}
+                                      onChange={(e) => setEditLeadData((prev: any) => ({
+                                        ...prev,
+                                        responsavel_encontrado: e.target.value === 'null' ? null : e.target.value === 'true'
+                                      }))}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                      <option value="null">Não definido</option>
+                                      <option value="false">Não</option>
+                                      <option value="true">Sim</option>
+                                    </select>
                                   </div>
-                                )}
-                              </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Falando com responsável</label>
+                                    <select
+                                      value={editLeadData.falando_com_responsavel === null ? 'null' : editLeadData.falando_com_responsavel ? 'true' : 'false'}
+                                      onChange={(e) => setEditLeadData((prev: any) => ({
+                                        ...prev,
+                                        falando_com_responsavel: e.target.value === 'null' ? null : e.target.value === 'true'
+                                      }))}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                      <option value="null">Não definido</option>
+                                      <option value="false">Não</option>
+                                      <option value="true">Sim</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
