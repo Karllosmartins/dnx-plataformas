@@ -608,6 +608,9 @@ export default function LeadsPage() {
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null)
 
+  // Estado para modal de detalhes
+  const [showLeadModal, setShowLeadModal] = useState(false)
+
   // Estados específicos para a aba Relatórios
   const [reportFilters, setReportFilters] = useState({
     campanha: '',
@@ -1681,6 +1684,40 @@ export default function LeadsPage() {
     })
   }
 
+  // Função para renderizar campos personalizados
+  const renderCustomFields = (lead: Lead) => {
+    if (!userTipoNegocio?.campos_personalizados || !lead.dados_personalizados) {
+      return <div className="text-gray-500 text-sm">Nenhum campo personalizado</div>
+    }
+
+    try {
+      const customFields = JSON.parse(userTipoNegocio.campos_personalizados)
+      const leadData = typeof lead.dados_personalizados === 'string'
+        ? JSON.parse(lead.dados_personalizados)
+        : lead.dados_personalizados
+
+      return (
+        <div className="space-y-3">
+          {customFields.map((field: any) => {
+            const value = leadData[field.nome]
+            if (!value) return null
+
+            return (
+              <div key={field.nome} className="flex justify-between">
+                <span className="text-gray-600 font-medium">{field.label}:</span>
+                <span className="text-gray-900">
+                  {Array.isArray(value) ? value.join(', ') : value}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )
+    } catch (error) {
+      return <div className="text-gray-500 text-sm">Erro ao carregar dados personalizados</div>
+    }
+  }
+
   // Função para mover lead entre estágios
   const moveLeadToStatus = async (leadId: number, newStatus: string) => {
     try {
@@ -1781,6 +1818,7 @@ export default function LeadsPage() {
                     onClick={() => {
                       console.log('Card clicado:', lead.nome_cliente, lead.id)
                       setSelectedLead(lead)
+                      setShowLeadModal(true)
                     }}
                   >
                     <div className="space-y-3">
@@ -1833,6 +1871,7 @@ export default function LeadsPage() {
                               setSelectedLead(lead)
                               setEditLeadData(lead)
                               setIsEditingLead(true)
+                              setShowLeadModal(true)
                             }}
                             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="Editar lead"
@@ -3201,9 +3240,146 @@ export default function LeadsPage() {
         renderReportsTab()
       )}
 
+      {/* Modal de detalhes do lead */}
+      {showLeadModal && selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header do Modal */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-white">
+                  <User className="h-6 w-6 mr-3" />
+                  <div>
+                    <h2 className="text-xl font-semibold">{selectedLead.nome_cliente || 'Lead Selecionado'}</h2>
+                    <p className="text-blue-100 text-sm">{userTipoNegocio?.nome_exibicao}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  {!isEditingLead && (
+                    <button
+                      onClick={() => setIsEditingLead(true)}
+                      className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowLeadModal(false)
+                      setSelectedLead(null)
+                      setIsEditingLead(false)
+                    }}
+                    className="text-white hover:bg-white hover:bg-opacity-20 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Informações Pessoais */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                    <User className="h-4 w-4 mr-2 text-blue-600" />
+                    Informações Pessoais
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">Nome:</span>
+                      <span className="text-gray-900">{selectedLead.nome_cliente || '-'}</span>
+                    </div>
+                    {selectedLead.cpf && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">CPF:</span>
+                        <span className="text-gray-900">{selectedLead.cpf}</span>
+                      </div>
+                    )}
+                    {selectedLead.cpf_cnpj && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">{selectedLead.nome_empresa ? 'CNPJ:' : 'CPF/CNPJ:'}</span>
+                        <span className="text-gray-900">{selectedLead.cpf_cnpj}</span>
+                      </div>
+                    )}
+                    {selectedLead.nome_empresa && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">Empresa:</span>
+                        <span className="text-gray-900">{selectedLead.nome_empresa}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">Telefone:</span>
+                      <span className="text-gray-900">{selectedLead.telefone || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">Origem:</span>
+                      <span className="text-gray-900">{selectedLead.origem || '-'}</span>
+                    </div>
+                    <div className="mt-4">
+                      <span className="text-gray-600 font-medium">Status:</span>
+                      <div className="mt-2">{getStatusBadge(selectedLead.status_generico || selectedLead.status_limpa_nome || 'novo_lead')}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informações Financeiras */}
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                    Informações Financeiras
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    {selectedLead.valor_estimado_divida ? (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">Valor estimado:</span>
+                        <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_estimado_divida)}</span>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">Sem informações financeiras</div>
+                    )}
+                    {selectedLead.valor_real_divida && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">Valor real:</span>
+                        <span className="text-gray-900 font-semibold">{formatCurrency(selectedLead.valor_real_divida)}</span>
+                      </div>
+                    )}
+                    {selectedLead.valor_pago_consulta && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">Consulta paga:</span>
+                        <span className="text-blue-600 font-semibold">{formatCurrency(selectedLead.valor_pago_consulta)}</span>
+                      </div>
+                    )}
+                    {selectedLead.valor_contrato && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">Valor contrato:</span>
+                        <span className="text-green-600 font-bold">{formatCurrency(selectedLead.valor_contrato)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Campos Personalizados */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                    Detalhes Específicos
+                  </h4>
+                  <div className="text-sm">
+                    {renderCustomFields(selectedLead)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de criar lead */}
       {showCreateForm && (
-        <CreateLeadModal 
+        <CreateLeadModal
           isOpen={showCreateForm}
           onClose={() => setShowCreateForm(false)}
           onLeadCreated={fetchLeads}
