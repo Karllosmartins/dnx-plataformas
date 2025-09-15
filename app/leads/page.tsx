@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
-import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare } from 'lucide-react'
+import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download } from 'lucide-react'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome
@@ -772,6 +772,201 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const downloadLeadsCSV = () => {
+    // Aplicar os mesmos filtros que estão sendo usados na visualização
+    const filteredLeads = leads.filter(lead => {
+      // Filtro por status
+      const statusMatch = statusFilter === 'todos' ||
+        (lead.status_generico || lead.status_limpa_nome) === statusFilter
+
+      // Filtro por tipo de consulta
+      const tipoConsultaMatch = tipoConsultaFilter === 'todos' ||
+        (lead.tipo_consulta_interesse && lead.tipo_consulta_interesse.toLowerCase().includes(tipoConsultaFilter.toLowerCase()))
+
+      // Filtro por nome e telefone (busca)
+      const searchMatch = searchTerm === '' ||
+        (lead.nome_cliente && lead.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lead.telefone && lead.telefone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lead.cpf && lead.cpf.toLowerCase().includes(searchTerm.toLowerCase()))
+
+      // Filtro por data
+      let dateMatch = true
+      if (startDate && lead.created_at) {
+        const leadDate = new Date(lead.created_at)
+        const filterStartDate = new Date(startDate)
+        dateMatch = dateMatch && leadDate >= filterStartDate
+      }
+      if (endDate && lead.created_at) {
+        const leadDate = new Date(lead.created_at)
+        const filterEndDate = new Date(endDate + 'T23:59:59')
+        dateMatch = dateMatch && leadDate <= filterEndDate
+      }
+
+      return statusMatch && tipoConsultaMatch && searchMatch && dateMatch
+    })
+
+    // Definir cabeçalhos baseados no tipo de negócio
+    let headers: string[] = []
+    let rows: string[][] = []
+
+    if (userTipoNegocio?.nome === 'b2b') {
+      headers = [
+        'Nome do Cliente',
+        'CNPJ',
+        'Nome da Empresa',
+        'Telefone',
+        'Origem',
+        'Status',
+        'Responsável Encontrado',
+        'Falando com Responsável',
+        'Segmento da Empresa',
+        'Porte da Empresa',
+        'Budget Disponível',
+        'Agente ID',
+        'Follow-up Solicitado',
+        'Data Follow-up',
+        'Existe WhatsApp',
+        'Nome da Campanha',
+        'Status Disparo',
+        'Data de Criação'
+      ]
+
+      rows = filteredLeads.map(lead => [
+        lead.nome_cliente || '',
+        lead.cpf_cnpj || '',
+        lead.nome_empresa || '',
+        lead.telefone || '',
+        lead.origem || '',
+        lead.status_generico || '',
+        lead.responsavel_encontrado ? 'Sim' : 'Não',
+        lead.falando_com_responsavel ? 'Sim' : 'Não',
+        lead.dados_personalizados?.segmento_empresa || '',
+        lead.dados_personalizados?.porte_empresa || '',
+        lead.dados_personalizados?.budget_disponivel ? `R$ ${lead.dados_personalizados.budget_disponivel.toLocaleString('pt-BR')}` : '',
+        lead.Agente_ID || '',
+        lead.folowup_solicitado ? 'Sim' : 'Não',
+        lead.data_folowup_solicitado || '',
+        lead.existe_whatsapp ? 'Sim' : 'Não',
+        lead.nome_campanha || '',
+        lead.status_disparo || '',
+        lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR') : ''
+      ])
+    } else if (userTipoNegocio?.nome === 'previdenciario') {
+      headers = [
+        'Nome do Cliente',
+        'CPF',
+        'Telefone',
+        'Origem',
+        'Status',
+        'Tipo de Serviço',
+        'Valor Estimado do Caso',
+        'Situação Atual',
+        'Tipo de Acidente',
+        'Valor do Contrato',
+        'Responsável',
+        'Agente ID',
+        'Follow-up Solicitado',
+        'Data Follow-up',
+        'Existe WhatsApp',
+        'Nome da Campanha',
+        'Status Disparo',
+        'Data de Criação'
+      ]
+
+      rows = filteredLeads.map(lead => [
+        lead.nome_cliente || '',
+        lead.cpf || '',
+        lead.telefone || '',
+        lead.origem || '',
+        lead.status_generico || '',
+        lead.dados_personalizados?.tipo_servico || '',
+        lead.dados_personalizados?.valor_estimado_caso ? `R$ ${lead.dados_personalizados.valor_estimado_caso.toLocaleString('pt-BR')}` : '',
+        lead.dados_personalizados?.situacao_atual || '',
+        lead.dados_personalizados?.tipo_acidente || '',
+        lead.valor_contrato ? `R$ ${lead.valor_contrato.toLocaleString('pt-BR')}` : '',
+        lead.dados_personalizados?.responsavel || '',
+        lead.Agente_ID || '',
+        lead.folowup_solicitado ? 'Sim' : 'Não',
+        lead.data_folowup_solicitado || '',
+        lead.existe_whatsapp ? 'Sim' : 'Não',
+        lead.nome_campanha || '',
+        lead.status_disparo || '',
+        lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR') : ''
+      ])
+    } else {
+      // Limpa Nome
+      headers = [
+        'Nome do Cliente',
+        'CPF',
+        'Telefone',
+        'Origem',
+        'Status',
+        'Valor Estimado da Dívida',
+        'Valor Real da Dívida',
+        'Valor Pago Consulta',
+        'Valor Contrato',
+        'Tempo Negativado',
+        'Tipo Consulta Interesse',
+        'Órgãos Negativados',
+        'Observações',
+        'Agente ID',
+        'Follow-up Solicitado',
+        'Data Follow-up',
+        'Existe WhatsApp',
+        'Nome da Campanha',
+        'Status Disparo',
+        'Data de Criação'
+      ]
+
+      rows = filteredLeads.map(lead => [
+        lead.nome_cliente || '',
+        lead.cpf || '',
+        lead.telefone || '',
+        lead.origem || '',
+        lead.status_limpa_nome || '',
+        lead.valor_estimado_divida ? `R$ ${lead.valor_estimado_divida.toLocaleString('pt-BR')}` : '',
+        lead.valor_real_divida ? `R$ ${lead.valor_real_divida.toLocaleString('pt-BR')}` : '',
+        lead.valor_pago_consulta ? `R$ ${lead.valor_pago_consulta.toLocaleString('pt-BR')}` : '',
+        lead.valor_contrato ? `R$ ${lead.valor_contrato.toLocaleString('pt-BR')}` : '',
+        lead.tempo_negativado || '',
+        lead.tipo_consulta_interesse || '',
+        Array.isArray(lead.orgaos_negativados) ? lead.orgaos_negativados.join(', ') : '',
+        lead.observacoes_limpa_nome || '',
+        lead.Agente_ID || '',
+        lead.folowup_solicitado ? 'Sim' : 'Não',
+        lead.data_folowup_solicitado || '',
+        lead.existe_whatsapp ? 'Sim' : 'Não',
+        lead.nome_campanha || '',
+        lead.status_disparo || '',
+        lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR') : ''
+      ])
+    }
+
+    // Construir CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ].join('\n')
+
+    // Download do arquivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+
+    const tipoNegocio = userTipoNegocio?.nome || 'leads'
+    const dataAtual = new Date().toISOString().split('T')[0]
+    const filtroAplicado = searchTerm || statusFilter !== 'todos' || tipoConsultaFilter !== 'todos' || startDate || endDate ? '_filtrado' : ''
+
+    link.setAttribute('download', `leads_${tipoNegocio}_${dataAtual}${filtroAplicado}.csv`)
+    link.style.visibility = 'hidden'
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const createSampleLeads = async () => {
@@ -2024,6 +2219,15 @@ export default function LeadsPage() {
               >
                 <Users className="h-4 w-4 mr-2" />
                 Criar Leads de Exemplo
+              </button>
+            )}
+            {leads.length > 0 && (
+              <button
+                onClick={downloadLeadsCSV}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Baixar CSV
               </button>
             )}
             <button
