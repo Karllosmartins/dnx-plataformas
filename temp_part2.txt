@@ -1,0 +1,50 @@
+                                <div className="mt-3 flex items-center justify-between">
+                                  <div className="text-xs text-gray-500">
+                                    {formatDate(lead.created_at)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="ml-4">
+                                {getStatusBadge(lead.status_generico || lead.status_limpa_nome || 'novo_lead')}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        renderReportsTab()
+      )}
+
+      {/* Modal de criar lead */}
+      {showCreateForm && (
+        <CreateLeadModal
+          isOpen={showCreateForm}
+          onClose={() => setShowCreateForm(false)}
+          onLeadCreated={fetchLeads}
+          userId={user?.id}
+        />
+      )}
+
+      {/* Modal de editar lead */}
+      {showEditModal && (
+        <EditLeadModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false)
+            setEditingLead(null)
+          }}
+          lead={editingLead}
+          onLeadUpdated={fetchLeads}
+          availableStatuses={getRelevantStatuses()}
+          userTipoNegocio={userTipoNegocio}
+        />
+      )}
+    </div>
+  )
+}

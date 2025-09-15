@@ -52,3 +52,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Modal overlay com z-index definitive */
+.modal-overlay {
+  z-index: 99999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
