@@ -722,7 +722,7 @@ export default function DisparoSimplesPage() {
                     ))}
                   </p>
                   <p className="text-xs text-green-600 mt-1">
-                    Exemplo: telefone,variavel1,variavel2 (na primeira linha)
+                    Exemplo: nome,telefone,variavel1,variavel2 (na primeira linha)
                   </p>
                 </div>
               )}
@@ -748,7 +748,7 @@ export default function DisparoSimplesPage() {
                     </div>
                     <p className="text-xs text-gray-500">
                       {activeTab === 'official'
-                        ? 'CSV com colunas: telefone,variavel1,variavel2,etc'
+                        ? 'CSV com colunas: nome,telefone,variavel1,variavel2,etc'
                         : 'CSV com colunas: nome,telefone'}
                     </p>
                   </div>
