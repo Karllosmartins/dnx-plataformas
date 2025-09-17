@@ -251,9 +251,6 @@ export default function DisparoIAPage() {
 
     const template = availableTemplates.find(t => t.name === templateName)
     if (template) {
-      // DEBUG: Vamos ver a estrutura real do template
-      console.log('Template selecionado:', JSON.stringify(template, null, 2))
-
       // Extrair variáveis do template
       const variables: string[] = []
       template.components.forEach(component => {
@@ -665,11 +662,11 @@ export default function DisparoIAPage() {
                       <div className="bg-white rounded-lg p-3 border border-blue-300">
                         {template.components.map((component, index) => {
                           if (component.type === 'HEADER') {
-                            if (component.format === 'IMAGE' && component.example?.header_url) {
+                            if (component.format === 'IMAGE' && component.example?.header_handle?.[0]) {
                               return (
                                 <div key={index} className="mb-2">
                                   <img
-                                    src={component.example.header_url}
+                                    src={component.example.header_handle[0]}
                                     alt="Template Header"
                                     className="w-full h-32 object-cover rounded border"
                                     onError={(e) => {

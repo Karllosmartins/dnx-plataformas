@@ -9,7 +9,7 @@ export interface WhatsAppOfficialTemplate {
     format?: string
     text?: string
     example?: {
-      header_url?: string
+      header_handle?: string[]
       header_text?: string
     }
     parameters?: Array<{
