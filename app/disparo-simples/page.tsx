@@ -598,7 +598,7 @@ export default function DisparoSimplesPage() {
                                   <img
                                     src={component.example.header_handle[0]}
                                     alt="Template Header"
-                                    className="w-full h-32 object-cover rounded border"
+                                    className="w-full max-h-48 object-contain rounded border bg-gray-50"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none'
                                     }}
