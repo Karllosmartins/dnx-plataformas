@@ -768,9 +768,9 @@ export default function DisparoIAPage() {
 
                   {!imagePreview ? (
                     <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
-                      <div className="space-y-1 text-center">
+                      <div className="space-y-2 text-center">
                         <Image className="mx-auto h-8 w-8 text-gray-400" />
-                        <div className="flex text-sm text-gray-600">
+                        <div className="flex justify-center text-sm text-gray-600">
                           <label className="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
                             <span>Selecionar imagem</span>
                             <input
@@ -833,10 +833,10 @@ export default function DisparoIAPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lista de Contatos (CSV)
                 </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-purple-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-purple-400" />
-                    <div className="flex text-sm text-gray-600">
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-purple-300 border-dashed rounded-md hover:border-purple-400 transition-colors">
+                  <div className="space-y-2 text-center">
+                    <Upload className="mx-auto h-8 w-8 text-purple-400" />
+                    <div className="flex justify-center text-sm text-gray-600">
                       <label className="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
                         <span>Fazer upload do arquivo</span>
                         <input
