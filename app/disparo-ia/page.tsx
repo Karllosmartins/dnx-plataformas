@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase, AgenteIA } from '../../lib/supabase'
+import { supabase, AgenteIA, WhatsAppTemplate } from '../../lib/supabase'
+import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
 import PlanProtection from '../../components/PlanProtection'
-import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X } from 'lucide-react'
+import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X, Smartphone, Send } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -21,6 +22,9 @@ interface Campaign {
 interface WhatsAppInstance {
   id: number
   instancia: string
+  is_official_api?: boolean
+  waba_id?: string
+  apikey?: string
 }
 
 export default function DisparoIAPage() {
@@ -49,6 +53,13 @@ export default function DisparoIAPage() {
   // Estados para imagens
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  // Estados para API oficial do WhatsApp
+  const [activeTab, setActiveTab] = useState<'evolution' | 'official'>('evolution')
+  const [availableTemplates, setAvailableTemplates] = useState<WhatsAppOfficialTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [templateVariables, setTemplateVariables] = useState<string[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -139,12 +150,12 @@ export default function DisparoIAPage() {
     try {
       const { data, error } = await supabase
         .from('instancia_whtats')
-        .select('id, instancia')
+        .select('id, instancia, is_official_api, waba_id, apikey')
         .eq('user_id', parseInt(user.id || '0'))
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      
+
       setInstances(data || [])
       // Selecionar automaticamente a primeira instância se houver apenas uma
       if (data && data.length === 1) {
@@ -152,6 +163,77 @@ export default function DisparoIAPage() {
       }
     } catch (error) {
       console.error('Erro ao carregar instâncias:', error)
+    }
+  }
+
+  const fetchTemplates = async (instanceId: number) => {
+    const instance = instances.find(i => i.id === instanceId)
+    if (!instance || !instance.is_official_api || !instance.waba_id || !instance.apikey) {
+      return
+    }
+
+    setLoadingTemplates(true)
+    try {
+      const api = new WhatsAppOfficialAPI(instance.apikey, instance.waba_id)
+      const templates = await api.getTemplates()
+      setAvailableTemplates(templates)
+    } catch (error) {
+      console.error('Erro ao buscar templates:', error)
+      alert('Erro ao buscar templates da API oficial do WhatsApp')
+    } finally {
+      setLoadingTemplates(false)
+    }
+  }
+
+  const handleInstanceChange = (instanceId: string) => {
+    setSelectedInstance(instanceId)
+
+    // Limpar templates anteriores
+    setAvailableTemplates([])
+    setSelectedTemplate('')
+    setTemplateVariables([])
+
+    const instance = instances.find(i => i.instancia === instanceId)
+    // Se a instância suporta API oficial e a aba oficial está ativa, buscar templates
+    if (instance?.is_official_api && activeTab === 'official') {
+      fetchTemplates(instance.id)
+    }
+  }
+
+  const handleTabChange = (tab: 'evolution' | 'official') => {
+    setActiveTab(tab)
+
+    // Se mudou para aba oficial e tem instância selecionada, buscar templates
+    if (tab === 'official' && selectedInstance) {
+      const instance = instances.find(i => i.instancia === selectedInstance)
+      if (instance?.is_official_api) {
+        fetchTemplates(instance.id)
+      }
+    }
+
+    // Limpar campos específicos da aba anterior
+    if (tab === 'evolution') {
+      setSelectedTemplate('')
+      setTemplateVariables([])
+      setAvailableTemplates([])
+    }
+  }
+
+  const handleTemplateChange = (templateName: string) => {
+    setSelectedTemplate(templateName)
+
+    const template = availableTemplates.find(t => t.name === templateName)
+    if (template) {
+      // Extrair variáveis do template
+      const variables: string[] = []
+      template.components.forEach(component => {
+        if (component.type === 'BODY' && component.parameters) {
+          component.parameters.forEach((_, index) => {
+            variables.push(`variavel${index + 1}`)
+          })
+        }
+      })
+      setTemplateVariables(variables)
     }
   }
 
@@ -224,9 +306,17 @@ export default function DisparoIAPage() {
   }
 
   const executeCampaign = async () => {
-    if (!nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0) {
-      alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
-      return
+    // Validações específicas por tipo de API
+    if (activeTab === 'official') {
+      if (!nomeCampanha.trim() || !selectedTemplate || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0) {
+        alert('Preencha todos os campos, selecione um template, adicione contexto IA e faça upload do CSV')
+        return
+      }
+    } else {
+      if (!nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0) {
+        alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
+        return
+      }
     }
 
     setSending(true)
@@ -301,21 +391,37 @@ export default function DisparoIAPage() {
         formData.append('campanha', nomeCampanha)
         formData.append('contexto_ia', contextoIA)
         formData.append('usuario_id', user?.id?.toString() || '')
-        formData.append('tipo', 'disparo_ia')
         formData.append('total_contatos', csvContacts.length.toString())
-        formData.append('mensagem', mensagem)
-        formData.append('agente_id', agenteSelected || '')
         formData.append('instancia', selectedInstance)
-        
-        // Adicionar imagem e tipo de disparo
-        if (selectedImage) {
-          formData.append('image', selectedImage)
-          formData.append('tipo_disparo', 'imagem')
+        formData.append('campo_disparo', 'ia')
+
+        if (activeTab === 'official') {
+          // API Oficial do WhatsApp
+          formData.append('tipo_api', 'oficial')
+          formData.append('template_name', selectedTemplate)
+
+          const instance = instances.find(i => i.instancia === selectedInstance)
+          if (instance) {
+            formData.append('waba_id', instance.waba_id || '')
+            formData.append('access_token', instance.apikey || '') // apikey já é o token
+          }
         } else {
-          formData.append('tipo_disparo', 'texto')
+          // Evolution API
+          formData.append('tipo_api', 'evolution')
+          formData.append('mensagem', mensagem)
+          formData.append('agente_id', agenteSelected || '')
+
+          // Adicionar imagem e tipo de disparo
+          if (selectedImage) {
+            formData.append('image', selectedImage)
+            formData.append('tipo_disparo', 'imagem')
+          } else {
+            formData.append('tipo_disparo', 'texto')
+          }
         }
 
-        const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e9dr1', {
+        const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
+        const response = await fetch(webhookUrl, {
           method: 'POST',
           body: formData // Sem Content-Type para FormData
         })
@@ -344,6 +450,9 @@ export default function DisparoIAPage() {
       setCsvContacts([])
       setSelectedImage(null)
       setImagePreview(null)
+      setSelectedTemplate('')
+      setTemplateVariables([])
+      setAvailableTemplates([])
       
       // Recarregar campanhas
       fetchCampaigns()
@@ -380,7 +489,39 @@ export default function DisparoIAPage() {
               <Sparkles className="h-6 w-6 mr-2 text-purple-600" />
               Nova Campanha com IA
             </h3>
-            
+
+            {/* Abas de Tipos de API */}
+            {selectedInstance && (
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => handleTabChange('evolution')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'evolution'
+                        ? 'border-purple-500 text-purple-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <MessageCircle className="h-4 w-4 inline mr-2" />
+                    Evolution API
+                  </button>
+                  {instances.find(i => i.instancia === selectedInstance)?.is_official_api && (
+                    <button
+                      onClick={() => handleTabChange('official')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'official'
+                          ? 'border-green-500 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Smartphone className="h-4 w-4 inline mr-2" />
+                      API Oficial WhatsApp
+                    </button>
+                  )}
+                </nav>
+              </div>
+            )}
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -396,22 +537,60 @@ export default function DisparoIAPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mensagem Base
-                </label>
-                <textarea
-                  value={mensagem}
-                  onChange={(e) => setMensagem(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Olá {nome}, temos uma oferta especial para você!"
-                  disabled={isDisabled}
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
-                </p>
-              </div>
+              {/* Campo Mensagem - apenas para Evolution API */}
+              {activeTab === 'evolution' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mensagem Base
+                  </label>
+                  <textarea
+                    value={mensagem}
+                    onChange={(e) => setMensagem(e.target.value)}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Olá {nome}, temos uma oferta especial para você!"
+                    disabled={isDisabled}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
+                  </p>
+                </div>
+              )}
+
+              {/* Seleção de Template - apenas para API Oficial */}
+              {activeTab === 'official' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Smartphone className="inline h-4 w-4 mr-1" />
+                    Template Aprovado
+                  </label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => handleTemplateChange(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isDisabled || loadingTemplates}
+                    required
+                  >
+                    <option value="">
+                      {loadingTemplates ? 'Carregando templates...' : 'Selecione um template'}
+                    </option>
+                    {availableTemplates.map((template) => (
+                      <option key={template.name} value={template.name}>
+                        {template.name} ({template.language})
+                      </option>
+                    ))}
+                  </select>
+                  {loadingTemplates && (
+                    <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="animate-spin h-4 w-4 border-b-2 border-green-500 rounded-full mr-2"></div>
+                      Buscando templates aprovados...
+                    </div>
+                  )}
+                  <p className="text-sm text-green-600 mt-1">
+                    📋 Apenas templates aprovados pelo WhatsApp podem ser usados
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -430,82 +609,87 @@ export default function DisparoIAPage() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Agente IA (Opcional)
-                </label>
-                <select
-                  value={agenteSelected}
-                  onChange={(e) => setAgenteSelected(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isDisabled}
-                >
-                  <option value="">Sem agente específico</option>
-                  {agentes.length > 0 ? (
-                    agentes.map((agente) => (
-                      <option key={agente.id} value={agente.agente_id}>
-                        {agente.nome} - {agente.funcao}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>Nenhum agente encontrado - Crie um agente em Configurações</option>
-                  )}
-                </select>
-                <p className="text-sm text-gray-500 mt-1">
-                  <Bot className="h-3 w-3 inline mr-1" />
-                  Selecione um agente para usar suas configurações específicas
-                </p>
-              </div>
+              {/* Agente IA - apenas para Evolution API */}
+              {activeTab === 'evolution' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Agente IA (Opcional)
+                  </label>
+                  <select
+                    value={agenteSelected}
+                    onChange={(e) => setAgenteSelected(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={isDisabled}
+                  >
+                    <option value="">Sem agente específico</option>
+                    {agentes.length > 0 ? (
+                      agentes.map((agente) => (
+                        <option key={agente.id} value={agente.agente_id}>
+                          {agente.nome} - {agente.funcao}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Nenhum agente encontrado - Crie um agente em Configurações</option>
+                    )}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    <Bot className="h-3 w-3 inline mr-1" />
+                    Selecione um agente para usar suas configurações específicas
+                  </p>
+                </div>
+              )}
 
-              {/* Seção de Upload de Imagem */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Image className="inline h-4 w-4 mr-1" />
-                  Imagem (Opcional)
-                </label>
-                
-                {!imagePreview ? (
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
-                    <div className="space-y-1 text-center">
-                      <Image className="mx-auto h-8 w-8 text-gray-400" />
-                      <div className="flex text-sm text-gray-600">
-                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
-                          <span>Selecionar imagem</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="sr-only"
-                            disabled={isDisabled}
-                          />
-                        </label>
+              {/* Seção de Upload de Imagem - apenas para Evolution API */}
+              {activeTab === 'evolution' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Image className="inline h-4 w-4 mr-1" />
+                    Imagem (Opcional)
+                  </label>
+
+                  {!imagePreview ? (
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
+                      <div className="space-y-1 text-center">
+                        <Image className="mx-auto h-8 w-8 text-gray-400" />
+                        <div className="flex text-sm text-gray-600">
+                          <label className="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
+                            <span>Selecionar imagem</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="sr-only"
+                              disabled={isDisabled}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF até 5MB</p>
                       </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF até 5MB</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="mt-1 border-2 border-gray-300 rounded-md p-2">
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        className="max-h-40 mx-auto rounded-md object-contain"
-                      />
+                  ) : (
+                    <div className="relative">
+                      <div className="mt-1 border-2 border-gray-300 rounded-md p-2">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="max-h-40 mx-auto rounded-md object-contain"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        disabled={isDisabled}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="mt-2 text-sm text-gray-600 text-center">
+                        ✓ {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                      disabled={isDisabled}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                    <div className="mt-2 text-sm text-gray-600 text-center">
-                      ✓ {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -514,7 +698,7 @@ export default function DisparoIAPage() {
                 </label>
                 <select
                   value={selectedInstance}
-                  onChange={(e) => setSelectedInstance(e.target.value)}
+                  onChange={(e) => handleInstanceChange(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={isDisabled}
                   required
@@ -522,7 +706,7 @@ export default function DisparoIAPage() {
                   <option value="">Selecione uma instância</option>
                   {instances.map((instance) => (
                     <option key={instance.id} value={instance.instancia}>
-                      {instance.instancia}
+                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(Evolution API)'}
                     </option>
                   ))}
                 </select>
@@ -532,6 +716,24 @@ export default function DisparoIAPage() {
                   </p>
                 )}
               </div>
+
+              {/* Informações sobre variáveis do template - apenas para API Oficial */}
+              {activeTab === 'official' && selectedTemplate && templateVariables.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                  <h4 className="text-sm font-medium text-green-800 mb-2">
+                    📋 Estrutura do CSV para este template:
+                  </h4>
+                  <p className="text-sm text-green-700">
+                    O arquivo CSV deve conter as colunas: <code className="bg-green-100 px-1 rounded">telefone</code>
+                    {templateVariables.map((variable, index) => (
+                      <span key={index}>, <code className="bg-green-100 px-1 rounded">{variable}</code></span>
+                    ))}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Exemplo: telefone,variavel1,variavel2 (na primeira linha)
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -552,7 +754,11 @@ export default function DisparoIAPage() {
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-gray-500">CSV com colunas: nome,telefone</p>
+                    <p className="text-xs text-gray-500">
+                      {activeTab === 'official'
+                        ? 'CSV com colunas: telefone,variavel1,variavel2,etc'
+                        : 'CSV com colunas: nome,telefone'}
+                    </p>
                   </div>
                 </div>
                 
@@ -605,18 +811,34 @@ export default function DisparoIAPage() {
 
               <button
                 onClick={executeCampaign}
-                disabled={isDisabled || !nomeCampanha.trim() || !mensagem.trim() || !contextoIA.trim() || !selectedInstance || csvContacts.length === 0}
-                className="w-full flex items-center justify-center bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                disabled={
+                  sending ||
+                  !nomeCampanha.trim() ||
+                  !contextoIA.trim() ||
+                  !selectedInstance ||
+                  csvContacts.length === 0 ||
+                  (activeTab === 'evolution' && !mensagem.trim()) ||
+                  (activeTab === 'official' && !selectedTemplate)
+                }
+                className={`w-full flex items-center justify-center px-4 py-3 rounded-md font-medium text-white ${
+                  activeTab === 'official'
+                    ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-300'
+                    : 'bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300'
+                } disabled:cursor-not-allowed`}
               >
                 {sending ? (
                   <>
-                    <Bot className="h-5 w-5 mr-2 animate-pulse" />
+                    <Send className="h-5 w-5 mr-2 animate-pulse" />
                     Enviando ({sendingProgress}%)
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    Enviar com IA
+                    {activeTab === 'official' ? (
+                      <Smartphone className="h-5 w-5 mr-2" />
+                    ) : (
+                      <Sparkles className="h-5 w-5 mr-2" />
+                    )}
+                    {activeTab === 'official' ? 'Enviar via API Oficial' : 'Enviar com IA'}
                   </>
                 )}
               </button>

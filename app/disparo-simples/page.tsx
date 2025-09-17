@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase } from '../../lib/supabase'
-import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X } from 'lucide-react'
+import { supabase, WhatsAppTemplate } from '../../lib/supabase'
+import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
+import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X, Smartphone } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
@@ -20,6 +21,9 @@ interface Campaign {
 interface WhatsAppInstance {
   id: number
   instancia: string
+  is_official_api?: boolean
+  waba_id?: string
+  apikey?: string
 }
 
 export default function DisparoSimplesPage() {
@@ -40,6 +44,13 @@ export default function DisparoSimplesPage() {
   // Estados para imagens
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  // Estados para API oficial do WhatsApp
+  const [activeTab, setActiveTab] = useState<'evolution' | 'official'>('evolution')
+  const [availableTemplates, setAvailableTemplates] = useState<WhatsAppOfficialTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [templateVariables, setTemplateVariables] = useState<string[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -94,7 +105,7 @@ export default function DisparoSimplesPage() {
     try {
       const { data, error } = await supabase
         .from('instancia_whtats')
-        .select('id, instancia')
+        .select('id, instancia, is_official_api, waba_id, apikey')
         .eq('user_id', parseInt(user.id || '0'))
         .order('created_at', { ascending: false })
 
@@ -166,14 +177,95 @@ export default function DisparoSimplesPage() {
     setImagePreview(null)
   }
 
+  const fetchTemplates = async (instanceId: number) => {
+    const instance = instances.find(i => i.id === instanceId)
+    if (!instance || !instance.is_official_api || !instance.waba_id || !instance.apikey) {
+      return
+    }
+
+    setLoadingTemplates(true)
+    try {
+      const api = new WhatsAppOfficialAPI(instance.apikey, instance.waba_id)
+      const templates = await api.getTemplates()
+      setAvailableTemplates(templates)
+    } catch (error) {
+      console.error('Erro ao buscar templates:', error)
+      alert('Erro ao buscar templates da API oficial do WhatsApp')
+    } finally {
+      setLoadingTemplates(false)
+    }
+  }
+
+  const handleInstanceChange = (instanceId: string) => {
+    setSelectedInstance(instanceId)
+
+    // Limpar templates anteriores
+    setAvailableTemplates([])
+    setSelectedTemplate('')
+    setTemplateVariables([])
+
+    const instance = instances.find(i => i.instancia === instanceId)
+    // Se a instância suporta API oficial e a aba oficial está ativa, buscar templates
+    if (instance?.is_official_api && activeTab === 'official') {
+      fetchTemplates(instance.id)
+    }
+  }
+
+  const handleTabChange = (tab: 'evolution' | 'official') => {
+    setActiveTab(tab)
+
+    // Se mudou para aba oficial e tem instância selecionada, buscar templates
+    if (tab === 'official' && selectedInstance) {
+      const instance = instances.find(i => i.instancia === selectedInstance)
+      if (instance?.is_official_api) {
+        fetchTemplates(instance.id)
+      }
+    }
+
+    // Limpar campos específicos da aba anterior
+    if (tab === 'evolution') {
+      setSelectedTemplate('')
+      setTemplateVariables([])
+      setAvailableTemplates([])
+    } else {
+      // Limpar campos da Evolution API se necessário
+    }
+  }
+
+  const handleTemplateChange = (templateName: string) => {
+    setSelectedTemplate(templateName)
+
+    const template = availableTemplates.find(t => t.name === templateName)
+    if (template) {
+      // Extrair variáveis do template
+      const variables: string[] = []
+      template.components.forEach(component => {
+        if (component.type === 'BODY' && component.parameters) {
+          component.parameters.forEach((_, index) => {
+            variables.push(`variavel${index + 1}`)
+          })
+        }
+      })
+      setTemplateVariables(variables)
+    }
+  }
+
   const processMessage = (message: string, nome: string) => {
     return message.replace(/{nome}/g, nome)
   }
 
   const executeCampaign = async () => {
-    if (!nomeCampanha.trim() || !mensagem.trim() || !selectedInstance || csvContacts.length === 0) {
-      alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
-      return
+    // Validações específicas por tipo de API
+    if (activeTab === 'official') {
+      if (!nomeCampanha.trim() || !selectedTemplate || !selectedInstance || csvContacts.length === 0) {
+        alert('Preencha todos os campos, selecione um template e faça upload do CSV')
+        return
+      }
+    } else {
+      if (!nomeCampanha.trim() || !mensagem.trim() || !selectedInstance || csvContacts.length === 0) {
+        alert('Preencha todos os campos, selecione uma instância WhatsApp e faça upload do CSV')
+        return
+      }
     }
 
     setSending(true)
@@ -234,58 +326,58 @@ export default function DisparoSimplesPage() {
         }
       }
 
-      // Enviar mensagens
-      for (let i = 0; i < csvContacts.length; i++) {
-        const contato = csvContacts[i]
-        const mensagemPersonalizada = processMessage(mensagem, contato.nome)
-        
-        try {
-          // Se há imagem selecionada, enviar com FormData
-          if (selectedImage) {
-            const formData = new FormData()
-            formData.append('telefone', contato.telefone)
-            formData.append('nome', contato.nome)
-            formData.append('mensagem', mensagemPersonalizada)
-            formData.append('campanha', nomeCampanha)
-            formData.append('usuario_id', user?.id || '')
-            formData.append('tipo', 'disparo_simples_imagem')
-            formData.append('tipo_disparo', 'imagem')
-            formData.append('image', selectedImage)
+      // Enviar via webhook para n8n
+      try {
+        const formData = new FormData()
+        formData.append('planilha', csvFile!)
+        formData.append('campanha', nomeCampanha)
+        formData.append('usuario_id', user?.id?.toString() || '')
+        formData.append('instancia', selectedInstance)
+        formData.append('total_contatos', csvContacts.length.toString())
 
-            const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
-              method: 'POST',
-              body: formData
-            })
-          } else {
-            // Enviar apenas texto como antes
-            const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telefone: contato.telefone,
-                nome: contato.nome,
-                mensagem: mensagemPersonalizada,
-                campanha: nomeCampanha,
-                usuario_id: user?.id,
-                tipo: 'disparo_simples',
-                tipo_disparo: 'texto'
-              })
-            })
+        if (activeTab === 'official') {
+          // API Oficial do WhatsApp
+          formData.append('tipo_api', 'oficial')
+          formData.append('template_name', selectedTemplate)
+          formData.append('campo_disparo', 'oficial')
+
+          const instance = instances.find(i => i.instancia === selectedInstance)
+          if (instance) {
+            formData.append('waba_id', instance.waba_id || '')
+            formData.append('access_token', instance.apikey || '') // apikey já é o token
           }
+        } else {
+          // Evolution API
+          formData.append('tipo_api', 'evolution')
+          formData.append('mensagem', mensagem)
+          formData.append('campo_disparo', 'simples')
 
-          console.log(`Enviado para ${contato.nome} (${contato.telefone}):`, mensagemPersonalizada)
-
-          // Atualizar progresso
-          setSendingProgress(Math.round(((i + 1) / csvContacts.length) * 100))
-
-          // Delay entre mensagens (1 segundo)
-          await new Promise(resolve => setTimeout(resolve, 1000))
-
-        } catch (error) {
-          console.error(`Erro ao enviar para ${contato.nome}:`, error)
+          if (selectedImage) {
+            formData.append('image', selectedImage)
+            formData.append('tipo_disparo', 'imagem')
+          } else {
+            formData.append('tipo_disparo', 'texto')
+          }
         }
+
+        const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          body: formData
+        })
+
+        if (response.ok) {
+          console.log('Campanha enviada com sucesso para o n8n')
+        } else {
+          throw new Error('Erro na resposta do webhook')
+        }
+
+        setSendingProgress(100)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+      } catch (error) {
+        console.error('Erro ao enviar campanha:', error)
+        throw error
       }
 
       alert('Campanha enviada com sucesso!')
@@ -297,6 +389,9 @@ export default function DisparoSimplesPage() {
       setCsvContacts([])
       setSelectedImage(null)
       setImagePreview(null)
+      setSelectedTemplate('')
+      setTemplateVariables([])
+      setAvailableTemplates([])
       
       // Recarregar campanhas
       fetchCampaigns()
@@ -324,7 +419,39 @@ export default function DisparoSimplesPage() {
         <div className="lg:col-span-2">
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-6">Nova Campanha</h3>
-            
+
+            {/* Abas de Tipos de API */}
+            {selectedInstance && (
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => handleTabChange('evolution')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'evolution'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <MessageCircle className="h-4 w-4 inline mr-2" />
+                    Evolution API
+                  </button>
+                  {instances.find(i => i.instancia === selectedInstance)?.is_official_api && (
+                    <button
+                      onClick={() => handleTabChange('official')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'official'
+                          ? 'border-green-500 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Smartphone className="h-4 w-4 inline mr-2" />
+                      API Oficial WhatsApp
+                    </button>
+                  )}
+                </nav>
+              </div>
+            )}
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -340,24 +467,63 @@ export default function DisparoSimplesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mensagem
-                </label>
-                <textarea
-                  value={mensagem}
-                  onChange={(e) => setMensagem(e.target.value)}
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Olá {nome}, temos uma oferta especial para você!"
-                  disabled={sending}
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
-                </p>
-              </div>
+              {/* Campo Mensagem - apenas para Evolution API */}
+              {activeTab === 'evolution' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mensagem
+                  </label>
+                  <textarea
+                    value={mensagem}
+                    onChange={(e) => setMensagem(e.target.value)}
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Olá {nome}, temos uma oferta especial para você!"
+                    disabled={sending}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Use <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> para personalizar com o nome do contato
+                  </p>
+                </div>
+              )}
 
-              {/* Seção de Upload de Imagem */}
+              {/* Seleção de Template - apenas para API Oficial */}
+              {activeTab === 'official' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Smartphone className="inline h-4 w-4 mr-1" />
+                    Template Aprovado
+                  </label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => handleTemplateChange(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={sending || loadingTemplates}
+                    required
+                  >
+                    <option value="">
+                      {loadingTemplates ? 'Carregando templates...' : 'Selecione um template'}
+                    </option>
+                    {availableTemplates.map((template) => (
+                      <option key={template.name} value={template.name}>
+                        {template.name} ({template.language})
+                      </option>
+                    ))}
+                  </select>
+                  {loadingTemplates && (
+                    <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="animate-spin h-4 w-4 border-b-2 border-green-500 rounded-full mr-2"></div>
+                      Buscando templates aprovados...
+                    </div>
+                  )}
+                  <p className="text-sm text-green-600 mt-1">
+                    📋 Apenas templates aprovados pelo WhatsApp podem ser usados
+                  </p>
+                </div>
+              )}
+
+              {/* Seção de Upload de Imagem - apenas para Evolution API */}
+              {activeTab === 'evolution' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Image className="inline h-4 w-4 mr-1" />
@@ -406,6 +572,7 @@ export default function DisparoSimplesPage() {
                   </div>
                 )}
               </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -414,7 +581,7 @@ export default function DisparoSimplesPage() {
                 </label>
                 <select
                   value={selectedInstance}
-                  onChange={(e) => setSelectedInstance(e.target.value)}
+                  onChange={(e) => handleInstanceChange(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={sending}
                   required
@@ -422,7 +589,7 @@ export default function DisparoSimplesPage() {
                   <option value="">Selecione uma instância</option>
                   {instances.map((instance) => (
                     <option key={instance.id} value={instance.instancia}>
-                      {instance.instancia}
+                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(Evolution API)'}
                     </option>
                   ))}
                 </select>
@@ -432,6 +599,24 @@ export default function DisparoSimplesPage() {
                   </p>
                 )}
               </div>
+
+              {/* Informações sobre variáveis do template - apenas para API Oficial */}
+              {activeTab === 'official' && selectedTemplate && templateVariables.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                  <h4 className="text-sm font-medium text-green-800 mb-2">
+                    📋 Estrutura do CSV para este template:
+                  </h4>
+                  <p className="text-sm text-green-700">
+                    O arquivo CSV deve conter as colunas: <code className="bg-green-100 px-1 rounded">telefone</code>
+                    {templateVariables.map((variable, index) => (
+                      <span key={index}>, <code className="bg-green-100 px-1 rounded">{variable}</code></span>
+                    ))}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Exemplo: telefone,variavel1,variavel2 (na primeira linha)
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -452,7 +637,11 @@ export default function DisparoSimplesPage() {
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-gray-500">CSV com colunas: nome,telefone</p>
+                    <p className="text-xs text-gray-500">
+                      {activeTab === 'official'
+                        ? 'CSV com colunas: telefone,variavel1,variavel2,etc'
+                        : 'CSV com colunas: nome,telefone'}
+                    </p>
                   </div>
                 </div>
                 
@@ -502,8 +691,18 @@ export default function DisparoSimplesPage() {
 
               <button
                 onClick={executeCampaign}
-                disabled={sending || !nomeCampanha.trim() || !mensagem.trim() || csvContacts.length === 0}
-                className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                disabled={
+                  sending ||
+                  !nomeCampanha.trim() ||
+                  csvContacts.length === 0 ||
+                  (activeTab === 'evolution' && !mensagem.trim()) ||
+                  (activeTab === 'official' && !selectedTemplate)
+                }
+                className={`w-full flex items-center justify-center px-4 py-3 rounded-md font-medium text-white ${
+                  activeTab === 'official'
+                    ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-300'
+                    : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300'
+                } disabled:cursor-not-allowed`}
               >
                 {sending ? (
                   <>

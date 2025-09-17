@@ -107,6 +107,11 @@ export interface InstanciaWhats {
   apikey?: string
   instancia?: string
   baseurl?: string
+
+  // Campos para API oficial do WhatsApp
+  waba_id?: string
+  is_official_api?: boolean
+
   created_at: string
 }
 
@@ -136,6 +141,19 @@ export interface AgenteIA {
   prompt: string
   estagio: string
   user_id: number
+}
+
+// Interface para templates do WhatsApp Business API
+export interface WhatsAppTemplate {
+  id: number
+  instancia_id: number
+  template_name: string
+  template_language: string
+  template_category: string
+  template_status: string
+  template_components?: any // JSON com header, body, footer, buttons
+  created_at: string
+  updated_at: string
 }
 
 // Interface para a tabela tools
