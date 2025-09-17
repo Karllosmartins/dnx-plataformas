@@ -251,6 +251,9 @@ export default function DisparoIAPage() {
 
     const template = availableTemplates.find(t => t.name === templateName)
     if (template) {
+      // DEBUG: Vamos ver a estrutura real do template
+      console.log('Template selecionado:', JSON.stringify(template, null, 2))
+
       // Extrair variáveis do template
       const variables: string[] = []
       template.components.forEach(component => {
