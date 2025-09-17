@@ -591,12 +591,27 @@ export default function DisparoSimplesPage() {
                     return (
                       <div className="bg-white rounded-lg p-3 border border-blue-300">
                         {template.components.map((component, index) => {
-                          if (component.type === 'HEADER' && component.text) {
-                            return (
-                              <div key={index} className="font-bold text-gray-800 mb-2">
-                                {component.text}
-                              </div>
-                            )
+                          if (component.type === 'HEADER') {
+                            if (component.format === 'IMAGE' && component.example?.header_url) {
+                              return (
+                                <div key={index} className="mb-2">
+                                  <img
+                                    src={component.example.header_url}
+                                    alt="Template Header"
+                                    className="w-full h-32 object-cover rounded border"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                </div>
+                              )
+                            } else if (component.text) {
+                              return (
+                                <div key={index} className="font-bold text-gray-800 mb-2">
+                                  {component.text}
+                                </div>
+                              )
+                            }
                           }
                           if (component.type === 'BODY' && component.text) {
                             let bodyText = component.text

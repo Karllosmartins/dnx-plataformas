@@ -8,6 +8,10 @@ export interface WhatsAppOfficialTemplate {
     type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS'
     format?: string
     text?: string
+    example?: {
+      header_url?: string
+      header_text?: string
+    }
     parameters?: Array<{
       type: string
       name?: string
