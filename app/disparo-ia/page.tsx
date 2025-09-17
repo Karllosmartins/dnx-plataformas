@@ -69,6 +69,33 @@ export default function DisparoIAPage() {
     }
   }, [user])
 
+  // Definir aba padrão baseada nas instâncias disponíveis
+  useEffect(() => {
+    if (instances.length > 0) {
+      const hasEvolution = instances.some(i => !i.is_official_api)
+      const hasOfficial = instances.some(i => i.is_official_api)
+
+      // Se só tem oficial, definir como oficial
+      if (hasOfficial && !hasEvolution) {
+        setActiveTab('official')
+      }
+      // Se só tem evolution, definir como evolution
+      else if (hasEvolution && !hasOfficial) {
+        setActiveTab('evolution')
+      }
+      // Se não tem instância selecionada, limpar
+      if (selectedInstance) {
+        const selectedInstanceData = instances.find(i => i.instancia === selectedInstance)
+        if (selectedInstanceData) {
+          const correctTab = selectedInstanceData.is_official_api ? 'official' : 'evolution'
+          if (activeTab !== correctTab) {
+            setActiveTab(correctTab)
+          }
+        }
+      }
+    }
+  }, [instances, selectedInstance])
+
   const fetchCampaigns = async () => {
     if (!user) return
 
@@ -491,9 +518,9 @@ export default function DisparoIAPage() {
             </h3>
 
             {/* Abas de Tipos de API */}
-            {selectedInstance && (
-              <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
+            <div className="border-b border-gray-200 mb-6">
+              <nav className="-mb-px flex space-x-8">
+                {instances.some(i => !i.is_official_api) && (
                   <button
                     onClick={() => handleTabChange('evolution')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -505,22 +532,22 @@ export default function DisparoIAPage() {
                     <MessageCircle className="h-4 w-4 inline mr-2" />
                     Evolution API
                   </button>
-                  {instances.find(i => i.instancia === selectedInstance)?.is_official_api && (
-                    <button
-                      onClick={() => handleTabChange('official')}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'official'
-                          ? 'border-green-500 text-green-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <Smartphone className="h-4 w-4 inline mr-2" />
-                      API Oficial WhatsApp
-                    </button>
-                  )}
-                </nav>
-              </div>
-            )}
+                )}
+                {instances.some(i => i.is_official_api) && (
+                  <button
+                    onClick={() => handleTabChange('official')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'official'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Smartphone className="h-4 w-4 inline mr-2" />
+                    API Oficial WhatsApp
+                  </button>
+                )}
+              </nav>
+            </div>
 
             <div className="space-y-6">
               <div>
@@ -535,6 +562,34 @@ export default function DisparoIAPage() {
                   placeholder="Ex: Campanha IA Vendas"
                   disabled={isDisabled}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <MessageCircle className="inline h-4 w-4 mr-1" />
+                  Instância WhatsApp
+                </label>
+                <select
+                  value={selectedInstance}
+                  onChange={(e) => handleInstanceChange(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isDisabled}
+                  required
+                >
+                  <option value="">Selecione uma instância</option>
+                  {instances
+                    .filter(instance => activeTab === 'official' ? instance.is_official_api : !instance.is_official_api)
+                    .map((instance) => (
+                    <option key={instance.id} value={instance.instancia}>
+                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(Evolution API)'}
+                    </option>
+                  ))}
+                </select>
+                {instances.filter(instance => activeTab === 'official' ? instance.is_official_api : !instance.is_official_api).length === 0 && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Nenhuma instância {activeTab === 'official' ? 'API Oficial' : 'Evolution API'} encontrada. Configure uma instância primeiro.
+                  </p>
+                )}
               </div>
 
               {/* Campo Mensagem - apenas para Evolution API */}
@@ -588,6 +643,70 @@ export default function DisparoIAPage() {
                   )}
                   <p className="text-sm text-green-600 mt-1">
                     📋 Apenas templates aprovados pelo WhatsApp podem ser usados
+                  </p>
+                </div>
+              )}
+
+              {/* Preview do Template - apenas para API Oficial */}
+              {activeTab === 'official' && selectedTemplate && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <h4 className="text-sm font-medium text-blue-800 mb-3 flex items-center">
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Preview da Mensagem que será Enviada
+                  </h4>
+                  {(() => {
+                    const template = availableTemplates.find(t => t.name === selectedTemplate)
+                    if (!template) return null
+
+                    return (
+                      <div className="bg-white rounded-lg p-3 border border-blue-300">
+                        {template.components.map((component, index) => {
+                          if (component.type === 'HEADER' && component.text) {
+                            return (
+                              <div key={index} className="font-bold text-gray-800 mb-2">
+                                {component.text}
+                              </div>
+                            )
+                          }
+                          if (component.type === 'BODY' && component.text) {
+                            let bodyText = component.text
+                            // Substituir variáveis por exemplos
+                            templateVariables.forEach((variable, varIndex) => {
+                              bodyText = bodyText.replace(`{{${varIndex + 1}}}`, `{${variable}}`)
+                            })
+                            return (
+                              <div key={index} className="text-gray-700 mb-2 whitespace-pre-wrap">
+                                {bodyText}
+                              </div>
+                            )
+                          }
+                          if (component.type === 'FOOTER' && component.text) {
+                            return (
+                              <div key={index} className="text-xs text-gray-500 mt-2">
+                                {component.text}
+                              </div>
+                            )
+                          }
+                          if (component.type === 'BUTTONS' && component.buttons) {
+                            return (
+                              <div key={index} className="mt-3 space-y-1">
+                                {component.buttons.map((button, btnIndex) => (
+                                  <div key={btnIndex} className="text-center">
+                                    <span className="inline-block bg-blue-500 text-white px-3 py-1 rounded text-sm">
+                                      {button.text}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          }
+                          return null
+                        })}
+                      </div>
+                    )
+                  })()}
+                  <p className="text-xs text-blue-600 mt-2">
+                    ℹ️ As variáveis {'{'}variavel1{'},'} {'{'}variavel2{'}'} etc. serão substituídas pelos dados do CSV
                   </p>
                 </div>
               )}
@@ -691,31 +810,6 @@ export default function DisparoIAPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MessageCircle className="inline h-4 w-4 mr-1" />
-                  Instância WhatsApp
-                </label>
-                <select
-                  value={selectedInstance}
-                  onChange={(e) => handleInstanceChange(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isDisabled}
-                  required
-                >
-                  <option value="">Selecione uma instância</option>
-                  {instances.map((instance) => (
-                    <option key={instance.id} value={instance.instancia}>
-                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(Evolution API)'}
-                    </option>
-                  ))}
-                </select>
-                {instances.length === 0 && (
-                  <p className="text-sm text-red-500 mt-1">
-                    Nenhuma instância WhatsApp encontrada. Configure uma instância primeiro.
-                  </p>
-                )}
-              </div>
 
               {/* Informações sobre variáveis do template - apenas para API Oficial */}
               {activeTab === 'official' && selectedTemplate && templateVariables.length > 0 && (
