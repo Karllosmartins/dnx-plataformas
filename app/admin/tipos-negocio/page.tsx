@@ -39,6 +39,7 @@ export default function TiposNegocioAdmin() {
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
   const [criandoNovo, setCriandoNovo] = useState(false);
+  const [tipoEditando, setTipoEditando] = useState<Partial<TipoNegocio>>({});
   const [novoTipo, setNovoTipo] = useState<Partial<TipoNegocio>>({
     nome: '',
     nome_exibicao: '',
@@ -121,6 +122,73 @@ export default function TiposNegocioAdmin() {
     }
   };
 
+  const iniciarEdicao = (tipo: TipoNegocio) => {
+    setTipoEditando({ ...tipo });
+    setEditando(tipo.id);
+  };
+
+  const cancelarEdicao = () => {
+    setEditando(null);
+    setTipoEditando({});
+  };
+
+  const salvarEdicao = async () => {
+    try {
+      if (!tipoEditando.nome || !tipoEditando.nome_exibicao) {
+        alert('Nome e Nome de Exibição são obrigatórios');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('tipos_negocio')
+        .update({
+          nome: tipoEditando.nome,
+          nome_exibicao: tipoEditando.nome_exibicao,
+          descricao: tipoEditando.descricao,
+          icone: tipoEditando.icone,
+          cor: tipoEditando.cor,
+          campos_personalizados: tipoEditando.campos_personalizados,
+          status_personalizados: tipoEditando.status_personalizados,
+          ativo: tipoEditando.ativo,
+          ordem: tipoEditando.ordem
+        })
+        .eq('id', editando);
+
+      if (error) throw error;
+
+      setTipos(tipos.map(t =>
+        t.id === editando ? { ...t, ...tipoEditando } as TipoNegocio : t
+      ));
+
+      cancelarEdicao();
+      alert('Tipo de negócio atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar tipo:', error);
+      alert('Erro ao atualizar tipo de negócio');
+    }
+  };
+
+  const excluirTipo = async (id: number, nome: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o tipo "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tipos_negocio')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTipos(tipos.filter(t => t.id !== id));
+      alert('Tipo de negócio excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir tipo:', error);
+      alert('Erro ao excluir tipo de negócio. Verifique se não há leads associados a este tipo.');
+    }
+  };
+
   const alternarAtivo = async (id: number, ativo: boolean) => {
     try {
       const { error } = await supabase
@@ -136,31 +204,55 @@ export default function TiposNegocioAdmin() {
     }
   };
 
-  const adicionarCampo = () => {
-    setNovoTipo({
-      ...novoTipo,
-      campos_personalizados: [
-        ...(novoTipo.campos_personalizados || []),
-        {
-          nome: '',
-          label: '',
-          tipo: 'text',
-          obrigatorio: false
-        }
-      ]
-    });
+  const adicionarCampo = (isEdit = false) => {
+    const novoCampo = {
+      nome: '',
+      label: '',
+      tipo: 'text' as const,
+      obrigatorio: false
+    };
+
+    if (isEdit) {
+      setTipoEditando({
+        ...tipoEditando,
+        campos_personalizados: [
+          ...(tipoEditando.campos_personalizados || []),
+          novoCampo
+        ]
+      });
+    } else {
+      setNovoTipo({
+        ...novoTipo,
+        campos_personalizados: [
+          ...(novoTipo.campos_personalizados || []),
+          novoCampo
+        ]
+      });
+    }
   };
 
-  const removerCampo = (index: number) => {
-    const campos = [...(novoTipo.campos_personalizados || [])];
-    campos.splice(index, 1);
-    setNovoTipo({ ...novoTipo, campos_personalizados: campos });
+  const removerCampo = (index: number, isEdit = false) => {
+    if (isEdit) {
+      const campos = [...(tipoEditando.campos_personalizados || [])];
+      campos.splice(index, 1);
+      setTipoEditando({ ...tipoEditando, campos_personalizados: campos });
+    } else {
+      const campos = [...(novoTipo.campos_personalizados || [])];
+      campos.splice(index, 1);
+      setNovoTipo({ ...novoTipo, campos_personalizados: campos });
+    }
   };
 
-  const atualizarCampo = (index: number, campo: CampoPersonalizado) => {
-    const campos = [...(novoTipo.campos_personalizados || [])];
-    campos[index] = campo;
-    setNovoTipo({ ...novoTipo, campos_personalizados: campos });
+  const atualizarCampo = (index: number, campo: CampoPersonalizado, isEdit = false) => {
+    if (isEdit) {
+      const campos = [...(tipoEditando.campos_personalizados || [])];
+      campos[index] = campo;
+      setTipoEditando({ ...tipoEditando, campos_personalizados: campos });
+    } else {
+      const campos = [...(novoTipo.campos_personalizados || [])];
+      campos[index] = campo;
+      setNovoTipo({ ...novoTipo, campos_personalizados: campos });
+    }
   };
 
   if (loading) {
@@ -201,8 +293,8 @@ export default function TiposNegocioAdmin() {
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div 
-                    className="w-4 h-4 rounded-full" 
+                  <div
+                    className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: tipo.cor }}
                   />
                   <CardTitle className="text-lg">{tipo.nome_exibicao}</CardTitle>
@@ -225,7 +317,7 @@ export default function TiposNegocioAdmin() {
                   <span>•</span>
                   <span>{tipo.status_personalizados?.length || 0} status</span>
                 </div>
-                
+
                 {/* Botões de Ação */}
                 <div className="flex gap-2 pt-2">
                   <Button
@@ -238,12 +330,18 @@ export default function TiposNegocioAdmin() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      // TODO: Implementar edição
-                      alert('Edição será implementada em breve');
-                    }}
+                    onClick={() => iniciarEdicao(tipo)}
+                    disabled={editando === tipo.id}
                   >
                     <Edit size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => excluirTipo(tipo.id, tipo.nome_exibicao)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 size={14} />
                   </Button>
                 </div>
               </div>
@@ -344,7 +442,7 @@ export default function TiposNegocioAdmin() {
             <div className="mt-8">
               <div className="flex items-center justify-between mb-4">
                 <Label className="text-lg">Campos Personalizados</Label>
-                <Button type="button" variant="outline" onClick={adicionarCampo}>
+                <Button type="button" variant="outline" onClick={() => adicionarCampo()}>
                   <Plus size={16} className="mr-2" />
                   Adicionar Campo
                 </Button>
@@ -442,6 +540,202 @@ export default function TiposNegocioAdmin() {
               <Button onClick={salvarTipo}>
                 <Save size={16} className="mr-2" />
                 Salvar Tipo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Formulário de Edição */}
+      {editando && (
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Editar Tipo de Negócio</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelarEdicao}
+              >
+                <X size={20} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Informações Básicas */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-nome">ID do Tipo *</Label>
+                  <Input
+                    id="edit-nome"
+                    placeholder="ex: incorporadora"
+                    value={tipoEditando.nome || ''}
+                    onChange={(e) => setTipoEditando({ ...tipoEditando, nome: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-nome_exibicao">Nome de Exibição *</Label>
+                  <Input
+                    id="edit-nome_exibicao"
+                    placeholder="ex: Incorporadora Imobiliária"
+                    value={tipoEditando.nome_exibicao || ''}
+                    onChange={(e) => setTipoEditando({ ...tipoEditando, nome_exibicao: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-descricao">Descrição</Label>
+                  <Textarea
+                    id="edit-descricao"
+                    placeholder="Descrição do tipo de negócio..."
+                    value={tipoEditando.descricao || ''}
+                    onChange={(e) => setTipoEditando({ ...tipoEditando, descricao: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-cor">Cor</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="edit-cor"
+                      type="color"
+                      value={tipoEditando.cor || '#3B82F6'}
+                      onChange={(e) => setTipoEditando({ ...tipoEditando, cor: e.target.value })}
+                      className="w-16"
+                    />
+                    <Input
+                      value={tipoEditando.cor || '#3B82F6'}
+                      onChange={(e) => setTipoEditando({ ...tipoEditando, cor: e.target.value })}
+                      placeholder="#3B82F6"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status do Funil */}
+              <div className="space-y-4">
+                <div>
+                  <Label>Status do Funil</Label>
+                  <Textarea
+                    placeholder="Digite um status por linha"
+                    value={tipoEditando.status_personalizados?.join('\n') || ''}
+                    onChange={(e) => setTipoEditando({
+                      ...tipoEditando,
+                      status_personalizados: e.target.value.split('\n').filter(s => s.trim())
+                    })}
+                    rows={6}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ex: novo_lead, qualificacao, convertido
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Campos Personalizados */}
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-lg">Campos Personalizados</Label>
+                <Button type="button" variant="outline" onClick={() => adicionarCampo(true)}>
+                  <Plus size={16} className="mr-2" />
+                  Adicionar Campo
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {tipoEditando.campos_personalizados?.map((campo, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <div>
+                        <Label>Nome do Campo</Label>
+                        <Input
+                          placeholder="ex: tipo_imovel"
+                          value={campo.nome}
+                          onChange={(e) => atualizarCampo(index, { ...campo, nome: e.target.value }, true)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Label</Label>
+                        <Input
+                          placeholder="ex: Tipo do Imóvel"
+                          value={campo.label}
+                          onChange={(e) => atualizarCampo(index, { ...campo, label: e.target.value }, true)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Tipo</Label>
+                        <select
+                          className="w-full p-2 border rounded"
+                          value={campo.tipo}
+                          onChange={(e) => atualizarCampo(index, {
+                            ...campo,
+                            tipo: e.target.value as CampoPersonalizado['tipo']
+                          }, true)}
+                        >
+                          <option value="text">Texto</option>
+                          <option value="number">Número</option>
+                          <option value="select">Select</option>
+                          <option value="multiselect">Multi-Select</option>
+                          <option value="boolean">Sim/Não</option>
+                          <option value="date">Data</option>
+                          <option value="textarea">Texto Longo</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={campo.obrigatorio}
+                            onChange={(e) => atualizarCampo(index, {
+                              ...campo,
+                              obrigatorio: e.target.checked
+                            }, true)}
+                          />
+                          Obrigatório
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removerCampo(index, true)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {(campo.tipo === 'select' || campo.tipo === 'multiselect') && (
+                      <div className="mt-4">
+                        <Label>Opções (uma por linha)</Label>
+                        <Textarea
+                          placeholder="opcao1&#10;opcao2&#10;opcao3"
+                          value={campo.opcoes?.join('\n') || ''}
+                          onChange={(e) => atualizarCampo(index, {
+                            ...campo,
+                            opcoes: e.target.value.split('\n').filter(o => o.trim())
+                          }, true)}
+                          rows={3}
+                        />
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex justify-end gap-4 mt-8">
+              <Button
+                variant="outline"
+                onClick={cancelarEdicao}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={salvarEdicao}>
+                <Save size={16} className="mr-2" />
+                Salvar Alterações
               </Button>
             </div>
           </CardContent>
