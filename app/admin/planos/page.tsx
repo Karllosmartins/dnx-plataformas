@@ -203,7 +203,7 @@ export default function AdminPlanosPage() {
           </div>
 
           {/* Seção de Usuários */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <Users className="h-5 w-5 mr-2" />
@@ -212,7 +212,7 @@ export default function AdminPlanosPage() {
             </div>
 
             <div className="p-6">
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 {usuarios.map((usuario) => (
                   <UsuarioCard
                     key={usuario.id}
@@ -384,24 +384,24 @@ interface UsuarioCardProps {
 function UsuarioCard({ usuario, planos, onChangePlan }: UsuarioCardProps) {
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+        <div className="flex-1">
           <h3 className="font-medium text-gray-900">{usuario.name}</h3>
           <p className="text-sm text-gray-600">{usuario.email}</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 capitalize">
+          <span className="inline-block mt-1 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 capitalize">
             {usuario.plano_nome || usuario.plano}
           </span>
+        </div>
+        <div className="flex-shrink-0 sm:ml-4">
           <select
             value={usuario.plano_id || ''}
             onChange={(e) => onChangePlan(usuario.id, parseInt(e.target.value))}
-            className="text-sm border border-gray-300 rounded px-2 py-1"
+            className="w-full sm:w-auto text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Selecionar plano</option>
+            <option value="">Alterar plano...</option>
             {planos.map((plano) => (
               <option key={plano.id} value={plano.id}>
-                {plano.nome} - {plano.descricao}
+                {plano.nome}
               </option>
             ))}
           </select>
