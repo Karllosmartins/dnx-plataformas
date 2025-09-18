@@ -159,7 +159,6 @@ export function getUserPlanInfo(user: User | UsuarioComPlano) {
     return {
       nome: usuarioComPlano.plano_nome || user.plano,
       descricao: usuarioComPlano.plano_descricao,
-      valor: usuarioComPlano.valor_mensal,
       features: getAvailableFeatures(user),
       limites: {
         leads: user.limite_leads,
@@ -174,7 +173,6 @@ export function getUserPlanInfo(user: User | UsuarioComPlano) {
   return {
     nome: planoLegado,
     descricao: `Plano ${planoLegado}`,
-    valor: 0,
     features: getAvailableFeatures(user),
     limites: {
       leads: user.limite_leads,

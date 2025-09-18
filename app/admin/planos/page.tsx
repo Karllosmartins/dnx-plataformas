@@ -250,10 +250,10 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
       <div className="border border-gray-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center">
-            <DollarSign className="h-5 w-5 text-green-500 mr-2" />
+            <Crown className="h-5 w-5 text-blue-500 mr-2" />
             <h3 className="font-semibold text-gray-900 capitalize">{plano.nome}</h3>
-            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-              R$ {plano.valor_mensal}/mês
+            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+              Plano de Acesso
             </span>
           </div>
           <div className="flex space-x-2">
@@ -307,20 +307,13 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
   return (
     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div>
           <input
             type="text"
             placeholder="Nome do plano"
             value={formData.nome || ''}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            placeholder="Valor mensal"
-            value={formData.valor_mensal || ''}
-            onChange={(e) => setFormData({ ...formData, valor_mensal: parseFloat(e.target.value) || 0 })}
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
           />
         </div>
 
@@ -402,7 +395,7 @@ function UsuarioCard({ usuario, planos, onChangePlan }: UsuarioCardProps) {
             <option value="">Selecionar plano</option>
             {planos.map((plano) => (
               <option key={plano.id} value={plano.id}>
-                {plano.nome} - R$ {plano.valor_mensal}/mês
+                {plano.nome} - {plano.descricao}
               </option>
             ))}
           </select>

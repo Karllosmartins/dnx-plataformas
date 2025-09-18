@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS public.planos (
   id BIGSERIAL PRIMARY KEY,
   nome VARCHAR(100) NOT NULL UNIQUE,
   descricao TEXT,
-  valor_mensal DECIMAL(10,2) DEFAULT 0,
 
   -- Controles de acesso
   acesso_dashboard BOOLEAN DEFAULT TRUE,
@@ -33,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.planos (
 
 -- Inserir planos padrão
 INSERT INTO public.planos (
-  nome, descricao, valor_mensal,
+  nome, descricao,
   acesso_dashboard, acesso_crm, acesso_whatsapp, acesso_disparo_simples,
   acesso_disparo_ia, acesso_agentes_ia, acesso_extracao_leads,
   acesso_enriquecimento, acesso_usuarios,
@@ -42,8 +41,7 @@ INSERT INTO public.planos (
 -- Plano Básico
 (
   'basico',
-  'Plano básico com funcionalidades essenciais',
-  97.00,
+  'Acesso ao dashboard CRM, whatsapp, disparo simples',
   TRUE, TRUE, TRUE, TRUE,
   FALSE, FALSE, FALSE,
   FALSE, FALSE,
@@ -52,8 +50,7 @@ INSERT INTO public.planos (
 -- Plano Premium 1 (IA)
 (
   'premium1',
-  'Plano premium com IA e agentes inteligentes',
-  197.00,
+  'Acesso ao dashboard CRM, whatsapp, disparo simples, disparo com IA, Agentes IA',
   TRUE, TRUE, TRUE, TRUE,
   TRUE, TRUE, FALSE,
   FALSE, FALSE,
@@ -62,8 +59,7 @@ INSERT INTO public.planos (
 -- Plano Premium 2 (Extração)
 (
   'premium2',
-  'Plano premium com extração de leads',
-  197.00,
+  'Acesso ao dashboard CRM, whatsapp, disparo simples, Extração',
   TRUE, TRUE, TRUE, TRUE,
   FALSE, FALSE, TRUE,
   FALSE, FALSE,
@@ -72,8 +68,7 @@ INSERT INTO public.planos (
 -- Plano Enterprise
 (
   'enterprise',
-  'Plano completo com todas as funcionalidades',
-  497.00,
+  'Acesso completo: dashboard CRM, whatsapp, disparo simples, disparo com IA, Agentes IA, Extração, enriquecimento',
   TRUE, TRUE, TRUE, TRUE,
   TRUE, TRUE, TRUE,
   TRUE, TRUE,
@@ -81,7 +76,6 @@ INSERT INTO public.planos (
 )
 ON CONFLICT (nome) DO UPDATE SET
   descricao = EXCLUDED.descricao,
-  valor_mensal = EXCLUDED.valor_mensal,
   acesso_dashboard = EXCLUDED.acesso_dashboard,
   acesso_crm = EXCLUDED.acesso_crm,
   acesso_whatsapp = EXCLUDED.acesso_whatsapp,
@@ -146,7 +140,6 @@ SELECT
   u.plano as plano_legado,
   p.nome as plano_nome,
   p.descricao as plano_descricao,
-  p.valor_mensal,
   p.acesso_dashboard,
   p.acesso_crm,
   p.acesso_whatsapp,

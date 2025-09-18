@@ -24,7 +24,6 @@ export interface Plano {
   id: number
   nome: string
   descricao?: string
-  valor_mensal: number
 
   // Controles de acesso
   acesso_dashboard: boolean
@@ -74,7 +73,6 @@ export interface User {
 export interface UsuarioComPlano extends User {
   plano_nome?: string
   plano_descricao?: string
-  valor_mensal?: number
   acesso_dashboard?: boolean
   acesso_crm?: boolean
   acesso_whatsapp?: boolean
