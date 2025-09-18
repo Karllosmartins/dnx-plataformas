@@ -1,5 +1,5 @@
 -- =====================================================
--- MIGRAÇÃO PARA SISTEMA DE PLANOS E CONTROLE DE ACESSO
+-- MIGRAÇÃO PARA SISTEMA DE PLANOS E CONTROLE DE ACESSO - VERSÃO CORRIGIDA
 -- =====================================================
 
 -- Criar tabela de planos
@@ -93,7 +93,7 @@ ON CONFLICT (nome) DO UPDATE SET
 -- Adicionar relacionamento de plano na tabela users
 ALTER TABLE public.users
 ADD COLUMN IF NOT EXISTS plano_id BIGINT REFERENCES public.planos(id),
-ADD COLUMN IF NOT EXISTS plano_customizado JSONB; -- Para overrides específicos
+ADD COLUMN IF NOT EXISTS plano_customizado JSONB;
 
 -- Migrar planos existentes para a nova estrutura
 UPDATE public.users SET plano_id = (
@@ -109,21 +109,6 @@ UPDATE public.users SET plano_id = (
 CREATE INDEX IF NOT EXISTS idx_planos_ativo ON public.planos(ativo);
 CREATE INDEX IF NOT EXISTS idx_planos_nome ON public.planos(nome);
 CREATE INDEX IF NOT EXISTS idx_users_plano_id ON public.users(plano_id);
-
--- Criar função para atualizar updated_at automaticamente
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger para planos
-DROP TRIGGER IF EXISTS update_planos_updated_at ON public.planos;
-CREATE TRIGGER update_planos_updated_at
-  BEFORE UPDATE ON public.planos
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- RLS para tabela planos
 ALTER TABLE public.planos ENABLE ROW LEVEL SECURITY;
@@ -157,8 +142,3 @@ SELECT
   u.updated_at
 FROM public.users u
 LEFT JOIN public.planos p ON u.plano_id = p.id;
-
--- Comentários para documentação
-COMMENT ON TABLE public.planos IS 'Tabela de planos com controles de acesso e limites';
-COMMENT ON COLUMN public.users.plano_customizado IS 'Overrides específicos de acesso para este usuário (formato JSON)';
-COMMENT ON VIEW public.view_usuarios_planos IS 'View que combina usuários com seus planos e permissões';
