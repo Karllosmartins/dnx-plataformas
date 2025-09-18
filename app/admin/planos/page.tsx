@@ -24,26 +24,18 @@ export default function AdminPlanosPage() {
   const [loading, setLoading] = useState(true)
   const [editingPlano, setEditingPlano] = useState<number | null>(null)
   const [showNewPlano, setShowNewPlano] = useState(false)
-
-  // Verificar se o usuário tem acesso
-  if (!user || !hasFeatureAccess(user, 'usuarios')) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Crown className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Acesso Negado</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Você não tem permissão para acessar esta página.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const [hasAccess, setHasAccess] = useState(false)
 
   useEffect(() => {
-    fetchPlanos()
-    fetchUsuarios()
-  }, [])
+    // Verificar acesso
+    if (user && (user.role === 'admin' || hasFeatureAccess(user as any, 'usuarios'))) {
+      setHasAccess(true)
+      fetchPlanos()
+      fetchUsuarios()
+    } else {
+      setLoading(false)
+    }
+  }, [user])
 
   const fetchPlanos = async () => {
     try {
@@ -130,6 +122,20 @@ export default function AdminPlanosPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Crown className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Acesso Negado</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Você não tem permissão para acessar esta página.
+          </p>
+        </div>
       </div>
     )
   }
