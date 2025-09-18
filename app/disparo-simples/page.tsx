@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import { supabase, WhatsAppTemplate } from '../../lib/supabase'
 import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
-import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X, Smartphone } from 'lucide-react'
+import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X, Smartphone, Database } from 'lucide-react'
+import { hasFeatureAccess, canUseEnriquecimento } from '../../lib/permissions'
 
 interface CsvContact {
   telefone: string
@@ -46,11 +47,14 @@ export default function DisparoSimplesPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   // Estados para API oficial do WhatsApp
-  const [activeTab, setActiveTab] = useState<'evolution' | 'official'>('evolution')
+  const [activeTab, setActiveTab] = useState<'evolution' | 'official' | 'enriquecimento'>('evolution')
   const [availableTemplates, setAvailableTemplates] = useState<WhatsAppOfficialTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [templateVariables, setTemplateVariables] = useState<string[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
+
+  // Estados para enriquecimento de dados
+  const [enriquecimentoOption, setEnriquecimentoOption] = useState<'telefone' | 'cnpj'>('cnpj')
 
   useEffect(() => {
     if (user) {
@@ -238,7 +242,7 @@ export default function DisparoSimplesPage() {
     }
   }
 
-  const handleTabChange = (tab: 'evolution' | 'official') => {
+  const handleTabChange = (tab: 'evolution' | 'official' | 'enriquecimento') => {
     setActiveTab(tab)
 
     // Se mudou para aba oficial e tem instância selecionada, buscar templates
@@ -251,6 +255,10 @@ export default function DisparoSimplesPage() {
 
     // Limpar campos específicos da aba anterior
     if (tab === 'evolution') {
+      setSelectedTemplate('')
+      setTemplateVariables([])
+      setAvailableTemplates([])
+    } else if (tab === 'enriquecimento') {
       setSelectedTemplate('')
       setTemplateVariables([])
       setAvailableTemplates([])

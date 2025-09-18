@@ -20,6 +20,33 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 // INTERFACES PARA O CRM LIMPA NOME
 // =====================================================
 
+export interface Plano {
+  id: number
+  nome: string
+  descricao?: string
+  valor_mensal: number
+
+  // Controles de acesso
+  acesso_dashboard: boolean
+  acesso_crm: boolean
+  acesso_whatsapp: boolean
+  acesso_disparo_simples: boolean
+  acesso_disparo_ia: boolean
+  acesso_agentes_ia: boolean
+  acesso_extracao_leads: boolean
+  acesso_enriquecimento: boolean
+  acesso_usuarios: boolean
+
+  // Limites
+  limite_leads: number
+  limite_consultas: number
+  limite_instancias: number
+
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: number
   name: string
@@ -29,7 +56,9 @@ export interface User {
   active: boolean
   cpf?: string
   telefone?: string
-  plano: 'basico' | 'premium' | 'enterprise'
+  plano: 'basico' | 'premium' | 'enterprise' // Mantido para compatibilidade
+  plano_id?: number
+  plano_customizado?: Record<string, any> // Overrides específicos
   limite_leads: number
   limite_consultas: number
   numero_instancias?: number
@@ -40,6 +69,21 @@ export interface User {
     nome_exibicao: string
     cor: string
   }>
+}
+
+export interface UsuarioComPlano extends User {
+  plano_nome?: string
+  plano_descricao?: string
+  valor_mensal?: number
+  acesso_dashboard?: boolean
+  acesso_crm?: boolean
+  acesso_whatsapp?: boolean
+  acesso_disparo_simples?: boolean
+  acesso_disparo_ia?: boolean
+  acesso_agentes_ia?: boolean
+  acesso_extracao_leads?: boolean
+  acesso_enriquecimento?: boolean
+  acesso_usuarios?: boolean
 }
 
 export interface ConfiguracaoCredenciais {
