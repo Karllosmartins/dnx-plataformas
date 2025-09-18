@@ -6,11 +6,11 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { hasFeatureAccess, PlanType } from '../lib/plans'
 import { supabase } from '../lib/supabase'
-import { 
-  BarChart3, 
-  Users, 
-  MessageSquare, 
-  Target, 
+import {
+  BarChart3,
+  Users,
+  MessageSquare,
+  Target,
   Calendar,
   Settings,
   Home,
@@ -23,7 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCog,
-  Building
+  Building,
+  Crown
 } from 'lucide-react'
 
 const navigation = [
@@ -35,6 +36,7 @@ const navigation = [
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Tipos de Negócio', href: '/admin/tipos-negocio', icon: Building, feature: 'usuarios' as const, adminOnly: true },
+  { name: 'Planos', href: '/admin/planos', icon: Crown, feature: 'usuarios' as const, adminOnly: true },
   { name: 'Usuários', href: '/usuarios', icon: UserCog, feature: 'usuarios' as const, adminOnly: true },
 ]
 
