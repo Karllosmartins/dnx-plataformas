@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Plano, UsuarioComPlano } from '@/lib/supabase'
-import { hasFeatureAccess } from '@/lib/permissions'
-import { useAuth } from '@/hooks/useAuth'
+import { supabase, Plano, UsuarioComPlano } from '../../../lib/supabase'
+import { hasFeatureAccess } from '../../../lib/permissions'
+import { useAuth } from '../../../components/AuthWrapper'
 import {
   Crown,
   Users,
