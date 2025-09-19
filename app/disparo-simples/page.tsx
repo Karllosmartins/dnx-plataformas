@@ -565,7 +565,7 @@ export default function DisparoSimplesPage() {
                     API Oficial WhatsApp
                   </button>
                 )}
-                {user && canUseEnriquecimento(user) && (
+                {user && canUseEnriquecimento(user as any) && (
                   <button
                     onClick={() => handleTabChange('enriquecimento')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${
