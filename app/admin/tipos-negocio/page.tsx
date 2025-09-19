@@ -308,42 +308,43 @@ export default function TiposNegocioAdmin() {
       </div>
 
       {/* Lista de Tipos Existentes */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 mb-8">
         {tipos.map((tipo) => (
           <Card key={tipo.id} className={`relative ${!tipo.ativo ? 'opacity-60' : ''}`}>
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div
-                    className="w-4 h-4 rounded-full"
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: tipo.cor }}
                   />
-                  <CardTitle className="text-lg">{tipo.nome_exibicao}</CardTitle>
+                  <CardTitle className="text-base">{tipo.nome_exibicao}</CardTitle>
                 </div>
                 <Badge variant={tipo.ativo ? 'default' : 'secondary'}>
                   {tipo.ativo ? 'Ativo' : 'Inativo'}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600">
-                  <strong>ID:</strong> {tipo.nome}
+            <CardContent className="pt-2">
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  ID: {tipo.nome}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 line-clamp-2">
                   {tipo.descricao}
                 </p>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
                   <span>{tipo.campos_personalizados?.length || 0} campos</span>
                   <span>•</span>
                   <span>{tipo.status_personalizados?.length || 0} status</span>
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-1 pt-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="text-xs px-2 py-1 h-7"
                     onClick={() => alternarAtivo(tipo.id, tipo.ativo)}
                   >
                     {tipo.ativo ? 'Desativar' : 'Ativar'}
@@ -351,18 +352,19 @@ export default function TiposNegocioAdmin() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="px-2 py-1 h-7"
                     onClick={() => iniciarEdicao(tipo)}
                     disabled={editando === tipo.id}
                   >
-                    <Edit size={14} />
+                    <Edit size={12} />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => excluirTipo(tipo.id, tipo.nome_exibicao)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 h-7"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={12} />
                   </Button>
                 </div>
               </div>
@@ -387,9 +389,9 @@ export default function TiposNegocioAdmin() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               {/* Informações Básicas */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <Label htmlFor="nome">ID do Tipo *</Label>
                   <Input
@@ -473,7 +475,7 @@ export default function TiposNegocioAdmin() {
               </div>
 
               {/* Status do Funil */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <Label>Status do Funil</Label>
                   <Textarea
@@ -492,13 +494,13 @@ export default function TiposNegocioAdmin() {
 
                 {/* Configuração de Métricas */}
                 <div>
-                  <Label className="text-lg mb-4 block">Configuração de Métricas</Label>
+                  <Label className="text-base mb-3 block">Configuração de Métricas</Label>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label>Campos de Receita</Label>
+                      <Label className="text-sm">Campos de Receita</Label>
                       <Textarea
-                        placeholder="Digite os nomes dos campos que representam receita (um por linha)"
+                        placeholder="Campos de receita (um por linha)"
                         value={novoTipo.metricas_config?.campos_receita?.join('\n') || ''}
                         onChange={(e) => setNovoTipo({
                           ...novoTipo,
@@ -507,14 +509,15 @@ export default function TiposNegocioAdmin() {
                             campos_receita: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label>Campos de Conversão</Label>
+                      <Label className="text-sm">Campos de Conversão</Label>
                       <Textarea
-                        placeholder="Digite os nomes dos campos que representam conversão (um por linha)"
+                        placeholder="Campos de conversão (um por linha)"
                         value={novoTipo.metricas_config?.campos_conversao?.join('\n') || ''}
                         onChange={(e) => setNovoTipo({
                           ...novoTipo,
@@ -523,14 +526,15 @@ export default function TiposNegocioAdmin() {
                             campos_conversao: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label>Métricas Principais</Label>
+                      <Label className="text-sm">Métricas Principais</Label>
                       <Textarea
-                        placeholder="Digite as métricas principais a serem exibidas (uma por linha)"
+                        placeholder="Métricas principais (uma por linha)"
                         value={novoTipo.metricas_config?.metricas_principais?.join('\n') || ''}
                         onChange={(e) => setNovoTipo({
                           ...novoTipo,
@@ -539,7 +543,8 @@ export default function TiposNegocioAdmin() {
                             metricas_principais: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
                   </div>
@@ -557,7 +562,7 @@ export default function TiposNegocioAdmin() {
                 </Button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {novoTipo.campos_personalizados?.map((campo, index) => (
                   <Card key={index} className="p-4">
                     <div className="grid gap-4 md:grid-cols-4">
@@ -671,9 +676,9 @@ export default function TiposNegocioAdmin() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               {/* Informações Básicas */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <Label htmlFor="edit-nome">ID do Tipo *</Label>
                   <Input
@@ -757,7 +762,7 @@ export default function TiposNegocioAdmin() {
               </div>
 
               {/* Status do Funil */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <Label>Status do Funil</Label>
                   <Textarea
@@ -776,13 +781,13 @@ export default function TiposNegocioAdmin() {
 
                 {/* Configuração de Métricas */}
                 <div>
-                  <Label className="text-lg mb-4 block">Configuração de Métricas</Label>
+                  <Label className="text-base mb-3 block">Configuração de Métricas</Label>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label>Campos de Receita</Label>
+                      <Label className="text-sm">Campos de Receita</Label>
                       <Textarea
-                        placeholder="Digite os nomes dos campos que representam receita (um por linha)"
+                        placeholder="Campos de receita (um por linha)"
                         value={tipoEditando.metricas_config?.campos_receita?.join('\n') || ''}
                         onChange={(e) => setTipoEditando({
                           ...tipoEditando,
@@ -791,14 +796,15 @@ export default function TiposNegocioAdmin() {
                             campos_receita: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label>Campos de Conversão</Label>
+                      <Label className="text-sm">Campos de Conversão</Label>
                       <Textarea
-                        placeholder="Digite os nomes dos campos que representam conversão (um por linha)"
+                        placeholder="Campos de conversão (um por linha)"
                         value={tipoEditando.metricas_config?.campos_conversao?.join('\n') || ''}
                         onChange={(e) => setTipoEditando({
                           ...tipoEditando,
@@ -807,14 +813,15 @@ export default function TiposNegocioAdmin() {
                             campos_conversao: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label>Métricas Principais</Label>
+                      <Label className="text-sm">Métricas Principais</Label>
                       <Textarea
-                        placeholder="Digite as métricas principais a serem exibidas (uma por linha)"
+                        placeholder="Métricas principais (uma por linha)"
                         value={tipoEditando.metricas_config?.metricas_principais?.join('\n') || ''}
                         onChange={(e) => setTipoEditando({
                           ...tipoEditando,
@@ -823,7 +830,8 @@ export default function TiposNegocioAdmin() {
                             metricas_principais: e.target.value.split('\n').filter(s => s.trim())
                           }
                         })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
                     </div>
                   </div>
@@ -841,7 +849,7 @@ export default function TiposNegocioAdmin() {
                 </Button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {tipoEditando.campos_personalizados?.map((campo, index) => (
                   <Card key={index} className="p-4">
                     <div className="grid gap-4 md:grid-cols-4">
