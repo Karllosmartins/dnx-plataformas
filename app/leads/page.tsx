@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
-import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit } from 'lucide-react'
+import { getUserPlanInfo } from '../../lib/permissions'
+import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit, Crown, Info } from 'lucide-react'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome
@@ -599,6 +600,7 @@ export default function LeadsPage() {
   const [endDate, setEndDate] = useState('')
   const [activeTab, setActiveTab] = useState<'leads' | 'relatorios'>('leads')
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
+  const [userPlanInfo, setUserPlanInfo] = useState<any>(null)
 
   // Estados para edição de lead
   const [isEditingLead, setIsEditingLead] = useState(false)
@@ -628,6 +630,7 @@ export default function LeadsPage() {
     if (user) {
       fetchLeads()
       fetchUserTipoNegocio()
+      fetchUserPlanInfo()
     }
   }, [user])
 
@@ -690,6 +693,18 @@ export default function LeadsPage() {
           status_personalizados: ['novo_lead', 'qualificacao', 'desqualificado', 'pagamento_consulta', 'nao_consta_divida', 'consta_divida', 'enviado_para_negociacao', 'cliente_fechado']
         })
       }
+    }
+  }
+
+  const fetchUserPlanInfo = async () => {
+    if (!user) return
+
+    try {
+      const planInfo = await getUserPlanInfo(user.id)
+      setUserPlanInfo(planInfo)
+      console.log('Plan info loaded:', planInfo)
+    } catch (error) {
+      console.error('Erro ao buscar informações do plano:', error)
     }
   }
 
@@ -2466,6 +2481,40 @@ export default function LeadsPage() {
           <p className="text-gray-600 mt-2">
             Gestão completa de leads e relatórios de performance
           </p>
+          {userPlanInfo && (
+            <div className="mt-4 flex items-center space-x-4">
+              <div className="flex items-center bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-200">
+                <Crown className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">
+                  Plano: {userPlanInfo.plano_nome || 'Personalizado'}
+                </span>
+              </div>
+              {userPlanInfo.limite_leads && (
+                <div className="flex items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="text-sm">
+                    Limite Leads: {userPlanInfo.limite_leads}
+                  </span>
+                </div>
+              )}
+              {userPlanInfo.limite_consultas && (
+                <div className="flex items-center bg-purple-50 text-purple-700 px-3 py-2 rounded-lg border border-purple-200">
+                  <Search className="h-4 w-4 mr-2" />
+                  <span className="text-sm">
+                    Limite Consultas: {userPlanInfo.limite_consultas}
+                  </span>
+                </div>
+              )}
+              {userPlanInfo.limite_instancias && (
+                <div className="flex items-center bg-orange-50 text-orange-700 px-3 py-2 rounded-lg border border-orange-200">
+                  <Activity className="h-4 w-4 mr-2" />
+                  <span className="text-sm">
+                    Instâncias: {userPlanInfo.limite_instancias}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {activeTab === 'leads' && (
           <div className="mt-4 sm:mt-0 flex items-center space-x-2">

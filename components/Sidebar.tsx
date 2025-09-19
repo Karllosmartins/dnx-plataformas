@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { hasFeatureAccess, PlanType } from '../lib/plans'
-import { supabase } from '../lib/supabase'
+import { hasFeatureAccess } from '../lib/permissions'
+import { supabase, User } from '../lib/supabase'
 import {
   BarChart3,
   Users,
@@ -21,10 +21,7 @@ import {
   MessageCircle,
   Bot,
   ChevronLeft,
-  ChevronRight,
-  UserCog,
-  Building,
-  Crown
+  ChevronRight
 } from 'lucide-react'
 
 const navigation = [
@@ -35,19 +32,11 @@ const navigation = [
   { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
-  { name: 'Tipos de Negócio', href: '/admin/tipos-negocio', icon: Building, feature: 'usuarios' as const, adminOnly: true },
-  { name: 'Planos', href: '/admin/planos', icon: Crown, feature: 'usuarios' as const, adminOnly: true },
-  { name: 'Usuários', href: '/usuarios', icon: UserCog, feature: 'usuarios' as const, adminOnly: true },
+  { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]
 
 interface SidebarProps {
-  user?: {
-    name: string
-    email: string
-    role: string
-    id: string
-    plano?: PlanType
-  }
+  user?: User
   onLogout?: () => void
   onCollapseChange?: (collapsed: boolean) => void
 }
@@ -120,63 +109,61 @@ export default function Sidebar({ user, onLogout, onCollapseChange }: SidebarPro
   )
 }
 
-function SidebarContent({ 
-  pathname, 
-  user, 
+function SidebarContent({
+  pathname,
+  user,
   onLogout,
   isCollapsed,
   setIsCollapsed,
   onCollapseChange
-}: { 
+}: {
   pathname: string
-  user?: { name: string; email: string; role: string; id: string; plano?: PlanType }
-  onLogout?: () => void 
+  user?: User
+  onLogout?: () => void
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
   onCollapseChange?: (collapsed: boolean) => void
 }) {
-  const [userPlan, setUserPlan] = useState<PlanType>('basico')
+  const [userWithPlan, setUserWithPlan] = useState<User | null>(null)
 
   useEffect(() => {
-    async function fetchUserPlan() {
+    async function fetchUserWithPlan() {
       if (!user?.id) {
-        console.log('Sidebar: user.id não encontrado')
         return
       }
 
-      console.log('Sidebar: Buscando plano para user.id:', user.id)
-
       try {
         const { data, error } = await supabase
-          .from('users')
-          .select('plano')
+          .from('view_usuarios_planos')
+          .select('*')
           .eq('id', parseInt(user.id || '0'))
           .single()
 
-        console.log('Sidebar: Resultado da busca:', { data, error })
-
         if (!error && data) {
-          console.log('Sidebar: Plano encontrado:', data.plano)
-          setUserPlan(data.plano || 'basico')
+          setUserWithPlan(data)
+        } else {
+          // Fallback para user básico
+          setUserWithPlan(user)
         }
       } catch (error) {
-        console.error('Sidebar: Erro ao carregar plano:', error)
+        console.error('Erro ao carregar dados do usuário:', error)
+        setUserWithPlan(user)
       }
     }
 
-    fetchUserPlan()
+    fetchUserWithPlan()
   }, [user?.id])
 
-  // Filtrar navegação baseada no plano do usuário
+  // Filtrar navegação baseada nas permissões do usuário
   const filteredNavigation = navigation.filter(item => {
-    if (!user) return false
-    
+    if (!userWithPlan) return false
+
     // Se é um item apenas para admin, verificar se o usuário é admin
-    if (item.adminOnly && user.role !== 'admin') {
+    if (item.adminOnly && userWithPlan.role !== 'admin') {
       return false
     }
-    
-    return hasFeatureAccess(userPlan, item.feature)
+
+    return hasFeatureAccess(userWithPlan, item.feature)
   })
   return (
     <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
