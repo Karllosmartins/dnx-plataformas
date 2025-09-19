@@ -700,7 +700,7 @@ export default function LeadsPage() {
     if (!user) return
 
     try {
-      const planInfo = await getUserPlanInfo(user.id)
+      const planInfo = getUserPlanInfo(user as any)
       setUserPlanInfo(planInfo)
       console.log('Plan info loaded:', planInfo)
     } catch (error) {

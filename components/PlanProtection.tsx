@@ -35,11 +35,11 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
           setUserWithPlan(data)
         } else {
           // Fallback para user básico
-          setUserWithPlan(user)
+          setUserWithPlan(user as any)
         }
       } catch (error) {
         console.error('Erro ao carregar dados do usuário:', error)
-        setUserWithPlan(user)
+        setUserWithPlan(user as any)
       } finally {
         setLoading(false)
       }

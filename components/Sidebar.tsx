@@ -136,7 +136,7 @@ function SidebarContent({
         const { data, error } = await supabase
           .from('view_usuarios_planos')
           .select('*')
-          .eq('id', parseInt(user.id || '0'))
+          .eq('id', parseInt(user.id?.toString() || '0'))
           .single()
 
         if (!error && data) {

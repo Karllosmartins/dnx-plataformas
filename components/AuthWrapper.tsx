@@ -78,7 +78,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
       <div className="min-h-screen bg-gray-50">
-        <Sidebar user={user} onLogout={logout} onCollapseChange={setSidebarCollapsed} />
+        <Sidebar user={user as any} onLogout={logout} onCollapseChange={setSidebarCollapsed} />
         <div className={`${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'} relative z-10 transition-all duration-300`}>
           <main className="py-4 px-4 sm:px-6 lg:px-8">
             {children}
