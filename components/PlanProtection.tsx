@@ -1,53 +1,51 @@
 'use client'
 
 import { useAuth } from './AuthWrapper'
-import { hasFeatureAccess, getPlanDisplayName, PlanType } from '../lib/plans'
+import { hasFeatureAccess, FeatureType } from '../lib/permissions'
 import { Lock, ArrowUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, User, UsuarioComPlano } from '../lib/supabase'
 
 interface PlanProtectionProps {
-  feature: 'dashboard' | 'crm' | 'whatsapp' | 'agentesIA' | 'disparoSimples' | 'disparoIA' | 'extracaoLeads' | 'configuracoes'
+  feature: FeatureType
   children: React.ReactNode
 }
 
 export default function PlanProtection({ feature, children }: PlanProtectionProps) {
   const { user } = useAuth()
-  const [userPlan, setUserPlan] = useState<PlanType>('basico')
+  const [userWithPlan, setUserWithPlan] = useState<User | UsuarioComPlano | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchUserPlan() {
+    async function fetchUserWithPlan() {
       if (!user?.id) {
-        console.log('PlanProtection: user.id não encontrado')
+        setLoading(false)
         return
       }
 
-      console.log('PlanProtection: Buscando plano para user.id:', user.id, 'convertido para:', parseInt(user.id || '0'))
-
       try {
+        // Tentar buscar dados completos do usuário com plano
         const { data, error } = await supabase
-          .from('users')
-          .select('plano')
+          .from('view_usuarios_planos')
+          .select('*')
           .eq('id', parseInt(user.id || '0'))
           .single()
 
-        console.log('PlanProtection: Resultado da busca:', { data, error })
-
         if (!error && data) {
-          console.log('PlanProtection: Plano encontrado:', data.plano)
-          setUserPlan(data.plano || 'basico')
+          setUserWithPlan(data)
         } else {
-          console.log('PlanProtection: Erro ou sem dados, usando plano básico')
+          // Fallback para user básico
+          setUserWithPlan(user)
         }
       } catch (error) {
-        console.error('Erro ao carregar plano do usuário:', error)
+        console.error('Erro ao carregar dados do usuário:', error)
+        setUserWithPlan(user)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchUserPlan()
+    fetchUserWithPlan()
   }, [user?.id])
 
   if (!user) {
@@ -69,7 +67,8 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
     )
   }
 
-  const hasAccess = hasFeatureAccess(userPlan, feature)
+  const hasAccess = userWithPlan ? hasFeatureAccess(userWithPlan, feature) : false
+  const planName = userWithPlan && 'plano_nome' in userWithPlan ? userWithPlan.plano_nome : (userWithPlan?.plano || 'básico')
 
   if (!hasAccess) {
     return (
@@ -78,13 +77,13 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
           <div className="mx-auto mb-6 w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
             <Lock className="h-8 w-8 text-gray-400" />
           </div>
-          
+
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Recurso Não Disponível
           </h1>
-          
+
           <p className="text-gray-600 mb-6">
-            Esta funcionalidade não está disponível no seu plano {getPlanDisplayName(userPlan)}.
+            Esta funcionalidade não está disponível no seu plano {planName}.
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -95,10 +94,12 @@ export default function PlanProtection({ feature, children }: PlanProtectionProp
                   Faça upgrade para acessar
                 </p>
                 <p className="text-sm text-blue-700">
-                  {feature === 'agentesIA' || feature === 'disparoIA' 
-                    ? 'Disponível no plano Enterprise'
+                  {feature === 'agentesIA' || feature === 'disparoIA'
+                    ? 'Disponível no plano Premium 1 ou Enterprise'
                     : feature === 'extracaoLeads'
-                    ? 'Disponível nos planos Premium e Enterprise'
+                    ? 'Disponível nos planos Premium 2 ou Enterprise'
+                    : feature === 'enriquecimento'
+                    ? 'Disponível apenas no plano Enterprise'
                     : 'Disponível em planos superiores'
                   }
                 </p>
