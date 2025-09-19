@@ -1180,9 +1180,17 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
                     onChange={(e) => setFormData({ ...formData, modelo_ia: e.target.value })}
                     className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Usar padrão do sistema</option>
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="">gpt-4.1 (padrão)</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                    <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                    <option value="o3">O3</option>
+                    <option value="o4-mini">O4 Mini</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5-nano">GPT-5 Nano</option>
                     <option value="gemini-pro">Gemini Pro</option>
                   </select>
                 </div>
@@ -1196,7 +1204,7 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
                     onChange={(e) => setFormData({ ...formData, tipo_tool_supabase: e.target.value })}
                     className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Usar padrão do sistema</option>
+                    <option value="">OpenAI (padrão)</option>
                     <option value="function">Function</option>
                     <option value="tool">Tool</option>
                   </select>
