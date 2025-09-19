@@ -26,7 +26,30 @@ export default function UsuariosSection() {
         .order('name')
 
       if (error) throw error
-      setUsuarios(data || [])
+
+      // Buscar tipos de negócio para cada usuário
+      const usuariosComTipos = await Promise.all(
+        (data || []).map(async (usuario) => {
+          const { data: tiposData } = await supabase
+            .from('user_tipos_negocio')
+            .select(`
+              tipos_negocio!inner (
+                id,
+                nome,
+                nome_exibicao
+              )
+            `)
+            .eq('user_id', usuario.id)
+            .eq('ativo', true)
+
+          return {
+            ...usuario,
+            tipos_negocio_selecionados: tiposData?.map(item => item.tipos_negocio.nome) || []
+          }
+        })
+      )
+
+      setUsuarios(usuariosComTipos)
     } catch (error) {
       console.error('Erro ao buscar usuários:', error)
     }
@@ -118,17 +141,61 @@ export default function UsuariosSection() {
     telefone?: string
     limite_leads?: number
     limite_consultas?: number
+    tipos_negocio?: string[]
   }) => {
     try {
+      // Separar tipos_negocio dos dados do usuário
+      const { tipos_negocio, ...userDataOnly } = userData
+
+      // Atualizar dados básicos do usuário
       const { error } = await supabase
         .from('users')
         .update({
-          ...userData,
+          ...userDataOnly,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)
 
       if (error) throw error
+
+      // Se tipos_negocio foi fornecido, atualizar relacionamentos
+      if (tipos_negocio !== undefined) {
+        // Desativar todos os tipos existentes
+        await supabase
+          .from('user_tipos_negocio')
+          .update({ ativo: false })
+          .eq('user_id', userId)
+
+        // Ativar ou criar os tipos selecionados
+        for (const tipoNome of tipos_negocio) {
+          // Buscar ID do tipo
+          const { data: tipoData } = await supabase
+            .from('tipos_negocio')
+            .select('id')
+            .eq('nome', tipoNome)
+            .single()
+
+          if (tipoData) {
+            // Tentar atualizar registro existente
+            const { error: updateError } = await supabase
+              .from('user_tipos_negocio')
+              .update({ ativo: true })
+              .eq('user_id', userId)
+              .eq('tipo_negocio_id', tipoData.id)
+
+            // Se não existe, criar novo
+            if (updateError) {
+              await supabase
+                .from('user_tipos_negocio')
+                .insert({
+                  user_id: userId,
+                  tipo_negocio_id: tipoData.id,
+                  ativo: true
+                })
+            }
+          }
+        }
+      }
 
       await fetchUsuarios()
       setEditingUser(null)
@@ -284,6 +351,7 @@ export default function UsuariosSection() {
             key={usuario.id}
             usuario={usuario}
             planos={planos}
+            tiposNegocio={tiposNegocio}
             isEditing={editingUser === usuario.id}
             onEdit={() => setEditingUser(usuario.id)}
             onCancel={() => setEditingUser(null)}
@@ -301,6 +369,7 @@ export default function UsuariosSection() {
 interface UsuarioCardProps {
   usuario: UsuarioComPlano
   planos: Plano[]
+  tiposNegocio: Array<{id: number, nome: string, nome_exibicao: string}>
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
@@ -314,12 +383,14 @@ interface UsuarioCardProps {
     telefone?: string
     limite_leads?: number
     limite_consultas?: number
+    tipos_negocio?: string[]
   }) => void
 }
 
 function UsuarioCard({
   usuario,
   planos,
+  tiposNegocio,
   isEditing,
   onEdit,
   onCancel,
@@ -336,8 +407,18 @@ function UsuarioCard({
     cpf: usuario.cpf || '',
     telefone: usuario.telefone || '',
     limite_leads: usuario.limite_leads || 1000,
-    limite_consultas: usuario.limite_consultas || 100
+    limite_consultas: usuario.limite_consultas || 100,
+    tipos_negocio: (usuario as any).tipos_negocio_selecionados || []
   })
+
+  const toggleTipoNegocio = (tipo: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tipos_negocio: prev.tipos_negocio.includes(tipo)
+        ? prev.tipos_negocio.filter(t => t !== tipo)
+        : [...prev.tipos_negocio, tipo]
+    }))
+  }
 
   const handleSave = async () => {
     // Atualizar plano se mudou
@@ -351,13 +432,17 @@ function UsuarioCard({
     }
 
     // Atualizar outros dados se mudaram
+    const tiposOriginais = (usuario as any).tipos_negocio_selecionados || []
+    const tiposChanged = JSON.stringify(formData.tipos_negocio.sort()) !== JSON.stringify(tiposOriginais.sort())
+
     const hasChanges =
       formData.name !== usuario.name ||
       formData.email !== usuario.email ||
       formData.cpf !== (usuario.cpf || '') ||
       formData.telefone !== (usuario.telefone || '') ||
       formData.limite_leads !== usuario.limite_leads ||
-      formData.limite_consultas !== usuario.limite_consultas
+      formData.limite_consultas !== usuario.limite_consultas ||
+      tiposChanged
 
     if (hasChanges) {
       await onUpdateUser(usuario.id, formData)
@@ -544,6 +629,25 @@ function UsuarioCard({
               <option value="user">Usuário</option>
               <option value="admin">Administrador</option>
             </select>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tipos de Negócio
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {tiposNegocio.map((tipo) => (
+              <label key={tipo.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.tipos_negocio.includes(tipo.nome)}
+                  onChange={() => toggleTipoNegocio(tipo.nome)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">{tipo.nome_exibicao}</span>
+              </label>
+            ))}
           </div>
         </div>
 
