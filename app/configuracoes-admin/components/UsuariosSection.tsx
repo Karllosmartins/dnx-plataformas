@@ -33,7 +33,7 @@ export default function UsuariosSection() {
           const { data: tiposData } = await supabase
             .from('user_tipos_negocio')
             .select(`
-              tipos_negocio!inner (
+              tipos_negocio (
                 id,
                 nome,
                 nome_exibicao
@@ -44,7 +44,7 @@ export default function UsuariosSection() {
 
           return {
             ...usuario,
-            tipos_negocio_selecionados: tiposData?.map(item => item.tipos_negocio.nome) || []
+            tipos_negocio_selecionados: tiposData?.map((item: any) => item.tipos_negocio?.nome) || []
           }
         })
       )
@@ -453,45 +453,45 @@ function UsuarioCard({
     cpf: usuario.cpf || '',
     telefone: usuario.telefone || '',
     // Configurações operacionais
-    delay_entre_mensagens: usuario.delay_entre_mensagens || 30,
-    delay_apos_intervencao: usuario.delay_apos_intervencao || 0,
-    inicio_expediente: usuario.inicio_expediente || 8,
-    fim_expediente: usuario.fim_expediente || 18,
-    numero_instancias: usuario.numero_instancias || 1,
-    limite_leads: usuario.limite_leads || 100,
-    limite_consultas: usuario.limite_consultas || 50,
+    delay_entre_mensagens: (usuario as any).delay_entre_mensagens || 30,
+    delay_apos_intervencao: (usuario as any).delay_apos_intervencao || 0,
+    inicio_expediente: (usuario as any).inicio_expediente || 8,
+    fim_expediente: (usuario as any).fim_expediente || 18,
+    numero_instancias: (usuario as any).numero_instancias || 1,
+    limite_leads: (usuario as any).limite_leads || 100,
+    limite_consultas: (usuario as any).limite_consultas || 50,
     // Tipos de negócio
     tipos_negocio: (usuario as any).tipos_negocio_selecionados || [],
     // Integração CRM
-    crm_url: usuario.crm_url || '',
-    crm_usuario: usuario.crm_usuario || '',
-    crm_senha: usuario.crm_senha || '',
-    crm_token: usuario.crm_token || '',
+    crm_url: (usuario as any).crm_url || '',
+    crm_usuario: (usuario as any).crm_usuario || '',
+    crm_senha: (usuario as any).crm_senha || '',
+    crm_token: (usuario as any).crm_token || '',
     // Google Drive
-    pasta_drive: usuario.pasta_drive || '',
-    id_pasta_rag: usuario.id_pasta_rag || '',
+    pasta_drive: (usuario as any).pasta_drive || '',
+    id_pasta_rag: (usuario as any).id_pasta_rag || '',
     // Informações do cliente
-    nome_cliente_empresa: usuario.nome_cliente_empresa || '',
-    structured_output_schema: usuario.structured_output_schema || '',
+    nome_cliente_empresa: (usuario as any).nome_cliente_empresa || '',
+    structured_output_schema: (usuario as any).structured_output_schema || '',
     // APIs de IA
-    openai_api_token: usuario.openai_api_token || '',
-    gemini_api_key: usuario.gemini_api_key || '',
-    modelo_ia: usuario.modelo_ia || '',
-    tipo_tool_supabase: usuario.tipo_tool_supabase || '',
-    reasoning_effort: usuario.reasoning_effort || '',
-    api_key_dados: usuario.api_key_dados || '',
+    openai_api_token: (usuario as any).openai_api_token || '',
+    gemini_api_key: (usuario as any).gemini_api_key || '',
+    modelo_ia: (usuario as any).modelo_ia || '',
+    tipo_tool_supabase: (usuario as any).tipo_tool_supabase || '',
+    reasoning_effort: (usuario as any).reasoning_effort || '',
+    api_key_dados: (usuario as any).api_key_dados || '',
     // ElevenLabs
-    elevenlabs_api_key: usuario.elevenlabs_api_key || '',
-    elevenlabs_voice_id: usuario.elevenlabs_voice_id || '',
+    elevenlabs_api_key: (usuario as any).elevenlabs_api_key || '',
+    elevenlabs_voice_id: (usuario as any).elevenlabs_voice_id || '',
     // FireCrawl
-    firecrawl_api_key: usuario.firecrawl_api_key || ''
+    firecrawl_api_key: (usuario as any).firecrawl_api_key || ''
   })
 
   const toggleTipoNegocio = (tipo: string) => {
     setFormData(prev => ({
       ...prev,
       tipos_negocio: prev.tipos_negocio.includes(tipo)
-        ? prev.tipos_negocio.filter(t => t !== tipo)
+        ? prev.tipos_negocio.filter((t: string) => t !== tipo)
         : [...prev.tipos_negocio, tipo]
     }))
   }
@@ -516,30 +516,30 @@ function UsuarioCard({
       formData.email !== usuario.email ||
       formData.cpf !== (usuario.cpf || '') ||
       formData.telefone !== (usuario.telefone || '') ||
-      formData.limite_leads !== usuario.limite_leads ||
-      formData.limite_consultas !== usuario.limite_consultas ||
-      formData.delay_entre_mensagens !== usuario.delay_entre_mensagens ||
-      formData.delay_apos_intervencao !== usuario.delay_apos_intervencao ||
-      formData.inicio_expediente !== usuario.inicio_expediente ||
-      formData.fim_expediente !== usuario.fim_expediente ||
-      formData.numero_instancias !== usuario.numero_instancias ||
-      formData.crm_url !== (usuario.crm_url || '') ||
-      formData.crm_usuario !== (usuario.crm_usuario || '') ||
-      formData.crm_senha !== (usuario.crm_senha || '') ||
-      formData.crm_token !== (usuario.crm_token || '') ||
-      formData.pasta_drive !== (usuario.pasta_drive || '') ||
-      formData.id_pasta_rag !== (usuario.id_pasta_rag || '') ||
-      formData.nome_cliente_empresa !== (usuario.nome_cliente_empresa || '') ||
-      formData.structured_output_schema !== (usuario.structured_output_schema || '') ||
-      formData.openai_api_token !== (usuario.openai_api_token || '') ||
-      formData.gemini_api_key !== (usuario.gemini_api_key || '') ||
-      formData.modelo_ia !== (usuario.modelo_ia || '') ||
-      formData.tipo_tool_supabase !== (usuario.tipo_tool_supabase || '') ||
-      formData.reasoning_effort !== (usuario.reasoning_effort || '') ||
-      formData.api_key_dados !== (usuario.api_key_dados || '') ||
-      formData.elevenlabs_api_key !== (usuario.elevenlabs_api_key || '') ||
-      formData.elevenlabs_voice_id !== (usuario.elevenlabs_voice_id || '') ||
-      formData.firecrawl_api_key !== (usuario.firecrawl_api_key || '') ||
+      formData.limite_leads !== (usuario as any).limite_leads ||
+      formData.limite_consultas !== (usuario as any).limite_consultas ||
+      formData.delay_entre_mensagens !== (usuario as any).delay_entre_mensagens ||
+      formData.delay_apos_intervencao !== (usuario as any).delay_apos_intervencao ||
+      formData.inicio_expediente !== (usuario as any).inicio_expediente ||
+      formData.fim_expediente !== (usuario as any).fim_expediente ||
+      formData.numero_instancias !== (usuario as any).numero_instancias ||
+      formData.crm_url !== ((usuario as any).crm_url || '') ||
+      formData.crm_usuario !== ((usuario as any).crm_usuario || '') ||
+      formData.crm_senha !== ((usuario as any).crm_senha || '') ||
+      formData.crm_token !== ((usuario as any).crm_token || '') ||
+      formData.pasta_drive !== ((usuario as any).pasta_drive || '') ||
+      formData.id_pasta_rag !== ((usuario as any).id_pasta_rag || '') ||
+      formData.nome_cliente_empresa !== ((usuario as any).nome_cliente_empresa || '') ||
+      formData.structured_output_schema !== ((usuario as any).structured_output_schema || '') ||
+      formData.openai_api_token !== ((usuario as any).openai_api_token || '') ||
+      formData.gemini_api_key !== ((usuario as any).gemini_api_key || '') ||
+      formData.modelo_ia !== ((usuario as any).modelo_ia || '') ||
+      formData.tipo_tool_supabase !== ((usuario as any).tipo_tool_supabase || '') ||
+      formData.reasoning_effort !== ((usuario as any).reasoning_effort || '') ||
+      formData.api_key_dados !== ((usuario as any).api_key_dados || '') ||
+      formData.elevenlabs_api_key !== ((usuario as any).elevenlabs_api_key || '') ||
+      formData.elevenlabs_voice_id !== ((usuario as any).elevenlabs_voice_id || '') ||
+      formData.firecrawl_api_key !== ((usuario as any).firecrawl_api_key || '') ||
       tiposChanged
 
     if (hasChanges) {
@@ -1370,7 +1370,7 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
     setFormData(prev => ({
       ...prev,
       tipos_negocio: prev.tipos_negocio.includes(tipo)
-        ? prev.tipos_negocio.filter(t => t !== tipo)
+        ? prev.tipos_negocio.filter((t: string) => t !== tipo)
         : [...prev.tipos_negocio, tipo]
     }))
   }
