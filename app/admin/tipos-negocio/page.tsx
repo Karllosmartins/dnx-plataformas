@@ -19,6 +19,12 @@ interface CampoPersonalizado {
   ajuda?: string;
 }
 
+interface MetricasConfig {
+  campos_receita: string[];
+  campos_conversao: string[];
+  metricas_principais: string[];
+}
+
 interface TipoNegocio {
   id: number;
   nome: string;
@@ -28,6 +34,7 @@ interface TipoNegocio {
   cor: string;
   campos_personalizados: CampoPersonalizado[];
   status_personalizados: string[];
+  metricas_config: MetricasConfig;
   ativo: boolean;
   ordem: number;
   created_at: string;
@@ -48,6 +55,11 @@ export default function TiposNegocioAdmin() {
     cor: '#3B82F6',
     campos_personalizados: [],
     status_personalizados: ['novo_lead', 'qualificacao', 'convertido'],
+    metricas_config: {
+      campos_receita: [],
+      campos_conversao: [],
+      metricas_principais: []
+    },
     ativo: true,
     ordem: 1
   });
@@ -70,12 +82,15 @@ export default function TiposNegocioAdmin() {
       // Converter campos JSON string para objetos
       const tiposProcessados = data?.map(tipo => ({
         ...tipo,
-        campos_personalizados: typeof tipo.campos_personalizados === 'string' 
-          ? JSON.parse(tipo.campos_personalizados) 
+        campos_personalizados: typeof tipo.campos_personalizados === 'string'
+          ? JSON.parse(tipo.campos_personalizados)
           : tipo.campos_personalizados,
         status_personalizados: typeof tipo.status_personalizados === 'string'
           ? JSON.parse(tipo.status_personalizados)
-          : tipo.status_personalizados
+          : tipo.status_personalizados,
+        metricas_config: typeof tipo.metricas_config === 'string'
+          ? JSON.parse(tipo.metricas_config)
+          : tipo.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] }
       })) || [];
       
       setTipos(tiposProcessados);
@@ -111,6 +126,11 @@ export default function TiposNegocioAdmin() {
         cor: '#3B82F6',
         campos_personalizados: [],
         status_personalizados: ['novo_lead', 'qualificacao', 'convertido'],
+        metricas_config: {
+          campos_receita: [],
+          campos_conversao: [],
+          metricas_principais: []
+        },
         ativo: true,
         ordem: tipos.length + 1
       });
@@ -149,6 +169,7 @@ export default function TiposNegocioAdmin() {
           cor: tipoEditando.cor,
           campos_personalizados: tipoEditando.campos_personalizados,
           status_personalizados: tipoEditando.status_personalizados,
+          metricas_config: tipoEditando.metricas_config,
           ativo: tipoEditando.ativo,
           ordem: tipoEditando.ordem
         })
@@ -400,6 +421,27 @@ export default function TiposNegocioAdmin() {
                 </div>
 
                 <div>
+                  <Label htmlFor="icone">Ícone</Label>
+                  <select
+                    id="icone"
+                    className="w-full p-2 border rounded"
+                    value={novoTipo.icone}
+                    onChange={(e) => setNovoTipo({ ...novoTipo, icone: e.target.value })}
+                  >
+                    <option value="building">Building</option>
+                    <option value="scale">Scale (Balança)</option>
+                    <option value="building-office">Building Office</option>
+                    <option value="home">Home</option>
+                    <option value="users">Users</option>
+                    <option value="briefcase">Briefcase</option>
+                    <option value="heart">Heart</option>
+                    <option value="car">Car</option>
+                    <option value="plane">Plane</option>
+                    <option value="ship">Ship</option>
+                  </select>
+                </div>
+
+                <div>
                   <Label htmlFor="cor">Cor</Label>
                   <div className="flex gap-2">
                     <Input
@@ -416,6 +458,18 @@ export default function TiposNegocioAdmin() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <Label htmlFor="ordem">Ordem de Exibição</Label>
+                  <Input
+                    id="ordem"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    value={novoTipo.ordem}
+                    onChange={(e) => setNovoTipo({ ...novoTipo, ordem: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
               </div>
 
               {/* Status do Funil */}
@@ -425,15 +479,70 @@ export default function TiposNegocioAdmin() {
                   <Textarea
                     placeholder="Digite um status por linha"
                     value={novoTipo.status_personalizados?.join('\n') || ''}
-                    onChange={(e) => setNovoTipo({ 
-                      ...novoTipo, 
-                      status_personalizados: e.target.value.split('\n').filter(s => s.trim()) 
+                    onChange={(e) => setNovoTipo({
+                      ...novoTipo,
+                      status_personalizados: e.target.value.split('\n').filter(s => s.trim())
                     })}
                     rows={6}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Ex: novo_lead, qualificacao, convertido
                   </p>
+                </div>
+
+                {/* Configuração de Métricas */}
+                <div>
+                  <Label className="text-lg mb-4 block">Configuração de Métricas</Label>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Campos de Receita</Label>
+                      <Textarea
+                        placeholder="Digite os nomes dos campos que representam receita (um por linha)"
+                        value={novoTipo.metricas_config?.campos_receita?.join('\n') || ''}
+                        onChange={(e) => setNovoTipo({
+                          ...novoTipo,
+                          metricas_config: {
+                            ...novoTipo.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            campos_receita: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Campos de Conversão</Label>
+                      <Textarea
+                        placeholder="Digite os nomes dos campos que representam conversão (um por linha)"
+                        value={novoTipo.metricas_config?.campos_conversao?.join('\n') || ''}
+                        onChange={(e) => setNovoTipo({
+                          ...novoTipo,
+                          metricas_config: {
+                            ...novoTipo.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            campos_conversao: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Métricas Principais</Label>
+                      <Textarea
+                        placeholder="Digite as métricas principais a serem exibidas (uma por linha)"
+                        value={novoTipo.metricas_config?.metricas_principais?.join('\n') || ''}
+                        onChange={(e) => setNovoTipo({
+                          ...novoTipo,
+                          metricas_config: {
+                            ...novoTipo.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            metricas_principais: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -596,6 +705,27 @@ export default function TiposNegocioAdmin() {
                 </div>
 
                 <div>
+                  <Label htmlFor="edit-icone">Ícone</Label>
+                  <select
+                    id="edit-icone"
+                    className="w-full p-2 border rounded"
+                    value={tipoEditando.icone || 'building'}
+                    onChange={(e) => setTipoEditando({ ...tipoEditando, icone: e.target.value })}
+                  >
+                    <option value="building">Building</option>
+                    <option value="scale">Scale (Balança)</option>
+                    <option value="building-office">Building Office</option>
+                    <option value="home">Home</option>
+                    <option value="users">Users</option>
+                    <option value="briefcase">Briefcase</option>
+                    <option value="heart">Heart</option>
+                    <option value="car">Car</option>
+                    <option value="plane">Plane</option>
+                    <option value="ship">Ship</option>
+                  </select>
+                </div>
+
+                <div>
                   <Label htmlFor="edit-cor">Cor</Label>
                   <div className="flex gap-2">
                     <Input
@@ -611,6 +741,18 @@ export default function TiposNegocioAdmin() {
                       placeholder="#3B82F6"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-ordem">Ordem de Exibição</Label>
+                  <Input
+                    id="edit-ordem"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    value={tipoEditando.ordem || 1}
+                    onChange={(e) => setTipoEditando({ ...tipoEditando, ordem: parseInt(e.target.value) || 1 })}
+                  />
                 </div>
               </div>
 
@@ -630,6 +772,61 @@ export default function TiposNegocioAdmin() {
                   <p className="text-xs text-gray-500 mt-1">
                     Ex: novo_lead, qualificacao, convertido
                   </p>
+                </div>
+
+                {/* Configuração de Métricas */}
+                <div>
+                  <Label className="text-lg mb-4 block">Configuração de Métricas</Label>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Campos de Receita</Label>
+                      <Textarea
+                        placeholder="Digite os nomes dos campos que representam receita (um por linha)"
+                        value={tipoEditando.metricas_config?.campos_receita?.join('\n') || ''}
+                        onChange={(e) => setTipoEditando({
+                          ...tipoEditando,
+                          metricas_config: {
+                            ...tipoEditando.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            campos_receita: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Campos de Conversão</Label>
+                      <Textarea
+                        placeholder="Digite os nomes dos campos que representam conversão (um por linha)"
+                        value={tipoEditando.metricas_config?.campos_conversao?.join('\n') || ''}
+                        onChange={(e) => setTipoEditando({
+                          ...tipoEditando,
+                          metricas_config: {
+                            ...tipoEditando.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            campos_conversao: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Métricas Principais</Label>
+                      <Textarea
+                        placeholder="Digite as métricas principais a serem exibidas (uma por linha)"
+                        value={tipoEditando.metricas_config?.metricas_principais?.join('\n') || ''}
+                        onChange={(e) => setTipoEditando({
+                          ...tipoEditando,
+                          metricas_config: {
+                            ...tipoEditando.metricas_config || { campos_receita: [], campos_conversao: [], metricas_principais: [] },
+                            metricas_principais: e.target.value.split('\n').filter(s => s.trim())
+                          }
+                        })}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
