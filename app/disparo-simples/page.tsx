@@ -522,7 +522,7 @@ export default function DisparoSimplesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8 px-4 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Disparo Simples</h1>
         <p className="mt-2 text-sm text-gray-700">
