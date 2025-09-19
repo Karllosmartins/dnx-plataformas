@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, UsuarioComPlano, Plano } from '../../../lib/supabase'
-import { Users, Edit, Save, X, Shield, UserX, Plus } from 'lucide-react'
+import { Users, Edit, Save, X, Shield, UserX, Plus, Settings, Lock, Bot, Mic, Globe, Database, Building, Clock, Zap } from 'lucide-react'
 
 export default function UsuariosSection() {
   const [usuarios, setUsuarios] = useState<UsuarioComPlano[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
+  const [tiposNegocio, setTiposNegocio] = useState<Array<{id: number, nome: string, nome_exibicao: string}>>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<number | null>(null)
   const [showNewUser, setShowNewUser] = useState(false)
@@ -14,6 +15,7 @@ export default function UsuariosSection() {
   useEffect(() => {
     fetchUsuarios()
     fetchPlanos()
+    fetchTiposNegocio()
   }, [])
 
   const fetchUsuarios = async () => {
@@ -43,6 +45,21 @@ export default function UsuariosSection() {
       console.error('Erro ao buscar planos:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchTiposNegocio = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_negocio')
+        .select('id, nome, nome_exibicao')
+        .eq('ativo', true)
+        .order('ordem, nome_exibicao')
+
+      if (error) throw error
+      setTiposNegocio(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar tipos de negócio:', error)
     }
   }
 
@@ -130,6 +147,41 @@ export default function UsuariosSection() {
     plano_id?: number
     cpf?: string
     telefone?: string
+    // Configurações operacionais
+    delay_entre_mensagens?: number
+    delay_apos_intervencao?: number
+    inicio_expediente?: number
+    fim_expediente?: number
+    numero_instancias?: number
+    limite_leads?: number
+    limite_consultas?: number
+    // Tipos de negócio
+    tipos_negocio?: string[]
+    // Integração CRM
+    crm_url?: string
+    crm_usuario?: string
+    crm_senha?: string
+    crm_token?: string
+    // Google Drive
+    pasta_drive?: string
+    id_pasta_rag?: string
+    // Informações do cliente
+    nome_cliente_empresa?: string
+    structured_output_schema?: string
+    // APIs de IA
+    openai_api_token?: string
+    gemini_api_key?: string
+    modelo_ia?: string
+    tipo_tool_supabase?: string
+    reasoning_effort?: string
+    api_key_dados?: string
+    // ElevenLabs
+    elevenlabs_api_key?: string
+    elevenlabs_voice_id?: string
+    // FireCrawl
+    firecrawl_api_key?: string
+    // Status
+    ativo?: boolean
   }) => {
     try {
       const { error } = await supabase
@@ -142,9 +194,40 @@ export default function UsuariosSection() {
           plano_id: userData.plano_id,
           cpf: userData.cpf || null,
           telefone: userData.telefone || null,
-          active: true,
-          limite_leads: 1000,
-          limite_consultas: 100,
+          active: userData.ativo !== false,
+          // Configurações operacionais
+          delay_entre_mensagens: userData.delay_entre_mensagens || 30,
+          delay_apos_intervencao: userData.delay_apos_intervencao || 0,
+          inicio_expediente: userData.inicio_expediente || 8,
+          fim_expediente: userData.fim_expediente || 18,
+          numero_instancias: userData.numero_instancias || 1,
+          limite_leads: userData.limite_leads || 100,
+          limite_consultas: userData.limite_consultas || 50,
+          // Tipos de negócio
+          tipos_negocio: userData.tipos_negocio ? JSON.stringify(userData.tipos_negocio) : null,
+          // Integração CRM
+          crm_url: userData.crm_url || null,
+          crm_usuario: userData.crm_usuario || null,
+          crm_senha: userData.crm_senha || null,
+          crm_token: userData.crm_token || null,
+          // Google Drive
+          pasta_drive: userData.pasta_drive || null,
+          id_pasta_rag: userData.id_pasta_rag || null,
+          // Informações do cliente
+          nome_cliente_empresa: userData.nome_cliente_empresa || null,
+          structured_output_schema: userData.structured_output_schema || null,
+          // APIs de IA
+          openai_api_token: userData.openai_api_token || null,
+          gemini_api_key: userData.gemini_api_key || null,
+          modelo_ia: userData.modelo_ia || null,
+          tipo_tool_supabase: userData.tipo_tool_supabase || null,
+          reasoning_effort: userData.reasoning_effort || null,
+          api_key_dados: userData.api_key_dados || null,
+          // ElevenLabs
+          elevenlabs_api_key: userData.elevenlabs_api_key || null,
+          elevenlabs_voice_id: userData.elevenlabs_voice_id || null,
+          // FireCrawl
+          firecrawl_api_key: userData.firecrawl_api_key || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])
@@ -190,6 +273,7 @@ export default function UsuariosSection() {
         {showNewUser && (
           <NovoUsuarioCard
             planos={planos}
+            tiposNegocio={tiposNegocio}
             onSave={handleCreateUser}
             onCancel={() => setShowNewUser(false)}
           />
@@ -486,6 +570,7 @@ function UsuarioCard({
 
 interface NovoUsuarioCardProps {
   planos: Plano[]
+  tiposNegocio: Array<{id: number, nome: string, nome_exibicao: string}>
   onSave: (userData: {
     name: string
     email: string
@@ -494,19 +579,90 @@ interface NovoUsuarioCardProps {
     plano_id?: number
     cpf?: string
     telefone?: string
+    // Configurações operacionais
+    delay_entre_mensagens?: number
+    delay_apos_intervencao?: number
+    inicio_expediente?: number
+    fim_expediente?: number
+    numero_instancias?: number
+    limite_leads?: number
+    limite_consultas?: number
+    // Tipos de negócio
+    tipos_negocio?: string[]
+    // Integração CRM
+    crm_url?: string
+    crm_usuario?: string
+    crm_senha?: string
+    crm_token?: string
+    // Google Drive
+    pasta_drive?: string
+    id_pasta_rag?: string
+    // Informações do cliente
+    nome_cliente_empresa?: string
+    structured_output_schema?: string
+    // APIs de IA
+    openai_api_token?: string
+    gemini_api_key?: string
+    modelo_ia?: string
+    tipo_tool_supabase?: string
+    reasoning_effort?: string
+    api_key_dados?: string
+    // ElevenLabs
+    elevenlabs_api_key?: string
+    elevenlabs_voice_id?: string
+    // FireCrawl
+    firecrawl_api_key?: string
+    // Status
+    ativo?: boolean
   }) => void
   onCancel: () => void
 }
 
-function NovoUsuarioCard({ planos, onSave, onCancel }: NovoUsuarioCardProps) {
+function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuarioCardProps) {
+  const [activeTab, setActiveTab] = useState('basico')
   const [formData, setFormData] = useState({
+    // Informações básicas
     name: '',
     email: '',
     password: '',
     role: 'user' as 'admin' | 'user',
     plano_id: '',
     cpf: '',
-    telefone: ''
+    telefone: '',
+    ativo: true,
+    // Configurações operacionais
+    delay_entre_mensagens: 30,
+    delay_apos_intervencao: 0,
+    inicio_expediente: 8,
+    fim_expediente: 18,
+    numero_instancias: 1,
+    limite_leads: 100,
+    limite_consultas: 50,
+    // Tipos de negócio
+    tipos_negocio: [] as string[],
+    // Integração CRM
+    crm_url: '',
+    crm_usuario: '',
+    crm_senha: '',
+    crm_token: '',
+    // Google Drive
+    pasta_drive: '',
+    id_pasta_rag: '',
+    // Informações do cliente
+    nome_cliente_empresa: '',
+    structured_output_schema: '{\n  "name": "response_pattern",\n  "schema": {\n    "type": "object",\n    "required": [\n      "messages"\n    ],\n    "properties": {\n      "messages": {\n        "type": "array",\n        "items": {\n          "type": "string",\n          "description": "A part of the response."\n        },\n        "description": "An array of strings representing the response parts."\n      }\n    },\n    "additionalProperties": false\n  },\n  "strict": true\n}',
+    // APIs de IA
+    openai_api_token: '',
+    gemini_api_key: '',
+    modelo_ia: '',
+    tipo_tool_supabase: '',
+    reasoning_effort: '',
+    api_key_dados: '',
+    // ElevenLabs
+    elevenlabs_api_key: '',
+    elevenlabs_voice_id: '',
+    // FireCrawl
+    firecrawl_api_key: ''
   })
 
   const handleSubmit = () => {
@@ -522,129 +678,671 @@ function NovoUsuarioCard({ planos, onSave, onCancel }: NovoUsuarioCardProps) {
       role: formData.role,
       plano_id: formData.plano_id ? parseInt(formData.plano_id) : undefined,
       cpf: formData.cpf || undefined,
-      telefone: formData.telefone || undefined
+      telefone: formData.telefone || undefined,
+      ativo: formData.ativo,
+      // Configurações operacionais
+      delay_entre_mensagens: formData.delay_entre_mensagens,
+      delay_apos_intervencao: formData.delay_apos_intervencao,
+      inicio_expediente: formData.inicio_expediente,
+      fim_expediente: formData.fim_expediente,
+      numero_instancias: formData.numero_instancias,
+      limite_leads: formData.limite_leads,
+      limite_consultas: formData.limite_consultas,
+      // Tipos de negócio
+      tipos_negocio: formData.tipos_negocio.length > 0 ? formData.tipos_negocio : undefined,
+      // Integração CRM
+      crm_url: formData.crm_url || undefined,
+      crm_usuario: formData.crm_usuario || undefined,
+      crm_senha: formData.crm_senha || undefined,
+      crm_token: formData.crm_token || undefined,
+      // Google Drive
+      pasta_drive: formData.pasta_drive || undefined,
+      id_pasta_rag: formData.id_pasta_rag || undefined,
+      // Informações do cliente
+      nome_cliente_empresa: formData.nome_cliente_empresa || undefined,
+      structured_output_schema: formData.structured_output_schema || undefined,
+      // APIs de IA
+      openai_api_token: formData.openai_api_token || undefined,
+      gemini_api_key: formData.gemini_api_key || undefined,
+      modelo_ia: formData.modelo_ia || undefined,
+      tipo_tool_supabase: formData.tipo_tool_supabase || undefined,
+      reasoning_effort: formData.reasoning_effort || undefined,
+      api_key_dados: formData.api_key_dados || undefined,
+      // ElevenLabs
+      elevenlabs_api_key: formData.elevenlabs_api_key || undefined,
+      elevenlabs_voice_id: formData.elevenlabs_voice_id || undefined,
+      // FireCrawl
+      firecrawl_api_key: formData.firecrawl_api_key || undefined
     })
   }
 
+  const toggleTipoNegocio = (tipo: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tipos_negocio: prev.tipos_negocio.includes(tipo)
+        ? prev.tipos_negocio.filter(t => t !== tipo)
+        : [...prev.tipos_negocio, tipo]
+    }))
+  }
+
+  const tabs = [
+    { id: 'basico', label: 'Informações Básicas', icon: Users },
+    { id: 'operacional', label: 'Config. Operacionais', icon: Clock },
+    { id: 'negocios', label: 'Tipos de Negócio', icon: Building },
+    { id: 'crm', label: 'Integração CRM', icon: Database },
+    { id: 'drive', label: 'Google Drive', icon: Globe },
+    { id: 'cliente', label: 'Info do Cliente', icon: Building },
+    { id: 'ia', label: 'APIs de IA', icon: Bot },
+    { id: 'elevenlabs', label: 'ElevenLabs', icon: Mic },
+    { id: 'firecrawl', label: 'FireCrawl', icon: Zap }
+  ]
+
   return (
-    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-      <div className="space-y-4">
+    <div className="border border-green-200 rounded-lg bg-green-50">
+      <div className="p-4">
         <h3 className="font-medium text-gray-900 mb-4">Criar Novo Usuário</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nome completo"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="email@exemplo.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Senha *
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Senha do usuário"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              CPF
-            </label>
-            <input
-              type="text"
-              value={formData.cpf}
-              onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="000.000.000-00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Telefone
-            </label>
-            <input
-              type="text"
-              value={formData.telefone}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="(11) 99999-9999"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Função
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="user">Usuário</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Plano
-            </label>
-            <select
-              value={formData.plano_id}
-              onChange={(e) => setFormData({ ...formData, plano_id: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecionar plano...</option>
-              {planos.map((plano) => (
-                <option key={plano.id} value={plano.id}>
-                  {plano.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-4">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-2">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
-          >
-            <Save className="h-3 w-3 mr-1" />
-            Criar Usuário
-          </button>
+        {/* Tab Content */}
+        <div className="space-y-4">
+          {activeTab === 'basico' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome Completo *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nome completo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CPF
+                </label>
+                <input
+                  type="text"
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="000.000.000-00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefone
+                </label>
+                <input
+                  type="text"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Senha *
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Senha do usuário"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Usuário
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="user">Usuário</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Plano
+                </label>
+                <select
+                  value={formData.plano_id}
+                  onChange={(e) => setFormData({ ...formData, plano_id: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecionar plano...</option>
+                  {planos.map((plano) => (
+                    <option key={plano.id} value={plano.id}>
+                      {plano.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="ativo"
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="ativo" className="ml-2 block text-sm text-gray-900">
+                  Usuário Ativo
+                </label>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'operacional' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Clock className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Configurações Operacionais</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Delay Entre Mensagens (seg)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.delay_entre_mensagens}
+                    onChange={(e) => setFormData({ ...formData, delay_entre_mensagens: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Delay Após Intervenção (min)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.delay_apos_intervencao}
+                    onChange={(e) => setFormData({ ...formData, delay_apos_intervencao: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Início Expediente (h)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={formData.inicio_expediente}
+                    onChange={(e) => setFormData({ ...formData, inicio_expediente: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fim Expediente (h)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={formData.fim_expediente}
+                    onChange={(e) => setFormData({ ...formData, fim_expediente: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número de Instâncias
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.numero_instancias}
+                    onChange={(e) => setFormData({ ...formData, numero_instancias: parseInt(e.target.value) || 1 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Limite de Leads
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.limite_leads}
+                    onChange={(e) => setFormData({ ...formData, limite_leads: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Limite de Consultas
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.limite_consultas}
+                    onChange={(e) => setFormData({ ...formData, limite_consultas: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'negocios' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Building className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Tipos de Negócio</h4>
+              </div>
+              <div className="space-y-3">
+                {tiposNegocio.map((tipo) => (
+                  <label key={tipo.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.tipos_negocio.includes(tipo.nome)}
+                      onChange={() => toggleTipoNegocio(tipo.nome)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{tipo.nome_exibicao}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'crm' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Database className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Integração CRM</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL do CRM
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.crm_url}
+                    onChange={(e) => setFormData({ ...formData, crm_url: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://crm.exemplo.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Usuário CRM
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.crm_usuario}
+                    onChange={(e) => setFormData({ ...formData, crm_usuario: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="usuario@crm.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Senha CRM
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.crm_senha}
+                    onChange={(e) => setFormData({ ...formData, crm_senha: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Token CRM
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.crm_token}
+                    onChange={(e) => setFormData({ ...formData, crm_token: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Token de integração"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'drive' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Globe className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Integração Google Drive</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pasta Drive
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.pasta_drive}
+                    onChange={(e) => setFormData({ ...formData, pasta_drive: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ID Pasta Drive RAG
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.id_pasta_rag}
+                    onChange={(e) => setFormData({ ...formData, id_pasta_rag: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'cliente' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Building className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">🏢 Informações do Cliente</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome do Cliente/Empresa
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nome_cliente_empresa}
+                    onChange={(e) => setFormData({ ...formData, nome_cliente_empresa: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nome da empresa"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Structured Output Schema
+                  </label>
+                  <textarea
+                    value={formData.structured_output_schema}
+                    onChange={(e) => setFormData({ ...formData, structured_output_schema: e.target.value })}
+                    rows={10}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="Schema JSON"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ia' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Bot className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">🤖 APIs de IA</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    OpenAI API Token
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.openai_api_token}
+                    onChange={(e) => setFormData({ ...formData, openai_api_token: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="sk-proj-..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gemini API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.gemini_api_key}
+                    onChange={(e) => setFormData({ ...formData, gemini_api_key: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="AI..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Modelo IA
+                  </label>
+                  <select
+                    value={formData.modelo_ia}
+                    onChange={(e) => setFormData({ ...formData, modelo_ia: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="gpt-4">GPT-4</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="gemini-pro">Gemini Pro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo Tool Supabase
+                  </label>
+                  <select
+                    value={formData.tipo_tool_supabase}
+                    onChange={(e) => setFormData({ ...formData, tipo_tool_supabase: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="function">Function</option>
+                    <option value="tool">Tool</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reasoning Effort
+                  </label>
+                  <select
+                    value={formData.reasoning_effort}
+                    onChange={(e) => setFormData({ ...formData, reasoning_effort: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Usar padrão do sistema</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    API Key de Dados (Profile)
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.api_key_dados}
+                    onChange={(e) => setFormData({ ...formData, api_key_dados: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="043d2754-..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'elevenlabs' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Mic className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">🎙️ ElevenLabs (Síntese de Voz)</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    API Key ElevenLabs
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.elevenlabs_api_key}
+                    onChange={(e) => setFormData({ ...formData, elevenlabs_api_key: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="sk_..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ID da Voz ElevenLabs
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.elevenlabs_voice_id}
+                    onChange={(e) => setFormData({ ...formData, elevenlabs_voice_id: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="21m00Tcm4TlvDq8ikWAM"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'firecrawl' && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Zap className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">🔥 FireCrawl (Web Scraping)</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    FireCrawl API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.firecrawl_api_key}
+                    onChange={(e) => setFormData({ ...formData, firecrawl_api_key: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="fc-..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-between space-x-2 pt-6 border-t border-gray-200">
+          <div className="flex space-x-2">
+            {tabs.map((tab, index) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tabs[index > 0 ? index - 1 : 0].id)}
+                disabled={index === 0}
+                className={`px-3 py-1 text-sm rounded ${
+                  index === 0
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                } ${activeTab === tab.id && index > 0 ? 'block' : 'hidden'}`}
+              >
+                ← Anterior
+              </button>
+            ))}
+
+            {tabs.map((tab, index) => (
+              <button
+                key={`next-${tab.id}`}
+                onClick={() => setActiveTab(tabs[index < tabs.length - 1 ? index + 1 : tabs.length - 1].id)}
+                disabled={index === tabs.length - 1}
+                className={`px-3 py-1 text-sm rounded ${
+                  index === tabs.length - 1
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                } ${activeTab === tab.id && index < tabs.length - 1 ? 'block' : 'hidden'}`}
+              >
+                Próximo →
+              </button>
+            ))}
+          </div>
+
+          <div className="flex space-x-2">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Criar Usuário
+            </button>
+          </div>
         </div>
       </div>
     </div>
