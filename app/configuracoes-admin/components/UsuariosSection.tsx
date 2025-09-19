@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, UsuarioComPlano, Plano } from '../../../lib/supabase'
-import { Users, Edit, Save, X, Shield, UserX, Plus, Settings, Lock, Bot, Mic, Globe, Database, Building, Clock, Zap } from 'lucide-react'
+import { Users, Edit, Save, X, Shield, UserX, Plus, Settings, Lock, Bot, Mic, Globe, Database, Building, Clock, Zap, Wrench } from 'lucide-react'
 
 export default function UsuariosSection() {
   const [usuarios, setUsuarios] = useState<UsuarioComPlano[]>([])
@@ -11,11 +11,16 @@ export default function UsuariosSection() {
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<number | null>(null)
   const [showNewUser, setShowNewUser] = useState(false)
+  const [showUserTools, setShowUserTools] = useState<number | null>(null)
+  const [tools, setTools] = useState<Array<{id: number, type: string, nome: string, descricao: string}>>([])
+  const [userTools, setUserTools] = useState<Array<{id: number, user_id: number, tool_id: number, is_active: boolean}>>([])
+  const [toolsLoading, setToolsLoading] = useState(false)
 
   useEffect(() => {
     fetchUsuarios()
     fetchPlanos()
     fetchTiposNegocio()
+    fetchTools()
   }, [])
 
   const fetchUsuarios = async () => {
@@ -83,6 +88,71 @@ export default function UsuariosSection() {
       setTiposNegocio(data || [])
     } catch (error) {
       console.error('Erro ao buscar tipos de negócio:', error)
+    }
+  }
+
+  const fetchTools = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tools')
+        .select('id, type, nome, descricao')
+        .order('type, nome')
+
+      if (error) throw error
+      setTools(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar tools:', error)
+    }
+  }
+
+  const fetchUserTools = async (userId: number) => {
+    try {
+      setToolsLoading(true)
+      const { data, error } = await supabase
+        .from('user_tools')
+        .select('id, user_id, tool_id, is_active')
+        .eq('user_id', userId)
+
+      if (error) throw error
+      setUserTools(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar tools do usuário:', error)
+    } finally {
+      setToolsLoading(false)
+    }
+  }
+
+  const toggleUserTool = async (userId: number, toolId: number, isActive: boolean) => {
+    try {
+      // Verificar se já existe um registro
+      const existing = userTools.find(ut => ut.user_id === userId && ut.tool_id === toolId)
+
+      if (existing) {
+        // Atualizar registro existente
+        const { error } = await supabase
+          .from('user_tools')
+          .update({ is_active: isActive })
+          .eq('id', existing.id)
+
+        if (error) throw error
+      } else {
+        // Criar novo registro
+        const { error } = await supabase
+          .from('user_tools')
+          .insert({
+            user_id: userId,
+            tool_id: toolId,
+            is_active: isActive
+          })
+
+        if (error) throw error
+      }
+
+      // Recarregar tools do usuário
+      await fetchUserTools(userId)
+    } catch (error) {
+      console.error('Erro ao atualizar tool do usuário:', error)
+      alert('Erro ao atualizar tool do usuário')
     }
   }
 
@@ -381,9 +451,30 @@ export default function UsuariosSection() {
             onChangeRole={handleChangeUserRole}
             onToggleActive={handleToggleUserActive}
             onUpdateUser={handleUpdateUser}
+            onOpenTools={(userId) => {
+              setShowUserTools(userId)
+              fetchUserTools(userId)
+            }}
           />
         ))}
       </div>
+
+      {/* Modal de Tools */}
+      {showUserTools && (
+        <UserToolsModal
+          userId={showUserTools}
+          usuario={usuarios.find(u => u.id === showUserTools)}
+          tools={tools}
+          userTools={userTools}
+          loading={toolsLoading}
+          onClose={() => setShowUserTools(null)}
+          onToggleTool={toggleUserTool}
+          onOpen={(userId) => {
+            setShowUserTools(userId)
+            fetchUserTools(userId)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -429,6 +520,7 @@ interface UsuarioCardProps {
     elevenlabs_voice_id?: string
     firecrawl_api_key?: string
   }) => void
+  onOpenTools: (userId: number) => void
 }
 
 function UsuarioCard({
@@ -441,7 +533,8 @@ function UsuarioCard({
   onChangePlan,
   onChangeRole,
   onToggleActive,
-  onUpdateUser
+  onUpdateUser,
+  onOpenTools
 }: UsuarioCardProps) {
   const [selectedPlan, setSelectedPlan] = useState(usuario.plano_id || '')
   const [selectedRole, setSelectedRole] = useState(usuario.role || 'user')
@@ -600,6 +693,13 @@ function UsuarioCard({
               title={usuario.active ? 'Desativar usuário' : 'Ativar usuário'}
             >
               <UserX className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onOpenTools(usuario.id)}
+              className="text-green-600 hover:text-green-800 p-2 rounded"
+              title="Gerenciar Tools"
+            >
+              <Wrench className="h-4 w-4" />
             </button>
             <button
               onClick={onEdit}
@@ -2001,6 +2101,112 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
               Criar Usuário
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal para gerenciar tools do usuário
+interface UserToolsModalProps {
+  userId: number
+  usuario?: UsuarioComPlano
+  tools: Array<{id: number, type: string, nome: string, descricao: string}>
+  userTools: Array<{id: number, user_id: number, tool_id: number, is_active: boolean}>
+  loading: boolean
+  onClose: () => void
+  onToggleTool: (userId: number, toolId: number, isActive: boolean) => void
+  onOpen: (userId: number) => void
+}
+
+function UserToolsModal({ userId, usuario, tools, userTools, loading, onClose, onToggleTool }: UserToolsModalProps) {
+  const getUserToolStatus = (toolId: number) => {
+    const userTool = userTools.find(ut => ut.tool_id === toolId)
+    return userTool?.is_active || false
+  }
+
+  const groupedTools = tools.reduce((acc, tool) => {
+    if (!acc[tool.type]) {
+      acc[tool.type] = []
+    }
+    acc[tool.type].push(tool)
+    return acc
+  }, {} as Record<string, typeof tools>)
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Wrench className="h-6 w-6 mr-2 text-green-600" />
+            <h2 className="text-xl font-semibold text-gray-900">
+              Gerenciar Tools - {usuario?.name}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-1 rounded"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(groupedTools).map(([type, typeTools]) => (
+              <div key={type} className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 capitalize">
+                  {type}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {typeTools.map((tool) => (
+                    <div
+                      key={tool.id}
+                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                        getUserToolStatus(tool.id)
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                      onClick={() => onToggleTool(userId, tool.id, !getUserToolStatus(tool.id))}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-gray-900">{tool.nome}</h4>
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            getUserToolStatus(tool.id)
+                              ? 'bg-green-500 border-green-500'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {getUserToolStatus(tool.id) && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                      {tool.descricao && (
+                        <p className="text-sm text-gray-600">{tool.descricao}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Fechar
+          </button>
         </div>
       </div>
     </div>
