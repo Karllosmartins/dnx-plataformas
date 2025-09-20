@@ -198,6 +198,7 @@ export default function EnriquecimentoAPIPage() {
         .select('*')
         .eq('user_id', user?.id)
         .eq('estagio', 'ativo')
+        .eq('tipo_tool', 'api_oficial')
 
       if (error) throw error
       setAgentes(data || [])
@@ -412,38 +413,56 @@ export default function EnriquecimentoAPIPage() {
 
   const cadastrarContatos = async (empresa: EmpresaEnriquecida) => {
     try {
+      console.log('Cadastro: Iniciando cadastro de contatos para empresa:', empresa.razaoSocial)
+
       // Cadastrar contatos da empresa
       for (const telefone of empresa.telefones) {
-        await supabase.from('leads').insert({
-          user_id: user?.id,
-          nome: empresa.razaoSocial,
-          telefone: telefone.telefoneFormatado,
-          email: empresa.emails[0]?.email || null,
-          empresa: empresa.razaoSocial,
-          cnpj: empresa.cnpj,
-          tipo_pessoa: 'PJ',
+        const contatoEmpresa = {
+          user_id: parseInt(user?.id || '0'),
+          nome_cliente: empresa.razaoSocial,
+          numero_formatado: telefone.telefoneFormatado || telefone.telefone,
+          email_usuario: empresa.emails[0]?.email || null,
+          nome_empresa: empresa.razaoSocial,
           origem: 'Enriquecimento API',
           nome_campanha: nomeCampanha,
-          observacoes: `Telefone ${telefone.tipoTelefone} da empresa`
-        })
+          observacoes_limpa_nome: `Telefone ${telefone.tipoTelefone || 'comercial'} da empresa`
+        }
+
+        console.log('Cadastro: Inserindo contato da empresa:', contatoEmpresa)
+
+        const { data, error } = await supabase.from('leads').insert(contatoEmpresa)
+
+        if (error) {
+          console.error('Cadastro: Erro ao inserir contato da empresa:', error)
+        } else {
+          console.log('Cadastro: Contato da empresa inserido com sucesso:', data)
+        }
       }
 
       // Cadastrar contatos dos sócios
       for (const socio of empresa.socios) {
         for (const telefone of socio.telefones) {
-          await supabase.from('leads').insert({
-            user_id: user?.id,
-            nome: socio.nome,
-            telefone: telefone.telefoneFormatado,
-            email: socio.emails[0]?.email || null,
-            empresa: empresa.razaoSocial,
-            cnpj: empresa.cnpj,
+          const contatoSocio = {
+            user_id: parseInt(user?.id || '0'),
+            nome_cliente: socio.nome,
+            numero_formatado: telefone.telefoneFormatado || telefone.telefone,
+            email_usuario: socio.emails[0]?.email || null,
+            nome_empresa: empresa.razaoSocial,
             cpf: socio.cpfCnpj,
-            tipo_pessoa: 'PF',
             origem: 'Enriquecimento API',
             nome_campanha: nomeCampanha,
-            observacoes: `Sócio da empresa ${empresa.razaoSocial} - Participação: ${socio.participacao}%`
-          })
+            observacoes_limpa_nome: `Sócio da empresa ${empresa.razaoSocial} - Participação: ${socio.participacao}`
+          }
+
+          console.log('Cadastro: Inserindo contato do sócio:', contatoSocio)
+
+          const { data, error } = await supabase.from('leads').insert(contatoSocio)
+
+          if (error) {
+            console.error('Cadastro: Erro ao inserir contato do sócio:', error)
+          } else {
+            console.log('Cadastro: Contato do sócio inserido com sucesso:', data)
+          }
         }
       }
     } catch (error) {
@@ -473,7 +492,7 @@ export default function EnriquecimentoAPIPage() {
         variavel2: variavel2,
         instrucaoAdicional: instrucaoAdicional,
         user_id: user?.id,
-        agente: agente?.nome
+        agente: agente?.id
       }
 
       console.log('Enviando configuração de disparo para webhook:', webhookData)
