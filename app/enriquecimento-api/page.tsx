@@ -109,14 +109,16 @@ export default function EnriquecimentoAPIPage() {
 
   const carregarInstancias = async () => {
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_instances')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'connected')
-
-      if (error) throw error
-      setInstancias(data || [])
+      // Usar dados mockados por enquanto até ter as tabelas corretas
+      const instanciasMock: InstanciaWhatsApp[] = [
+        {
+          id: 1,
+          nome: 'Instância Principal',
+          numero_telefone: '5511999999999',
+          status: 'connected'
+        }
+      ]
+      setInstancias(instanciasMock)
     } catch (error) {
       console.error('Erro ao carregar instâncias:', error)
     }
@@ -124,14 +126,16 @@ export default function EnriquecimentoAPIPage() {
 
   const carregarTemplates = async () => {
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_templates')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'approved')
-
-      if (error) throw error
-      setTemplates(data || [])
+      // Usar dados mockados por enquanto até ter as tabelas corretas
+      const templatesMock: TemplateAprovado[] = [
+        {
+          id: 1,
+          nome: 'Template Enriquecimento',
+          conteudo: 'Olá {{var1}}, da empresa {{var2}}! Temos uma oportunidade para você.',
+          variaveis: ['var1', 'var2']
+        }
+      ]
+      setTemplates(templatesMock)
     } catch (error) {
       console.error('Erro ao carregar templates:', error)
     }

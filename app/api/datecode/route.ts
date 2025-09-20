@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
         'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
       },
       body: JSON.stringify({
-        cnpj: cnpjLimpo
+        document: cnpjLimpo,
+        tipoPessoa: 'PJ'
       })
     })
 
