@@ -21,7 +21,8 @@ import {
   MessageCircle,
   Bot,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Database
 } from 'lucide-react'
 
 const navigation = [
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Agentes IA', href: '/agentes-ia', icon: Bot, feature: 'agentesIA' as const },
   { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
+  { name: 'Enriquecimento API', href: '/enriquecimento-api', icon: Database, feature: 'enriquecimentoAPI' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]

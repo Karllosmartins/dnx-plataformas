@@ -39,3 +39,5 @@ node_modules
 # Security - Docker compose with credentials
 docker-compose.portainer.local.yml
 *.local.yml
+# Docker compose com credenciais reais - NÃO DEVE IR PARA O GITHUB
+docker-compose.yml
