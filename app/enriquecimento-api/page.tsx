@@ -323,10 +323,14 @@ export default function EnriquecimentoAPIPage() {
 
     for (let i = 0; i < cnpjs.length; i++) {
       const cnpj = cnpjs[i]
+      console.log(`Enriquecimento: Processando CNPJ ${i + 1}/${cnpjs.length}: ${cnpj}`)
       setStatusEnriquecimento(`Consultando empresa ${i + 1}/${cnpjs.length}: ${cnpj}`)
 
-      // Buscar dados da empresa
-      const dadosEmpresa = await buscarDadosEmpresa(cnpj)
+      try {
+        // Buscar dados da empresa
+        console.log(`Enriquecimento: Chamando buscarDadosEmpresa para ${cnpj}`)
+        const dadosEmpresa = await buscarDadosEmpresa(cnpj)
+        console.log(`Enriquecimento: Resposta para ${cnpj}:`, dadosEmpresa)
 
       if (dadosEmpresa && dadosEmpresa.empresa) {
         const empresa: EmpresaEnriquecida = {
@@ -368,6 +372,13 @@ export default function EnriquecimentoAPIPage() {
 
         // Cadastrar contatos no banco
         await cadastrarContatos(empresa)
+      } else {
+        console.log(`Enriquecimento: Dados não encontrados para CNPJ ${cnpj}`)
+      }
+
+      } catch (error) {
+        console.error(`Enriquecimento: Erro ao processar CNPJ ${cnpj}:`, error)
+        setStatusEnriquecimento(`Erro ao processar ${cnpj}`)
       }
 
       setProgressoEnriquecimento(((i + 1) / cnpjs.length) * 100)
