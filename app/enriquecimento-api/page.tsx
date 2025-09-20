@@ -19,6 +19,7 @@ import {
   Download
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
 
 interface InstanciaWhatsApp {
   id: number
@@ -32,6 +33,14 @@ interface TemplateAprovado {
   nome: string
   conteudo: string
   variaveis: string[]
+}
+
+interface InstanciaCompleta {
+  id: number
+  instancia: string
+  is_official_api: boolean
+  waba_id: string | null
+  apikey: string | null
 }
 
 interface AgenteIA {
@@ -84,7 +93,9 @@ export default function EnriquecimentoAPIPage() {
 
   // Estados dos dados
   const [instancias, setInstancias] = useState<InstanciaWhatsApp[]>([])
+  const [instanciasCompletas, setInstanciasCompletas] = useState<InstanciaCompleta[]>([])
   const [templates, setTemplates] = useState<TemplateAprovado[]>([])
+  const [templatesOficiais, setTemplatesOficiais] = useState<WhatsAppOfficialTemplate[]>([])
   const [agentes, setAgentes] = useState<AgenteIA[]>([])
 
   // Estados do processo
@@ -109,24 +120,36 @@ export default function EnriquecimentoAPIPage() {
 
   const carregarInstancias = async () => {
     try {
-      // Usar dados mockados por enquanto até ter as tabelas corretas
-      const instanciasMock: InstanciaWhatsApp[] = [
-        {
-          id: 1,
-          nome: 'Instância Principal',
-          numero_telefone: '5511999999999',
-          status: 'connected'
-        }
-      ]
-      setInstancias(instanciasMock)
+      const { data, error } = await supabase
+        .from('instancia_whtats')
+        .select('id, instancia, is_official_api, waba_id, apikey')
+        .eq('user_id', parseInt(user?.id || '0'))
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Armazenar dados completos das instâncias
+      setInstanciasCompletas(data || [])
+
+      // Converter para formato esperado da interface
+      const instanciasFormatadas = data?.map(inst => ({
+        id: inst.id,
+        nome: inst.instancia,
+        numero_telefone: '', // Não usado neste contexto
+        status: 'connected'
+      })) || []
+
+      setInstancias(instanciasFormatadas)
     } catch (error) {
       console.error('Erro ao carregar instâncias:', error)
     }
   }
 
-  const carregarTemplates = async () => {
-    try {
-      // Usar dados mockados por enquanto até ter as tabelas corretas
+  const carregarTemplates = async (instanciaId: string) => {
+    const instanciaCompleta = instanciasCompletas.find(i => i.instancia === instanciaId)
+
+    if (!instanciaCompleta?.is_official_api || !instanciaCompleta.waba_id || !instanciaCompleta.apikey) {
+      // Se não é API oficial, usar dados mockados
       const templatesMock: TemplateAprovado[] = [
         {
           id: 1,
@@ -136,8 +159,35 @@ export default function EnriquecimentoAPIPage() {
         }
       ]
       setTemplates(templatesMock)
+      return
+    }
+
+    try {
+      const api = new WhatsAppOfficialAPI(instanciaCompleta.apikey, instanciaCompleta.waba_id)
+      const templates = await api.getTemplates()
+      setTemplatesOficiais(templates)
+
+      // Converter para formato esperado
+      const templatesFormatados = templates.map((template, index) => ({
+        id: index + 1,
+        nome: template.name,
+        conteudo: template.components.find(c => c.type === 'BODY')?.text || '',
+        variaveis: ['var1', 'var2'] // Simplificado por enquanto
+      }))
+
+      setTemplates(templatesFormatados)
     } catch (error) {
       console.error('Erro ao carregar templates:', error)
+      // Fallback para dados mockados em caso de erro
+      const templatesMock: TemplateAprovado[] = [
+        {
+          id: 1,
+          nome: 'Template Enriquecimento',
+          conteudo: 'Olá {{var1}}, da empresa {{var2}}! Temos uma oportunidade para você.',
+          variaveis: ['var1', 'var2']
+        }
+      ]
+      setTemplates(templatesMock)
     }
   }
 
@@ -625,13 +675,22 @@ export default function EnriquecimentoAPIPage() {
                     </label>
                     <select
                       value={instanciaWhatsApp}
-                      onChange={(e) => setInstanciaWhatsApp(e.target.value)}
+                      onChange={(e) => {
+                        setInstanciaWhatsApp(e.target.value)
+                        // Carregar templates quando instância for selecionada
+                        if (e.target.value) {
+                          const instancia = instancias.find(i => i.id.toString() === e.target.value)
+                          if (instancia) {
+                            carregarTemplates(instancia.nome)
+                          }
+                        }
+                      }}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     >
                       <option value="">Selecione uma instância</option>
                       {instancias.map((inst) => (
                         <option key={inst.id} value={inst.id}>
-                          {inst.nome} - {inst.numero_telefone}
+                          {inst.nome}
                         </option>
                       ))}
                     </select>
