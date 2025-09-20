@@ -198,7 +198,6 @@ export default function EnriquecimentoAPIPage() {
         .select('*')
         .eq('user_id', user?.id)
         .eq('estagio', 'ativo')
-        .eq('tipo_tool', 'api_oficial')
 
       if (error) throw error
       setAgentes(data || [])
@@ -425,6 +424,7 @@ export default function EnriquecimentoAPIPage() {
           nome_empresa: empresa.razaoSocial,
           origem: 'Enriquecimento API',
           nome_campanha: nomeCampanha,
+          cpf_cnpj: empresa.cnpj
         }
 
         console.log('Cadastro: Inserindo contato da empresa:', contatoEmpresa)
@@ -447,9 +447,9 @@ export default function EnriquecimentoAPIPage() {
             numero_formatado: telefone.telefoneFormatado || telefone.telefone,
             email_usuario: socio.emails[0]?.email || null,
             nome_empresa: empresa.razaoSocial,
-            cpf: socio.cpfCnpj,
             origem: 'Enriquecimento API',
             nome_campanha: nomeCampanha,
+            cpf_cnpj: empresa.cnpj
           }
 
           console.log('Cadastro: Inserindo contato do sócio:', contatoSocio)
