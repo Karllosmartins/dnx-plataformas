@@ -332,32 +332,53 @@ export default function EnriquecimentoAPIPage() {
         const dadosEmpresa = await buscarDadosEmpresa(cnpj)
         console.log(`Enriquecimento: Resposta para ${cnpj}:`, dadosEmpresa)
 
-      if (dadosEmpresa && dadosEmpresa.empresa) {
+      // A API retorna um array, pegar o primeiro item
+      const dadosEmpresaItem = Array.isArray(dadosEmpresa) ? dadosEmpresa[0] : dadosEmpresa
+      console.log(`Enriquecimento: Dados processados para ${cnpj}:`, dadosEmpresaItem)
+
+      if (dadosEmpresaItem && (dadosEmpresaItem.empresa || dadosEmpresaItem.razaoSocial)) {
+        // Determinar estrutura dos dados
+        const empresaInfo = dadosEmpresaItem.empresa || dadosEmpresaItem
+
         const empresa: EmpresaEnriquecida = {
-          cnpj: dadosEmpresa.empresa.cnpj,
-          razaoSocial: dadosEmpresa.empresa.razaoSocial,
-          nomeFantasia: dadosEmpresa.empresa.nomefantasia,
-          telefones: dadosEmpresa.telefones || [],
-          emails: dadosEmpresa.emails || [],
+          cnpj: empresaInfo.cnpj || cnpj,
+          razaoSocial: empresaInfo.razaoSocial || empresaInfo.nomeRazaoSocial || 'Empresa não identificada',
+          nomeFantasia: empresaInfo.nomeFantasia || empresaInfo.nomefantasia || null,
+          telefones: dadosEmpresaItem.telefones || [],
+          emails: dadosEmpresaItem.emails || [],
           socios: [],
           totalContatos: 0
         }
 
+        console.log(`Enriquecimento: Empresa criada:`, empresa)
+
         // Buscar dados dos sócios
-        if (dadosEmpresa.receitaFederal?.socios) {
-          for (const socio of dadosEmpresa.receitaFederal.socios) {
-            if (socio.cpfCnpj && socio.cpfCnpj.length === 11) { // CPF tem 11 dígitos
-              setStatusEnriquecimento(`Consultando sócio: ${socio.nomeRazaoSocial}`)
+        const sociosData = dadosEmpresaItem.receitaFederal?.socios || dadosEmpresaItem.socios || []
+        console.log(`Enriquecimento: Sócios encontrados para ${cnpj}:`, sociosData)
 
-              const dadosSocio = await buscarDadosSocio(socio.cpfCnpj)
+        if (sociosData.length > 0) {
+          for (const socio of sociosData) {
+            const cpfSocio = socio.cpfCnpj || socio.cpf
+            if (cpfSocio && cpfSocio.toString().replace(/\D/g, '').length === 11) { // CPF tem 11 dígitos
+              const nomeSocio = socio.nomeRazaoSocial || socio.nome || 'Sócio não identificado'
+              setStatusEnriquecimento(`Consultando sócio: ${nomeSocio}`)
+              console.log(`Enriquecimento: Buscando dados do sócio ${nomeSocio} - CPF: ${cpfSocio}`)
 
-              if (dadosSocio && dadosSocio.pessoa) {
+              const dadosSocio = await buscarDadosSocio(cpfSocio)
+              console.log(`Enriquecimento: Dados do sócio ${nomeSocio}:`, dadosSocio)
+
+              // A API pode retornar um array ou objeto para CPF também
+              const dadosSocioItem = Array.isArray(dadosSocio) ? dadosSocio[0] : dadosSocio
+
+              if (dadosSocioItem && (dadosSocioItem.pessoa || dadosSocioItem.nome)) {
+                const pessoaInfo = dadosSocioItem.pessoa || dadosSocioItem
+
                 empresa.socios.push({
-                  cpfCnpj: socio.cpfCnpj,
-                  nome: dadosSocio.pessoa.nome,
-                  participacao: socio.participacao,
-                  telefones: dadosSocio.telefones || [],
-                  emails: dadosSocio.emails || []
+                  cpfCnpj: cpfSocio,
+                  nome: pessoaInfo.nome || nomeSocio,
+                  participacao: socio.participacao || '0%',
+                  telefones: dadosSocioItem.telefones || [],
+                  emails: dadosSocioItem.emails || []
                 })
               }
             }
