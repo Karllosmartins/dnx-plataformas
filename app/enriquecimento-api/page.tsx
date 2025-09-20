@@ -185,15 +185,13 @@ export default function EnriquecimentoAPIPage() {
 
   const buscarDadosEmpresa = async (cnpj: string) => {
     try {
-      const response = await fetch('https://api.datecode.com.br/v2/dados/consulta', {
+      const response = await fetch('/api/datecode', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`${process.env.DATECODE_USERNAME}:${process.env.DATECODE_PASSWORD}`)}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          tipoPessoa: 'PJ',
-          document: cnpj
+          cnpj: cnpj
         })
       })
 
@@ -211,15 +209,13 @@ export default function EnriquecimentoAPIPage() {
 
   const buscarDadosSocio = async (cpf: string) => {
     try {
-      const response = await fetch('https://api.datecode.com.br/v2/dados/consulta', {
+      const response = await fetch('/api/datecode/cpf', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`${process.env.DATECODE_USERNAME}:${process.env.DATECODE_PASSWORD}`)}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          tipoPessoa: 'PF',
-          document: cpf
+          cpf: cpf
         })
       })
 
