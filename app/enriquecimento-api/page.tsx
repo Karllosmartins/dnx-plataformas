@@ -90,6 +90,8 @@ export default function EnriquecimentoAPIPage() {
   const [variavel2, setVariavel2] = useState('empresa')
   const [instrucaoAdicional, setInstrucaoAdicional] = useState('')
   const [agenteIA, setAgenteIA] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [instanciaOficial, setInstanciaOficial] = useState(false)
 
   // Estados dos dados
   const [instancias, setInstancias] = useState<InstanciaWhatsApp[]>([])
@@ -469,8 +471,19 @@ export default function EnriquecimentoAPIPage() {
   }
 
   const iniciarDisparo = async () => {
-    if (!instanciaWhatsApp || !templateAprovado) {
-      alert('Preencha todos os campos obrigatórios.')
+    // Validação baseada no tipo de API
+    if (!instanciaWhatsApp) {
+      alert('Selecione uma instância WhatsApp.')
+      return
+    }
+
+    if (instanciaOficial && !templateAprovado) {
+      alert('Selecione um template aprovado.')
+      return
+    }
+
+    if (!instanciaOficial && !mensagem.trim()) {
+      alert('Digite uma mensagem.')
       return
     }
 
@@ -485,12 +498,14 @@ export default function EnriquecimentoAPIPage() {
       const webhookData = {
         campanha: nomeCampanha,
         instancia: instancia?.nome,
-        template: template?.nome,
+        template: instanciaOficial ? template?.nome : null,
+        mensagem: !instanciaOficial ? mensagem : null,
         variavel1: variavel1,
         variavel2: variavel2,
         instrucaoAdicional: instrucaoAdicional,
         user_id: user?.id,
-        agente: agente?.id
+        agente: agente?.id,
+        is_official_api: instanciaOficial
       }
 
       console.log('Enviando configuração de disparo para webhook:', webhookData)
@@ -540,6 +555,8 @@ export default function EnriquecimentoAPIPage() {
     setVariavel2('empresa')
     setInstrucaoAdicional('')
     setAgenteIA('')
+    setMensagem('')
+    setInstanciaOficial(false)
   }
 
   return (
@@ -800,12 +817,21 @@ export default function EnriquecimentoAPIPage() {
                       value={instanciaWhatsApp}
                       onChange={(e) => {
                         setInstanciaWhatsApp(e.target.value)
-                        // Carregar templates quando instância for selecionada
+                        // Verificar se é API oficial
                         if (e.target.value) {
+                          const instanciaCompleta = instanciasCompletas.find(i => i.id.toString() === e.target.value)
                           const instancia = instancias.find(i => i.id.toString() === e.target.value)
-                          if (instancia) {
-                            carregarTemplates(instancia.nome)
+
+                          if (instanciaCompleta) {
+                            setInstanciaOficial(instanciaCompleta.is_official_api || false)
+
+                            // Carregar templates apenas para APIs oficiais
+                            if (instanciaCompleta.is_official_api && instancia) {
+                              carregarTemplates(instancia.nome)
+                            }
                           }
+                        } else {
+                          setInstanciaOficial(false)
                         }
                       }}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -819,23 +845,37 @@ export default function EnriquecimentoAPIPage() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Template Aprovado *
-                    </label>
-                    <select
-                      value={templateAprovado}
-                      onChange={(e) => setTemplateAprovado(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="">Selecione um template</option>
-                      {templates.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {instanciaOficial ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Template Aprovado *
+                      </label>
+                      <select
+                        value={templateAprovado}
+                        onChange={(e) => setTemplateAprovado(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      >
+                        <option value="">Selecione um template</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mensagem *
+                      </label>
+                      <textarea
+                        value={mensagem}
+                        onChange={(e) => setMensagem(e.target.value)}
+                        placeholder="Digite a mensagem que será enviada"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 h-32 resize-none"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">

@@ -1,25 +1,55 @@
 # =====================================================
-# DOCKER COMPOSE - DNX PLATAFORMAS CRM
-# Deploy em VPS com Traefik
+# DOCKER COMPOSE - PORTAINER - DNX PLATAFORMAS CRM
+# VERSÃO LOCAL - COM CREDENCIAIS REAIS
+# NÃO DEVE IR PARA O GITHUB!
 # =====================================================
 
-version: "3.8"
+version: "3.7"
 
 services:
-  # Aplicação DNX Plataformas
+  # Aplicação DNX Plataformas CRM
   dnx-plataformas-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: dnx-plataformas
-    restart: unless-stopped
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "
+      echo 'Checking app directory...' &&
+      ls -la /app/ || echo 'App directory empty' &&
+      echo 'Installing git...' &&
+      apk add --no-cache git &&
+      echo 'Cloning repository...' &&
+      git clone https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
+      echo 'Copying files to app directory...' &&
+      cp -r /tmp/repo/* /app/ &&
+      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
+      rm -rf /tmp/repo &&
+      echo 'Files after download:' &&
+      ls -la /app/ &&
+      echo 'Checking package.json:' &&
+      cat /app/package.json &&
+      echo 'Installing dependencies...' &&
+      npm ci &&
+      echo 'Building application...' &&
+      npm run build &&
+      echo 'Starting application...' &&
+      npm start
+      "
+
+    networks:
+      - dnnet
+
     environment:
       - NODE_ENV=production
       - PORT=3000
-    env_file:
-      - .env.production
-    networks:
-      - network_swarm_public
+      - HOSTNAME=0.0.0.0
+      # Supabase Configuration - CREDENCIAIS REAIS
+      - NEXT_PUBLIC_SUPABASE_URL=https://enwxbkyvnrjderqdygtl.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNjMwMzQsImV4cCI6MjA3MTYzOTAzNH0.xr39krGQYM6HC64cNFmjtpbj2IsDn2BEyhviBiTooCY
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjA2MzAzNCwiZXhwIjoyMDcxNjM5MDM0fQ.BxADhNw1F84N_YVV7EQC8OHJlE6StJx0lqjZxjHRRD8
+      - DATABASE_URL=postgresql://postgres:8W0KemHchTqSBcgi@enwxbkyvnrjderqdygtl.supabase.co:5432/postgres
+      # Datecode Configuration - CREDENCIAIS REAIS
+      - DATECODE_USERNAME=karllosdkma1@gmail.com
+      - DATECODE_PASSWORD=dnmkt@123
+
     deploy:
       mode: replicated
       replicas: 1
@@ -31,23 +61,17 @@ services:
           cpus: "1"
           memory: 1024M
       labels:
-        # Habilita o Traefik
-        - traefik.enable=true
-        # Define o endereço público
-        - traefik.http.routers.dnx_plataformas.rule=Host(`app.dnxplataformas.com.br`)
-        # Redireciona para HTTPS
-        - traefik.http.routers.dnx_plataformas.entrypoints=websecure
-        # Define certificado SSL
-        - traefik.http.routers.dnx_plataformas.tls.certresolver=letsencryptresolver
-        # Define porta da aplicação
-        - traefik.http.services.dnx_plataformas.loadbalancer.server.port=3000
-        # Headers
-        - traefik.http.services.dnx_plataformas.loadbalancer.passHostHeader=true
-        # Define serviço
-        - traefik.http.routers.dnx_plataformas.service=dnx_plataformas
+        # Traefik Labels seguindo o padrão do seu ambiente
+        - traefik.enable=1
+        - traefik.http.routers.dnx-plataformas.rule=Host(`app.dnxplataformas.com.br`)
+        - traefik.http.routers.dnx-plataformas.entrypoints=websecure
+        - traefik.http.routers.dnx-plataformas.priority=1
+        - traefik.http.routers.dnx-plataformas.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.dnx-plataformas.service=dnx-plataformas
+        - traefik.http.services.dnx-plataformas.loadbalancer.server.port=3000
+        - traefik.http.services.dnx-plataformas.loadbalancer.passHostHeader=true
 
-# Rede externa do Swarm
 networks:
-  network_swarm_public:
+  dnnet:
     external: true
-    name: network_swarm_public
+    name: dnnet
