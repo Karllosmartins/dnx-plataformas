@@ -425,7 +425,6 @@ export default function EnriquecimentoAPIPage() {
           nome_empresa: empresa.razaoSocial,
           origem: 'Enriquecimento API',
           nome_campanha: nomeCampanha,
-          observacoes_limpa_nome: `Telefone ${telefone.tipoTelefone || 'comercial'} da empresa`
         }
 
         console.log('Cadastro: Inserindo contato da empresa:', contatoEmpresa)
@@ -451,7 +450,6 @@ export default function EnriquecimentoAPIPage() {
             cpf: socio.cpfCnpj,
             origem: 'Enriquecimento API',
             nome_campanha: nomeCampanha,
-            observacoes_limpa_nome: `Sócio da empresa ${empresa.razaoSocial} - Participação: ${socio.participacao}`
           }
 
           console.log('Cadastro: Inserindo contato do sócio:', contatoSocio)
