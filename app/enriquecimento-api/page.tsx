@@ -428,24 +428,10 @@ export default function EnriquecimentoAPIPage() {
     setEnviandoDisparo(true)
 
     try {
-      // Buscar contatos da campanha no banco
-      const { data: contatos, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('nome_campanha', nomeCampanha)
-        .eq('origem', 'Enriquecimento API')
-
-      if (error) throw error
-
-      if (!contatos || contatos.length === 0) {
-        alert('Nenhum contato encontrado para esta campanha.')
-        return
-      }
-
-      // Preparar dados para o webhook
+      // Preparar dados para o webhook - apenas configuração da campanha
       const instancia = instancias.find(i => i.id.toString() === instanciaWhatsApp)
       const template = templates.find(t => t.id.toString() === templateAprovado)
+      const agente = agentes.find(a => a.id.toString() === agenteIA)
 
       const webhookData = {
         campanha: nomeCampanha,
@@ -454,20 +440,11 @@ export default function EnriquecimentoAPIPage() {
         variavel1: variavel1,
         variavel2: variavel2,
         instrucaoAdicional: instrucaoAdicional,
-        agente: agenteIA,
-        contatos: contatos.map(contato => ({
-          nome: contato.nome,
-          telefone: contato.telefone,
-          email: contato.email,
-          empresa: contato.empresa,
-          cnpj: contato.cnpj,
-          cpf: contato.cpf,
-          tipo_pessoa: contato.tipo_pessoa,
-          observacoes: contato.observacoes
-        }))
+        user_id: user?.id,
+        agente: agente?.nome
       }
 
-      console.log('Enviando disparo para webhook:', webhookData)
+      console.log('Enviando configuração de disparo para webhook:', webhookData)
 
       // Enviar para o webhook
       const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/49c846c0-3853-4dc9-85db-0824cd1d7c6e', {
@@ -485,7 +462,7 @@ export default function EnriquecimentoAPIPage() {
       const result = await response.json()
       console.log('Resposta do webhook:', result)
 
-      alert(`Disparo iniciado com sucesso! ${contatos.length} contatos serão processados.`)
+      alert('Disparo iniciado com sucesso! A campanha será processada.')
 
       // Voltar para início após sucesso
       setTimeout(() => {
