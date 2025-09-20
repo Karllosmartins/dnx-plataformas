@@ -307,6 +307,11 @@ export default function EnriquecimentoAPIPage() {
       return
     }
 
+    if (!nomeCampanha.trim()) {
+      alert('Por favor, informe o nome da campanha.')
+      return
+    }
+
     setEnriquecendo(true)
     setEtapaAtual('enriquecendo')
     setProgressoEnriquecimento(0)
@@ -386,6 +391,7 @@ export default function EnriquecimentoAPIPage() {
           cnpj: empresa.cnpj,
           tipo_pessoa: 'PJ',
           origem: 'Enriquecimento API',
+          nome_campanha: nomeCampanha,
           observacoes: `Telefone ${telefone.tipoTelefone} da empresa`
         })
       }
@@ -403,6 +409,7 @@ export default function EnriquecimentoAPIPage() {
             cpf: socio.cpfCnpj,
             tipo_pessoa: 'PF',
             origem: 'Enriquecimento API',
+            nome_campanha: nomeCampanha,
             observacoes: `Sócio da empresa ${empresa.razaoSocial} - Participação: ${socio.participacao}%`
           })
         }
@@ -413,22 +420,81 @@ export default function EnriquecimentoAPIPage() {
   }
 
   const iniciarDisparo = async () => {
-    if (!nomeCampanha || !instanciaWhatsApp || !templateAprovado) {
+    if (!instanciaWhatsApp || !templateAprovado) {
       alert('Preencha todos os campos obrigatórios.')
       return
     }
 
     setEnviandoDisparo(true)
-    setEtapaAtual('disparo')
 
     try {
-      // Aqui você implementaria a lógica de disparo
-      // Similar ao disparo com IA, mas usando os contatos enriquecidos
+      // Buscar contatos da campanha no banco
+      const { data: contatos, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('nome_campanha', nomeCampanha)
+        .eq('origem', 'Enriquecimento API')
 
-      alert('Disparo iniciado com sucesso!')
+      if (error) throw error
+
+      if (!contatos || contatos.length === 0) {
+        alert('Nenhum contato encontrado para esta campanha.')
+        return
+      }
+
+      // Preparar dados para o webhook
+      const instancia = instancias.find(i => i.id.toString() === instanciaWhatsApp)
+      const template = templates.find(t => t.id.toString() === templateAprovado)
+
+      const webhookData = {
+        campanha: nomeCampanha,
+        instancia: instancia?.nome,
+        template: template?.nome,
+        variavel1: variavel1,
+        variavel2: variavel2,
+        instrucaoAdicional: instrucaoAdicional,
+        agente: agenteIA,
+        contatos: contatos.map(contato => ({
+          nome: contato.nome,
+          telefone: contato.telefone,
+          email: contato.email,
+          empresa: contato.empresa,
+          cnpj: contato.cnpj,
+          cpf: contato.cpf,
+          tipo_pessoa: contato.tipo_pessoa,
+          observacoes: contato.observacoes
+        }))
+      }
+
+      console.log('Enviando disparo para webhook:', webhookData)
+
+      // Enviar para o webhook
+      const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/49c846c0-3853-4dc9-85db-0824cd1d7c6e', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookData)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erro no webhook: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('Resposta do webhook:', result)
+
+      alert(`Disparo iniciado com sucesso! ${contatos.length} contatos serão processados.`)
+
+      // Voltar para início após sucesso
+      setTimeout(() => {
+        reiniciarProcesso()
+      }, 2000)
+
     } catch (error) {
       console.error('Erro ao iniciar disparo:', error)
-      alert('Erro ao iniciar disparo.')
+      alert('Erro ao iniciar disparo. Verifique os logs para mais detalhes.')
     } finally {
       setEnviandoDisparo(false)
     }
@@ -509,10 +575,29 @@ export default function EnriquecimentoAPIPage() {
               )}
 
               {cnpjs.length > 0 && (
-                <div className="mt-6">
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome da Campanha *
+                    </label>
+                    <input
+                      type="text"
+                      value={nomeCampanha}
+                      onChange={(e) => setNomeCampanha(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      placeholder="Ex: Enriquecimento Dezembro 2024"
+                      required
+                    />
+                  </div>
+
                   <button
                     onClick={iniciarEnriquecimento}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+                    disabled={!nomeCampanha.trim()}
+                    className={`px-6 py-2 rounded-lg flex items-center ${
+                      nomeCampanha.trim()
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <Database className="h-5 w-5 mr-2" />
                     Iniciar Enriquecimento
@@ -674,17 +759,11 @@ export default function EnriquecimentoAPIPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nome da Campanha *
-                    </label>
-                    <input
-                      type="text"
-                      value={nomeCampanha}
-                      onChange={(e) => setNomeCampanha(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                      placeholder="Ex: Enriquecimento Dezembro 2024"
-                    />
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900">Campanha: {nomeCampanha}</h4>
+                    <p className="text-sm text-blue-700">
+                      {empresasEnriquecidas.reduce((total, emp) => total + emp.totalContatos, 0)} contatos enriquecidos
+                    </p>
                   </div>
 
                   <div>
