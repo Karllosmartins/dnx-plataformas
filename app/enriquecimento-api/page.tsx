@@ -113,8 +113,8 @@ export default function EnriquecimentoAPIPage() {
   useEffect(() => {
     if (user) {
       carregarInstancias()
-      carregarTemplates()
       carregarAgentes()
+      // Templates são carregados quando uma instância é selecionada
     }
   }, [user])
 
