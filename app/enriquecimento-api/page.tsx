@@ -412,6 +412,48 @@ export default function EnriquecimentoAPIPage() {
     setEtapaAtual('resultados')
   }
 
+  const upsertContato = async (contato: any, tipo: string) => {
+    const userId = parseInt(user?.id || '0')
+
+    // Verificar se já existe um lead com este user_id e numero_formatado
+    const { data: existingLead, error: searchError } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('numero_formatado', contato.numero_formatado)
+      .maybeSingle()
+
+    if (searchError && searchError.code !== 'PGRST116') {
+      console.error(`Cadastro: Erro ao buscar lead existente (${tipo}):`, searchError)
+      return
+    }
+
+    if (existingLead) {
+      // Atualizar lead existente
+      console.log(`Cadastro: Atualizando ${tipo} existente:`, contato)
+      const { data, error } = await supabase
+        .from('leads')
+        .update(contato)
+        .eq('id', existingLead.id)
+
+      if (error) {
+        console.error(`Cadastro: Erro ao atualizar ${tipo}:`, error)
+      } else {
+        console.log(`Cadastro: ${tipo} atualizado com sucesso:`, data)
+      }
+    } else {
+      // Inserir novo lead
+      console.log(`Cadastro: Inserindo novo ${tipo}:`, contato)
+      const { data, error } = await supabase.from('leads').insert(contato)
+
+      if (error) {
+        console.error(`Cadastro: Erro ao inserir ${tipo}:`, error)
+      } else {
+        console.log(`Cadastro: ${tipo} inserido com sucesso:`, data)
+      }
+    }
+  }
+
   const cadastrarContatos = async (empresa: EmpresaEnriquecida) => {
     try {
       console.log('Cadastro: Iniciando cadastro de contatos para empresa:', empresa.razaoSocial)
@@ -429,15 +471,7 @@ export default function EnriquecimentoAPIPage() {
           cpf_cnpj: empresa.cnpj
         }
 
-        console.log('Cadastro: Inserindo contato da empresa:', contatoEmpresa)
-
-        const { data, error } = await supabase.from('leads').insert(contatoEmpresa)
-
-        if (error) {
-          console.error('Cadastro: Erro ao inserir contato da empresa:', error)
-        } else {
-          console.log('Cadastro: Contato da empresa inserido com sucesso:', data)
-        }
+        await upsertContato(contatoEmpresa, 'contato da empresa')
       }
 
       // Cadastrar contatos dos sócios
@@ -454,15 +488,7 @@ export default function EnriquecimentoAPIPage() {
             cpf_cnpj: empresa.cnpj
           }
 
-          console.log('Cadastro: Inserindo contato do sócio:', contatoSocio)
-
-          const { data, error } = await supabase.from('leads').insert(contatoSocio)
-
-          if (error) {
-            console.error('Cadastro: Erro ao inserir contato do sócio:', error)
-          } else {
-            console.log('Cadastro: Contato do sócio inserido com sucesso:', data)
-          }
+          await upsertContato(contatoSocio, 'contato do sócio')
         }
       }
     } catch (error) {

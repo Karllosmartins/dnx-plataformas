@@ -2483,12 +2483,6 @@ export default function LeadsPage() {
           </p>
           {userPlanInfo && (
             <div className="mt-4 flex items-center space-x-4">
-              <div className="flex items-center bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-200">
-                <Crown className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">
-                  Plano: {userPlanInfo.plano_nome || 'Personalizado'}
-                </span>
-              </div>
               {userPlanInfo.limite_leads && (
                 <div className="flex items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
                   <Users className="h-4 w-4 mr-2" />
