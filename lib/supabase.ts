@@ -3,26 +3,37 @@ import { createClient } from '@supabase/supabase-js'
 // Configuração para o projeto DNX Plataformas CRM Limpa Nome
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing required Supabase environment variables')
 }
 
-if (!supabaseServiceKey) {
-  throw new Error('Missing required SUPABASE_SERVICE_ROLE_KEY environment variable')
-}
-
 // Cliente principal para operações do usuário
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Cliente admin para operações que requerem privilégios elevados
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Cliente admin - apenas para uso no servidor (APIs)
+function createSupabaseAdmin() {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseServiceKey) {
+    throw new Error('Missing required SUPABASE_SERVICE_ROLE_KEY environment variable')
   }
-})
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+}
+
+// Função para obter cliente admin (apenas no servidor)
+export function getSupabaseAdmin() {
+  if (typeof window !== 'undefined') {
+    throw new Error('supabaseAdmin should only be used on the server side')
+  }
+  return createSupabaseAdmin()
+}
 
 // =====================================================
 // INTERFACES PARA O CRM LIMPA NOME

@@ -4,7 +4,7 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '../../../../lib/supabase'
+import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
 import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 
 // =====================================================
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       // Atualizar status no banco se diferente
       const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
       if (instancia.status_conexao !== newStatus) {
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from('instancias_whatsapp')
           .update({ 
             status_conexao: newStatus,
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     } catch (evolutionError) {
       // Se erro na Evolution API, marcar como erro
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('instancias_whatsapp')
         .update({ 
           status_conexao: 'erro',
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
           // Atualizar status no banco
           const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
           if (instancia.status_conexao !== newStatus) {
-            await supabaseAdmin
+            await getSupabaseAdmin()
               .from('instancias_whatsapp')
               .update({ 
                 status_conexao: newStatus,
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
 
         } catch (error) {
           // Marcar como erro
-          await supabaseAdmin
+          await getSupabaseAdmin()
             .from('instancias_whatsapp')
             .update({ 
               status_conexao: 'erro',

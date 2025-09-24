@@ -4,7 +4,7 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../../lib/supabase'
+import { getSupabaseAdmin } from '../../../../lib/supabase'
 
 // =====================================================
 // POST - Processar webhook da Evolution API
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Registrar webhook no banco (opcional - para auditoria)
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('webhook_logs')
       .insert({
         instance_name: instance,
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     
     // Log do erro no banco
     try {
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('webhook_errors')
         .insert({
           instance_name: (await request.json())?.instance || 'unknown',
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 async function handleQRCodeUpdated(instanceName: string, data: any) {
   try {
     // Atualizar status da instância para "conectado" quando QR code for escaneado
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update({
         status_conexao: 'conectado',
@@ -145,7 +145,7 @@ async function handleConnectionUpdate(instanceName: string, data: any) {
     }
 
     // Atualizar status no banco
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update({
         status_conexao: statusConexao,
@@ -174,7 +174,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
       if (key.fromMe) continue
 
       // Buscar instância e usuário
-      const { data: instancia, error: instanciaError } = await supabaseAdmin
+      const { data: instancia, error: instanciaError } = await getSupabaseAdmin()
         .from('instancias_whatsapp')
         .select(`
           *,
@@ -193,7 +193,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
       const senderNumber = key.remoteJid.replace('@s.whatsapp.net', '')
       
       // Buscar ou criar lead
-      let { data: lead, error: leadError } = await supabaseAdmin
+      let { data: lead, error: leadError } = await getSupabaseAdmin()
         .from('leads_limpa_nome')
         .select('*')
         .eq('user_id', instancia.user_id)
@@ -202,7 +202,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
 
       // Se lead não existe, criar novo
       if (leadError || !lead) {
-        const { data: novoLead, error: novoLeadError } = await supabaseAdmin
+        const { data: novoLead, error: novoLeadError } = await getSupabaseAdmin()
           .from('leads_limpa_nome')
           .insert({
             user_id: instancia.user_id,

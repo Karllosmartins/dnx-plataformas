@@ -4,7 +4,7 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '../../../../lib/supabase'
+import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
 import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 import type { ConfiguracaoCredenciais, InstanciaWhatsapp, User } from '../../../../lib/supabase'
 
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     const evolutionInstance = await evolutionClient.createInstance(instanceConfig)
 
     // Criar configuração de credenciais
-    const { data: configData, error: configError } = await supabaseAdmin
+    const { data: configData, error: configError } = await getSupabaseAdmin()
       .from('configuracoes_credenciais')
       .insert({
         user_id: userId,
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar instância no banco
-    const { data: instanciaData, error: instanciaError } = await supabaseAdmin
+    const { data: instanciaData, error: instanciaError } = await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .insert({
         user_id: userId,
@@ -253,7 +253,7 @@ export async function PUT(request: NextRequest) {
     if (nomeInstancia) updateData.nome_instancia = nomeInstancia
     if (status_conexao) updateData.status_conexao = status_conexao
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update(updateData)
       .eq('id', instanceId)
@@ -331,7 +331,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Marcar como inativa no banco (não deletar para manter histórico)
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update({ ativo: false })
       .eq('id', instanceId)

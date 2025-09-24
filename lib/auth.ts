@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './supabase'
+import { supabase, getSupabaseAdmin } from './supabase'
 
 export interface User {
   id: string

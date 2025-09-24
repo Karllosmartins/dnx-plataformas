@@ -4,7 +4,7 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../../lib/supabase'
+import { getSupabaseAdmin } from '../../../../lib/supabase'
 import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 
 // =====================================================
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se usuário existe
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('*')
       .eq('id', userId)
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se usuário já tem instância configurada
-    const { data: existingConfig, error: configError } = await supabaseAdmin
+    const { data: existingConfig, error: configError } = await getSupabaseAdmin()
       .from('configuracoes_credenciais')
       .select('id, instancia, apikey, baseurl')
       .eq('user_id', userId)
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Se já existe configuração, apenas atualizar com dados da instância
     if (existingConfig) {
-      const { data: updatedConfig, error: updateError } = await supabaseAdmin
+      const { data: updatedConfig, error: updateError } = await getSupabaseAdmin()
         .from('configuracoes_credenciais')
         .update({
           instancia: instanceName,
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Criar nova configuração completa
-      const { data: newConfig, error: insertError } = await supabaseAdmin
+      const { data: newConfig, error: insertError } = await getSupabaseAdmin()
         .from('configuracoes_credenciais')
         .insert({
           user_id: userId,
@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar configuração do usuário
-    const { data: config, error } = await supabaseAdmin
+    const { data: config, error } = await getSupabaseAdmin()
       .from('configuracoes_credenciais')
       .select('*')
       .eq('user_id', userId)

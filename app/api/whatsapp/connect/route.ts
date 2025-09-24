@@ -4,7 +4,7 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '../../../../lib/supabase'
+import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
 import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
 
 // =====================================================
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const connectionResult = await evolutionClient.connectInstance(instancia.instancia)
 
     // Atualizar status no banco
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update({ 
         status_conexao: 'conectado',
@@ -145,7 +145,7 @@ export async function DELETE(request: NextRequest) {
     await evolutionClient.logoutInstance(instancia.instancia)
 
     // Atualizar status no banco
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('instancias_whatsapp')
       .update({ 
         status_conexao: 'desconectado',
