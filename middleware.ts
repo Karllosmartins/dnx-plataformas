@@ -16,8 +16,8 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   '/historico-contagens': 'extracaoLeads'
 }
 
-// Rotas que não precisam de autenticação
-const PUBLIC_ROUTES = ['/', '/login']
+// Rotas que não precisam de autenticação (AuthWrapper gerencia login)
+const PUBLIC_ROUTES = ['/']
 
 // Rotas de admin que sempre passam
 const ADMIN_ROUTES = ['/admin', '/configuracoes-admin']
@@ -66,15 +66,16 @@ export async function middleware(request: NextRequest) {
 
   const token = request.cookies.get('auth-token')?.value
 
-  // Se não tem token, redirecionar para login
+  // Se não tem token, deixar o AuthWrapper gerenciar
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.next()
   }
 
   // Verificar token
   const payload = await verifyToken(token)
   if (!payload || !payload.userId) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    // Token inválido, deixar o AuthWrapper gerenciar
+    return NextResponse.next()
   }
 
   // Admin sempre pode acessar tudo
