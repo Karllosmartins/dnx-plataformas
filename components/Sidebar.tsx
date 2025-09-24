@@ -176,7 +176,7 @@ function SidebarContent({
       console.log('DEBUG Consulta:', {
         feature: item.feature,
         userWithPlan: userWithPlan,
-        acesso_consulta: userWithPlan.acesso_consulta,
+        acesso_consulta: 'acesso_consulta' in userWithPlan ? userWithPlan.acesso_consulta : 'N/A (fallback user)',
         hasAccess: hasAccess
       })
     }
