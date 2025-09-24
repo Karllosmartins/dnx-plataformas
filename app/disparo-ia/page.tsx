@@ -447,6 +447,11 @@ export default function DisparoIAPage() {
           }
         }
 
+        // Adicionar agente_id para API oficial também
+        if (activeTab === 'official' && agenteSelected) {
+          formData.append('agente_id', agenteSelected)
+        }
+
         const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
         const response = await fetch(webhookUrl, {
           method: 'POST',
@@ -643,6 +648,37 @@ export default function DisparoIAPage() {
                   )}
                   <p className="text-sm text-green-600 mt-1">
                     📋 Apenas templates aprovados pelo WhatsApp podem ser usados
+                  </p>
+                </div>
+              )}
+
+              {/* Agente IA - apenas para API Oficial */}
+              {activeTab === 'official' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Bot className="inline h-4 w-4 mr-1" />
+                    Agente IA (Opcional)
+                  </label>
+                  <select
+                    value={agenteSelected}
+                    onChange={(e) => setAgenteSelected(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isDisabled}
+                  >
+                    <option value="">Sem agente específico</option>
+                    {agentes.length > 0 ? (
+                      agentes.map((agente) => (
+                        <option key={agente.id} value={agente.agente_id}>
+                          {agente.nome} - {agente.funcao}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Nenhum agente encontrado - Crie um agente em Configurações</option>
+                    )}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    <Bot className="h-3 w-3 inline mr-1" />
+                    Selecione um agente para usar suas configurações específicas
                   </p>
                 </div>
               )}
