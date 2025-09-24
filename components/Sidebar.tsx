@@ -184,7 +184,7 @@ function SidebarContent({
       console.log('DEBUG Consulta:', {
         feature: item.feature,
         userWithPlan: userWithPlan,
-        acesso_consulta: userWithPlan.acesso_consulta,
+        acesso_consulta: (userWithPlan as any).acesso_consulta,
         hasAcessoConsultaProp: 'acesso_consulta' in userWithPlan,
         hasAccess: hasAccess
       })
