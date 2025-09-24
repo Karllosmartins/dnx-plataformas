@@ -11,6 +11,7 @@ export type FeatureType =
   | 'extracaoLeads'
   | 'enriquecimento'
   | 'enriquecimentoAPI'
+  | 'consulta'
   | 'usuarios'
 
 // Configuração padrão dos planos (fallback)
@@ -25,6 +26,7 @@ export const PLANOS_DEFAULT = {
     extracaoLeads: false,
     enriquecimento: false,
     enriquecimentoAPI: false,
+    consulta: false,
     usuarios: false,
   },
   premium1: {
@@ -37,6 +39,7 @@ export const PLANOS_DEFAULT = {
     extracaoLeads: false,
     enriquecimento: false,
     enriquecimentoAPI: false,
+    consulta: false,
     usuarios: false,
   },
   premium2: {
@@ -49,6 +52,7 @@ export const PLANOS_DEFAULT = {
     extracaoLeads: true,
     enriquecimento: false,
     enriquecimentoAPI: false,
+    consulta: false,
     usuarios: false,
   },
   enterprise: {
@@ -61,6 +65,7 @@ export const PLANOS_DEFAULT = {
     extracaoLeads: true,
     enriquecimento: true,
     enriquecimentoAPI: true,
+    consulta: true,
     usuarios: true,
   }
 }
@@ -97,6 +102,7 @@ export function hasFeatureAccess(
       extracaoLeads: 'acesso_extracao_leads',
       enriquecimento: 'acesso_enriquecimento',
       enriquecimentoAPI: 'acesso_enriquecimento',
+      consulta: 'acesso_consulta',
       usuarios: 'acesso_usuarios',
     }
 
@@ -144,7 +150,7 @@ export function getAvailableFeatures(user: User | UsuarioComPlano): FeatureType[
   const allFeatures: FeatureType[] = [
     'dashboard', 'crm', 'whatsapp', 'disparoSimples',
     'disparoIA', 'agentesIA', 'extracaoLeads',
-    'enriquecimento', 'enriquecimentoAPI', 'usuarios'
+    'enriquecimento', 'enriquecimentoAPI', 'consulta', 'usuarios'
   ]
 
   for (const feature of allFeatures) {

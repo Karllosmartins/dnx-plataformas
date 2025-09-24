@@ -12,6 +12,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   '/agentes-ia': 'agentesIA',
   '/extracao-leads': 'extracaoLeads',
   '/enriquecimento-api': 'enriquecimentoAPI',
+  '/consulta': 'consulta',
   '/usuarios': 'usuarios',
   '/historico-contagens': 'extracaoLeads'
 }
@@ -26,6 +27,7 @@ const FEATURE_TO_DB_FIELD: Record<string, string> = {
   agentesIA: 'acesso_agentes_ia',
   extracaoLeads: 'acesso_extracao_leads',
   enriquecimentoAPI: 'acesso_enriquecimento',
+  consulta: 'acesso_consulta',
   usuarios: 'acesso_usuarios'
 }
 
@@ -39,6 +41,7 @@ const ROUTE_PRIORITY = [
   '/disparo-ia',
   '/agentes-ia',
   '/enriquecimento-api',
+  '/consulta',
   '/historico-contagens',
   '/usuarios'
 ]

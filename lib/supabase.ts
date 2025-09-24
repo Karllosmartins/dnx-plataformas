@@ -54,6 +54,7 @@ export interface Plano {
   acesso_extracao_leads: boolean
   acesso_enriquecimento: boolean
   acesso_usuarios: boolean
+  acesso_consulta: boolean
 
   // Limites
   limite_leads: number
@@ -101,6 +102,7 @@ export interface UsuarioComPlano extends User {
   acesso_extracao_leads?: boolean
   acesso_enriquecimento?: boolean
   acesso_usuarios?: boolean
+  acesso_consulta?: boolean
 }
 
 export interface ConfiguracaoCredenciais {

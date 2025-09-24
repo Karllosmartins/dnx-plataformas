@@ -92,7 +92,7 @@ export default function ConsultaPage() {
   }
 
   return (
-    <PlanProtection feature="enriquecimentoAPI">
+    <PlanProtection feature="consulta">
       <div className="space-y-8 px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho */}
         <div>
