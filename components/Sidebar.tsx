@@ -144,8 +144,10 @@ function SidebarContent({
           .single()
 
         if (!error && data) {
+          console.log('DEBUG View Success:', { data, user })
           setUserWithPlan(data)
         } else {
+          console.log('DEBUG View Error:', { error, fallbackUser: user })
           // Fallback para user básico
           setUserWithPlan(user)
         }
@@ -167,7 +169,19 @@ function SidebarContent({
       return false
     }
 
-    return hasFeatureAccess(userWithPlan, item.feature)
+    const hasAccess = hasFeatureAccess(userWithPlan, item.feature)
+
+    // Debug temporário para consulta
+    if (item.feature === 'consulta') {
+      console.log('DEBUG Consulta:', {
+        feature: item.feature,
+        userWithPlan: userWithPlan,
+        acesso_consulta: userWithPlan.acesso_consulta,
+        hasAccess: hasAccess
+      })
+    }
+
+    return hasAccess
   })
   return (
     <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
