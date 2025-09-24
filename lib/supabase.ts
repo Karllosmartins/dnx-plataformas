@@ -15,8 +15,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 function createSupabaseAdmin() {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseServiceKey) {
-    throw new Error('Missing required SUPABASE_SERVICE_ROLE_KEY environment variable')
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing required Supabase environment variables for admin client')
   }
 
   return createClient(supabaseUrl, supabaseServiceKey, {
