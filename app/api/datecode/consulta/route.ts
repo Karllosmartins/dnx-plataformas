@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se o usuário tem acesso ao enriquecimento
-    if (!userPlan.acesso_enriquecimento) {
+    // Verificar se o usuário tem acesso às consultas
+    if (!userPlan.acesso_consulta) {
       return NextResponse.json(
-        { error: 'Usuário não tem acesso ao enriquecimento de dados' },
+        { error: 'Usuário não tem acesso às consultas individuais' },
         { status: 403 }
       )
     }

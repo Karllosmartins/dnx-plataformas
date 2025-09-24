@@ -144,7 +144,6 @@ function SidebarContent({
           .single()
 
         if (!error && data) {
-          console.log('DEBUG View Success:', { data, user })
           // Garantir que o objeto tenha as propriedades necessárias
           const userWithPlanData = {
             ...user,
@@ -152,10 +151,8 @@ function SidebarContent({
             // Garantir que as propriedades de plano existam
             acesso_consulta: data.acesso_consulta || false
           }
-          console.log('DEBUG UserWithPlan Final:', userWithPlanData)
           setUserWithPlan(userWithPlanData)
         } else {
-          console.log('DEBUG View Error:', { error, fallbackUser: user })
           // Fallback para user básico
           setUserWithPlan(user)
         }
@@ -177,20 +174,7 @@ function SidebarContent({
       return false
     }
 
-    const hasAccess = hasFeatureAccess(userWithPlan, item.feature)
-
-    // Debug temporário para consulta
-    if (item.feature === 'consulta') {
-      console.log('DEBUG Consulta:', {
-        feature: item.feature,
-        userWithPlan: userWithPlan,
-        acesso_consulta: (userWithPlan as any).acesso_consulta,
-        hasAcessoConsultaProp: 'acesso_consulta' in userWithPlan,
-        hasAccess: hasAccess
-      })
-    }
-
-    return hasAccess
+    return hasFeatureAccess(userWithPlan, item.feature)
   })
   return (
     <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
