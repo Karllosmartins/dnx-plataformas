@@ -22,7 +22,8 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
-  Database
+  Database,
+  Search
 } from 'lucide-react'
 
 const navigation = [
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },
   { name: 'Disparo com IA', href: '/disparo-ia', icon: Bot, feature: 'disparoIA' as const },
   { name: 'Enriquecimento API', href: '/enriquecimento-api', icon: Database, feature: 'enriquecimentoAPI' as const },
+  { name: 'Consulta', href: '/consulta', icon: Search, feature: 'enriquecimentoAPI' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]
