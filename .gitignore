@@ -37,7 +37,23 @@ pids
 node_modules
 
 # Security - Docker compose with credentials
+docker-compose.local.yml
 docker-compose.portainer.local.yml
 *.local.yml
-# Docker compose com credenciais reais - NÃO DEVE IR PARA O GITHUB
-docker-compose.yml
+
+# Backup files
+*.backup
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE-specific files
+.claude/
+*.tsbuildinfo
+
+# Screenshots and images (não relacionadas ao projeto)
+Captura*.png
+screenshot*.png
+*.backup

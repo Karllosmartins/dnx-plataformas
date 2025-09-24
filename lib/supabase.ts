@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Configuração para o projeto DNX Plataformas CRM Limpa Nome
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://enwxbkyvnrjderqdygtl.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNjMwMzQsImV4cCI6MjA3MTYzOTAzNH0.xr39krGQYM6HC64cNFmjtpbj2IsDn2BEyhviBiTooCY'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjA2MzAzNCwiZXhwIjoyMDcxNjM5MDM0fQ.BxADhNw1F84N_YVV7EQC8OHJlE6StJx0lqjZxjHRRD8'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing required Supabase environment variables')
+}
 
 // Cliente principal para operações do usuário
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
