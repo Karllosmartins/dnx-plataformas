@@ -94,7 +94,7 @@ export const authService = {
     role: 'admin' | 'user'
   }) {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('users')
         .insert([{
           name: userData.name,
@@ -116,7 +116,7 @@ export const authService = {
 
   async updateUser(id: string, updates: Partial<User>) {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('users')
         .update(updates)
         .eq('id', id)
@@ -133,7 +133,7 @@ export const authService = {
 
   async getUsers() {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('users')
         .select('id, name, email, role, created_at, active')
         .order('created_at', { ascending: false })
