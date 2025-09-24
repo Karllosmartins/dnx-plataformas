@@ -145,7 +145,15 @@ function SidebarContent({
 
         if (!error && data) {
           console.log('DEBUG View Success:', { data, user })
-          setUserWithPlan(data)
+          // Garantir que o objeto tenha as propriedades necessárias
+          const userWithPlanData = {
+            ...user,
+            ...data,
+            // Garantir que as propriedades de plano existam
+            acesso_consulta: data.acesso_consulta || false
+          }
+          console.log('DEBUG UserWithPlan Final:', userWithPlanData)
+          setUserWithPlan(userWithPlanData)
         } else {
           console.log('DEBUG View Error:', { error, fallbackUser: user })
           // Fallback para user básico
@@ -176,7 +184,8 @@ function SidebarContent({
       console.log('DEBUG Consulta:', {
         feature: item.feature,
         userWithPlan: userWithPlan,
-        acesso_consulta: 'acesso_consulta' in userWithPlan ? userWithPlan.acesso_consulta : 'N/A (fallback user)',
+        acesso_consulta: userWithPlan.acesso_consulta,
+        hasAcessoConsultaProp: 'acesso_consulta' in userWithPlan,
         hasAccess: hasAccess
       })
     }
