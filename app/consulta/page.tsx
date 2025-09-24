@@ -364,6 +364,37 @@ export default function ConsultaPage() {
                         </div>
                       )}
 
+                      {/* Dados da Empresa */}
+                      {resultado.empresa && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                          <h4 className="font-medium text-blue-900 mb-3 flex items-center">
+                            <Building className="h-4 w-4 mr-2" />
+                            Dados da Empresa
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div><strong>Razão Social:</strong> {resultado.empresa.razaoSocial}</div>
+                            <div><strong>CNPJ:</strong> {resultado.empresa.cnpjFormatado}</div>
+                            <div><strong>Nome Fantasia:</strong> {resultado.empresa.nomefantasia || 'N/A'}</div>
+                            <div><strong>Data de Abertura:</strong> {resultado.empresa.dataAbertura}</div>
+                            <div><strong>CNAE:</strong> {resultado.empresa.cnae}</div>
+                            <div><strong>Porte:</strong> {resultado.empresa.porte}</div>
+                            <div><strong>Natureza Jurídica:</strong> {resultado.empresa.nJur}</div>
+                            <div><strong>Faturamento Anual:</strong> R$ {resultado.empresa.faturamentoPresumidoAnual ? Number(resultado.empresa.faturamentoPresumidoAnual).toLocaleString('pt-BR') : 'N/A'}</div>
+                            <div><strong>Score:</strong> {resultado.empresa.score}</div>
+                            <div>
+                              <strong>Risco:</strong>
+                              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                                resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-100 text-red-800' :
+                                resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {resultado.empresa.risco}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Dados da Pessoa */}
                       {resultado.pessoa && (
                         <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
@@ -496,6 +527,82 @@ export default function ConsultaPage() {
                                 </div>
                                 <div className="text-xs text-gray-600">
                                   Placa: {veiculo.placa} | RENAVAM: {veiculo.renavam}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Receita Federal */}
+                      {resultado.receitaFederal && (
+                        <div className="bg-cyan-50 border border-cyan-200 rounded-md p-4">
+                          <h4 className="font-medium text-cyan-900 mb-3">
+                            🏛️ Dados da Receita Federal
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                            <div><strong>Situação Cadastral:</strong> {resultado.receitaFederal.situacaoCadastral}</div>
+                            <div><strong>Capital Social:</strong> R$ {resultado.receitaFederal.capitalSocial ? Number(resultado.receitaFederal.capitalSocial).toLocaleString('pt-BR') : 'N/A'}</div>
+                            <div><strong>Descrição Matriz/Filial:</strong> {resultado.receitaFederal.descricaoMatriz}</div>
+                            <div><strong>Situação Especial:</strong> {resultado.receitaFederal.situacaoEspecial || 'N/A'}</div>
+                          </div>
+
+                          {/* CNAEs Secundários */}
+                          {resultado.receitaFederal.cnaesSecundarios && resultado.receitaFederal.cnaesSecundarios.length > 0 && (
+                            <div className="mt-4">
+                              <h5 className="font-medium text-cyan-900 mb-2">CNAEs Secundários:</h5>
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {resultado.receitaFederal.cnaesSecundarios.map((cnae: any, idx: number) => (
+                                  <div key={idx} className="text-xs bg-white rounded px-2 py-1">
+                                    <strong>{cnae.cnaeCod}</strong> - {cnae.cnaeDesc}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Sócios */}
+                          {resultado.receitaFederal.socios && resultado.receitaFederal.socios.length > 0 && (
+                            <div className="mt-4">
+                              <h5 className="font-medium text-cyan-900 mb-2">Sócios ({resultado.receitaFederal.socios.length}):</h5>
+                              <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {resultado.receitaFederal.socios.map((socio: any, idx: number) => (
+                                  <div key={idx} className="bg-white rounded px-3 py-2">
+                                    <div className="text-sm">
+                                      <strong>{socio.nomeRazaoSocial}</strong>
+                                      {socio.participacao > 0 && ` - ${socio.participacao}%`}
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      Doc: {socio.cpfCnpj} | {socio.qualificacaoDesc}
+                                      {socio.dataNascimentoAbertura && ` | Nascimento: ${socio.dataNascimentoAbertura}`}
+                                    </div>
+                                    {socio.representanteLegal && (
+                                      <div className="text-xs text-blue-600 mt-1">
+                                        Rep. Legal: {socio.representanteLegal.nome}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Funcionários */}
+                      {resultado.funcionarios && resultado.funcionarios.length > 0 && (
+                        <div className="bg-violet-50 border border-violet-200 rounded-md p-4">
+                          <h4 className="font-medium text-violet-900 mb-3">
+                            👥 Funcionários ({resultado.funcionarios.length})
+                          </h4>
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {resultado.funcionarios.map((funcionario: any, idx: number) => (
+                              <div key={idx} className="bg-white rounded px-3 py-2">
+                                <div className="text-sm">
+                                  <strong>{funcionario.nome}</strong>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  Cargo: {funcionario.cargo} | Salário: R$ {funcionario.salario}
                                 </div>
                               </div>
                             ))}
