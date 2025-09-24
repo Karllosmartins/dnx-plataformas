@@ -9,6 +9,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing required Supabase environment variables')
 }
 
+if (!supabaseServiceKey) {
+  throw new Error('Missing required SUPABASE_SERVICE_ROLE_KEY environment variable')
+}
+
 // Cliente principal para operações do usuário
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
