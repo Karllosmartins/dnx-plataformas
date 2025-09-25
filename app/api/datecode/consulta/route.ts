@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../../lib/supabase'
+import { hasAvailableConsultas, consumeConsultas, getConsultasBalance } from '../../../../lib/permissions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,25 +52,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar limite de consultas do usuário
-    const { data: consultasRealizadas, error: consultaError } = await getSupabaseAdmin()
-      .from('leads')
-      .select('id')
-      .eq('user_id', userId)
-      .ilike('origem', '%Consulta Individual%')
-
-    if (consultaError) {
-      console.error('Erro ao contar consultas realizadas:', consultaError)
-    }
-
-    const totalConsultas = consultasRealizadas?.length || 0
-    const limiteConsultas = userPlan.limite_consultas || 0
-
-    if (totalConsultas >= limiteConsultas && limiteConsultas > 0) {
+    // Verificar se o usuário tem consultas disponíveis
+    if (!hasAvailableConsultas(userPlan, 1)) {
+      const consultasRestantes = getConsultasBalance(userPlan)
       return NextResponse.json(
         {
           error: 'Limite de consultas excedido',
-          details: `Você já realizou ${totalConsultas} consultas. Seu limite é ${limiteConsultas}.`
+          details: `Você não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
         },
         { status: 429 }
       )
@@ -136,6 +125,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Consumir uma consulta do usuário
+    const consumeResult = await consumeConsultas(userId, 1)
+    if (!consumeResult.success) {
+      console.error('Erro ao consumir consulta:', consumeResult.error)
+      return NextResponse.json(
+        { error: 'Erro ao processar consulta' },
+        { status: 500 }
+      )
+    }
+
     // Registrar consulta no banco para controle de limite (não salvar os dados, apenas contar)
     try {
       await getSupabaseAdmin()
@@ -156,13 +155,22 @@ export async function POST(request: NextRequest) {
       // Não interromper o fluxo por erro de logging
     }
 
+    // Buscar dados atualizados do usuário para retornar o saldo
+    const { data: updatedUser, error: updateError } = await getSupabaseAdmin()
+      .from('view_usuarios_planos')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    const consultasRestantes = updatedUser ? getConsultasBalance(updatedUser) : 0
+
     return NextResponse.json({
       success: true,
       data: data,
       usage: {
-        consultasRealizadas: totalConsultas + 1,
-        limiteConsultas: limiteConsultas,
-        consultasRestantes: limiteConsultas > 0 ? Math.max(0, limiteConsultas - totalConsultas - 1) : 'Ilimitadas'
+        consultasRealizadas: (updatedUser?.consultas_realizadas || 0),
+        limiteConsultas: userPlan.limite_consultas,
+        consultasRestantes: consultasRestantes
       }
     })
 

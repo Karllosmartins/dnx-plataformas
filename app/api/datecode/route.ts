@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdmin } from '../../../lib/supabase'
+import { hasAvailableConsultas, consumeConsultas, getConsultasBalance } from '../../../lib/permissions'
 
 export async function POST(request: NextRequest) {
   try {
-    const { cnpj } = await request.json()
+    const { cnpj, userId } = await request.json()
     console.log('API Datecode: Recebido CNPJ:', cnpj)
 
     if (!cnpj) {
@@ -10,6 +12,35 @@ export async function POST(request: NextRequest) {
         { error: 'CNPJ é obrigatório' },
         { status: 400 }
       )
+    }
+
+    // Se userId foi fornecido, verificar limites do usuário
+    if (userId) {
+      const { data: userPlan, error: planError } = await getSupabaseAdmin()
+        .from('view_usuarios_planos')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (planError || !userPlan) {
+        console.error('Erro ao buscar plano do usuário:', planError)
+        return NextResponse.json(
+          { error: 'Usuário não encontrado ou sem plano ativo' },
+          { status: 404 }
+        )
+      }
+
+      // Verificar se o usuário tem consultas disponíveis
+      if (!hasAvailableConsultas(userPlan, 1)) {
+        const consultasRestantes = getConsultasBalance(userPlan)
+        return NextResponse.json(
+          {
+            error: 'Limite de consultas excedido',
+            details: `Você não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
+          },
+          { status: 429 }
+        )
+      }
     }
 
     // Remover caracteres especiais do CNPJ
@@ -60,6 +91,32 @@ export async function POST(request: NextRequest) {
         { error: 'Erro na consulta Datecode', details: data },
         { status: response.status }
       )
+    }
+
+    // Se userId foi fornecido, consumir uma consulta
+    if (userId) {
+      const consumeResult = await consumeConsultas(userId, 1)
+      if (!consumeResult.success) {
+        console.error('Erro ao consumir consulta:', consumeResult.error)
+        // Não interromper o fluxo por erro de consumo
+      }
+
+      // Buscar dados atualizados do usuário
+      const { data: updatedUser } = await getSupabaseAdmin()
+        .from('view_usuarios_planos')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      const consultasRestantes = updatedUser ? getConsultasBalance(updatedUser) : 0
+
+      return NextResponse.json({
+        ...data,
+        usage: {
+          consultasRealizadas: (updatedUser?.consultas_realizadas || 0),
+          consultasRestantes: consultasRestantes
+        }
+      })
     }
 
     return NextResponse.json(data)

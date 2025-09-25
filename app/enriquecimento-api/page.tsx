@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
-import { supabase } from '../../lib/supabase'
+import { supabase, getSupabaseAdmin } from '../../lib/supabase'
+import { hasAvailableLeads, consumeLeads, getLeadsBalance, calculateEnriquecimentoLeadsConsumption } from '../../lib/permissions'
 import {
   Upload,
   Database,
@@ -112,13 +113,33 @@ export default function EnriquecimentoAPIPage() {
   const [statusEnriquecimento, setStatusEnriquecimento] = useState('')
   const [enviandoDisparo, setEnviandoDisparo] = useState(false)
 
+  // Estados para controle de limites
+  const [userPlan, setUserPlan] = useState<any>(null)
+  const [leadsConsumidosEnriquecimento, setLeadsConsumidosEnriquecimento] = useState(0)
+
   useEffect(() => {
     if (user) {
       carregarInstancias()
       carregarAgentes()
+      carregarDadosUsuario()
       // Templates são carregados quando uma instância é selecionada
     }
   }, [user])
+
+  const carregarDadosUsuario = async () => {
+    try {
+      const { data, error } = await getSupabaseAdmin()
+        .from('view_usuarios_planos')
+        .select('*')
+        .eq('id', user?.id)
+        .single()
+
+      if (error) throw error
+      setUserPlan(data)
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error)
+    }
+  }
 
   const carregarInstancias = async () => {
     try {
@@ -261,7 +282,8 @@ export default function EnriquecimentoAPIPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          cnpj: cnpj
+          cnpj: cnpj,
+          userId: user?.id
         })
       })
 
@@ -285,7 +307,8 @@ export default function EnriquecimentoAPIPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          cpf: cpf
+          cpf: cpf,
+          userId: user?.id
         })
       })
 
@@ -311,6 +334,26 @@ export default function EnriquecimentoAPIPage() {
 
     if (!nomeCampanha.trim()) {
       alert('Por favor, informe o nome da campanha.')
+      return
+    }
+
+    if (!userPlan) {
+      alert('Erro ao carregar dados do usuário. Recarregue a página.')
+      return
+    }
+
+    // Verificar se o usuário tem acesso ao enriquecimento
+    if (!userPlan.acesso_enriquecimento) {
+      alert('Seu plano não inclui acesso ao enriquecimento de dados.')
+      return
+    }
+
+    // Estimativa básica: cada CNPJ pode ter até 3 sócios em média
+    const estimativaLeadsMinimos = cnpjs.length // 1 lead por empresa
+    const leadsDisponiveis = getLeadsBalance(userPlan)
+
+    if (leadsDisponiveis < estimativaLeadsMinimos) {
+      alert(`Você precisa de pelo menos ${estimativaLeadsMinimos} leads para este enriquecimento, mas possui apenas ${leadsDisponiveis} leads disponíveis.`)
       return
     }
 
@@ -357,6 +400,34 @@ export default function EnriquecimentoAPIPage() {
         // Buscar dados dos sócios
         const sociosData = dadosEmpresaItem.receitaFederal?.socios || dadosEmpresaItem.socios || []
         console.log(`Enriquecimento: Sócios encontrados para ${cnpj}:`, sociosData)
+
+        // Calcular quantos leads serão consumidos (1 para empresa + 1 para cada sócio)
+        const leadsParaConsumir = calculateEnriquecimentoLeadsConsumption(sociosData.length)
+
+        // Verificar se ainda tem leads suficientes
+        const userAtualizado = await getSupabaseAdmin()
+          .from('view_usuarios_planos')
+          .select('*')
+          .eq('id', user?.id)
+          .single()
+
+        if (userAtualizado.data && !hasAvailableLeads(userAtualizado.data, leadsParaConsumir)) {
+          const leadsRestantes = getLeadsBalance(userAtualizado.data)
+          console.log(`Enriquecimento: Leads insuficientes. Necessário: ${leadsParaConsumir}, Disponível: ${leadsRestantes}`)
+          setStatusEnriquecimento(`Leads insuficientes para continuar. Parando no CNPJ ${cnpj}`)
+          break
+        }
+
+        // Consumir leads ANTES de fazer as consultas dos sócios
+        if (sociosData.length > 0) {
+          const consumeResult = await consumeLeads(parseInt(user?.id || '0'), leadsParaConsumir)
+          if (!consumeResult.success) {
+            console.error('Erro ao consumir leads:', consumeResult.error)
+            setStatusEnriquecimento(`Erro ao processar ${cnpj}`)
+            continue
+          }
+          setLeadsConsumidosEnriquecimento(prev => prev + leadsParaConsumir)
+        }
 
         if (sociosData.length > 0) {
           for (const socio of sociosData) {
@@ -583,6 +654,9 @@ export default function EnriquecimentoAPIPage() {
     setAgenteIA('')
     setMensagem('')
     setInstanciaOficial(false)
+    setLeadsConsumidosEnriquecimento(0)
+    // Recarregar dados do usuário para atualizar saldos
+    carregarDadosUsuario()
   }
 
   return (
@@ -720,7 +794,7 @@ export default function EnriquecimentoAPIPage() {
                 </h3>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <div className="flex items-center">
                       <Building className="h-8 w-8 text-blue-600 mr-3" />
@@ -749,6 +823,15 @@ export default function EnriquecimentoAPIPage() {
                         <p className="text-2xl font-bold text-purple-600">
                           {empresasEnriquecidas.reduce((total, empresa) => total + empresa.socios.length, 0)}
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <Database className="h-8 w-8 text-red-600 mr-3" />
+                      <div>
+                        <p className="text-sm text-gray-600">Leads Consumidos</p>
+                        <p className="text-2xl font-bold text-red-600">{leadsConsumidosEnriquecimento}</p>
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '../../../lib/supabase'
+import { supabase, getSupabaseAdmin } from '../../../lib/supabase'
+import { hasAvailableLeads, consumeLeads, getLeadsBalance } from '../../../lib/permissions'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
@@ -108,9 +109,31 @@ export async function POST(request: NextRequest) {
     const { contagemId, userId, qtdeSolicitada = 1000, idTipoAcesso = 3, removerRegistrosExtraidos = true, apiKey } = body
 
     if (!contagemId || !userId || !apiKey) {
-      return NextResponse.json({ 
-        error: 'contagemId, userId e apiKey são obrigatórios' 
+      return NextResponse.json({
+        error: 'contagemId, userId e apiKey são obrigatórios'
       }, { status: 400 })
+    }
+
+    // Verificar permissões do usuário
+    const { data: userPlan, error: planError } = await getSupabaseAdmin()
+      .from('view_usuarios_planos')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (planError || !userPlan) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado ou sem plano ativo' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar se o usuário tem acesso à extração de leads
+    if (!userPlan.acesso_extracao_leads) {
+      return NextResponse.json(
+        { error: 'Usuário não tem acesso à extração de leads' },
+        { status: 403 }
+      )
     }
 
     // 1. Buscar contagem no banco para pegar o ID da API Profile
@@ -127,6 +150,21 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    // Calcular quantidade real de leads que serão extraídos
+    const quantidadeReal = Math.min(qtdeSolicitada, contagem.total_registros)
+
+    // Verificar se o usuário tem leads suficientes
+    if (!hasAvailableLeads(userPlan, quantidadeReal)) {
+      const leadsRestantes = getLeadsBalance(userPlan)
+      return NextResponse.json(
+        {
+          error: 'Leads insuficientes',
+          details: `Você solicitou ${quantidadeReal} leads, mas possui apenas ${leadsRestantes} leads disponíveis.`
+        },
+        { status: 429 }
+      )
+    }
+
     // 2. Autenticar para pegar token - EXATAMENTE COMO N8N "Busca Senha2"
     const token = await authenticateAPI(apiKey)
 
@@ -134,7 +172,7 @@ export async function POST(request: NextRequest) {
     const extracaoPayload = {
       idContagem: contagem.id_contagem_api,
       idTipoAcesso: idTipoAcesso,
-      qtdeSolicitada: Math.min(qtdeSolicitada, contagem.total_registros),
+      qtdeSolicitada: quantidadeReal,
       removerRegistrosExtraidos: removerRegistrosExtraidos
     }
 
@@ -159,6 +197,16 @@ export async function POST(request: NextRequest) {
       throw new Error(`API Profile: ${resultadoExtracao.msg}`)
     }
 
+    // Consumir os leads do usuário
+    const consumeResult = await consumeLeads(userId, quantidadeReal)
+    if (!consumeResult.success) {
+      console.error('Erro ao consumir leads:', consumeResult.error)
+      return NextResponse.json(
+        { error: 'Erro ao processar extração de leads' },
+        { status: 500 }
+      )
+    }
+
     // 4. Salvar no banco local (opcional, para tracking)
     const nomeArquivo = `leads_${contagem.nome_contagem.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.csv`
 
@@ -170,20 +218,34 @@ export async function POST(request: NextRequest) {
         id_extracao_api: resultadoExtracao.idExtracao,
         nome_arquivo: nomeArquivo,
         formato_arquivo: 'csv',
-        total_registros_extraidos: qtdeSolicitada,
+        total_registros_extraidos: quantidadeReal,
         status: 'processando',
         data_solicitacao: new Date().toISOString()
       }])
       .select('*')
       .single()
 
+    // Buscar dados atualizados do usuário
+    const { data: updatedUser } = await getSupabaseAdmin()
+      .from('view_usuarios_planos')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    const leadsRestantes = updatedUser ? getLeadsBalance(updatedUser) : 0
+
     // 5. Retornar resultado
-    return NextResponse.json({ 
+    return NextResponse.json({
       extracaoId: novaExtracao?.id,
       idExtracaoAPI: resultadoExtracao.idExtracao,
       nomeArquivo,
       status: 'processando',
-      message: 'Extração criada com sucesso!'
+      message: 'Extração criada com sucesso!',
+      usage: {
+        leadsConsumidos: (updatedUser?.leads_consumidos || 0),
+        leadsRestantes: leadsRestantes,
+        quantidadeExtraida: quantidadeReal
+      }
     })
 
   } catch (error) {

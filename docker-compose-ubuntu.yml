@@ -1,0 +1,17 @@
+# Teste com Ubuntu que geralmente já existe
+version: "3.7"
+
+services:
+  ubuntu-test:
+    image: ubuntu:20.04
+    command: sh -c "apt update && apt install -y curl && curl --version && sleep 30"
+    networks:
+      - dnnet
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  dnnet:
+    external: true
+    name: dnnet
