@@ -387,7 +387,7 @@ export default function DisparoSimplesPage() {
           }
         }
 
-        const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
+        const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e8deb'
         const response = await fetch(webhookUrl, {
           method: 'POST',
           body: formData

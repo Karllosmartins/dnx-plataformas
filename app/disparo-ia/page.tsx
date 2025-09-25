@@ -452,7 +452,10 @@ export default function DisparoIAPage() {
           formData.append('agente_id', agenteSelected)
         }
 
-        const webhookUrl = 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
+        // Escolher webhook baseado no tipo de API
+        const webhookUrl = activeTab === 'official'
+          ? 'https://webhooks.dnmarketing.com.br/webhook/01f9f188-2117-49ed-a95d-1466fee6a5f9'
+          : 'https://webhooks.dnmarketing.com.br/webhook/2b00d2ba-f923-44be-9dc1-b725566e9dr1'
         const response = await fetch(webhookUrl, {
           method: 'POST',
           body: formData // Sem Content-Type para FormData
