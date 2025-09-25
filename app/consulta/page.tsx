@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
 import {
@@ -34,6 +34,29 @@ export default function ConsultaPage() {
   const [consultaResult, setConsultaResult] = useState<any>(null)
   const [consultando, setConsultando] = useState(false)
   const [limiteInfo, setLimiteInfo] = useState<any>(null)
+
+  // Carregar informações de limite quando a página carrega
+  useEffect(() => {
+    if (user?.id) {
+      carregarLimiteInfo()
+    }
+  }, [user])
+
+  const carregarLimiteInfo = async () => {
+    try {
+      // Fazer uma requisição para uma API que busca os dados do usuário
+      const response = await fetch(`/api/users/limits?userId=${user?.id}`)
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar limites')
+      }
+
+      const data = await response.json()
+      setLimiteInfo(data)
+    } catch (error) {
+      console.error('Erro ao carregar limite:', error)
+    }
+  }
 
   const realizarConsulta = async () => {
     if (!consultaForm.document || !user?.id) {
