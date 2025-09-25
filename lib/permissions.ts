@@ -216,10 +216,24 @@ export function hasAvailableConsultas(user: User | UsuarioComPlano, requiredCons
  */
 export async function consumeLeads(userId: number, quantidade: number): Promise<{ success: boolean; error?: string }> {
   try {
+    // Primeiro, buscar o valor atual
+    const { data: user, error: selectError } = await supabase
+      .from('users')
+      .select('leads_consumidos')
+      .eq('id', userId)
+      .single()
+
+    if (selectError) {
+      console.error('Erro ao buscar leads consumidos:', selectError)
+      return { success: false, error: selectError.message }
+    }
+
+    const novoValor = (user?.leads_consumidos || 0) + quantidade
+
     const { error } = await supabase
       .from('users')
       .update({
-        leads_consumidos: supabase.raw(`leads_consumidos + ${quantidade}`)
+        leads_consumidos: novoValor
       })
       .eq('id', userId)
 
@@ -240,10 +254,24 @@ export async function consumeLeads(userId: number, quantidade: number): Promise<
  */
 export async function consumeConsultas(userId: number, quantidade: number): Promise<{ success: boolean; error?: string }> {
   try {
+    // Primeiro, buscar o valor atual
+    const { data: user, error: selectError } = await supabase
+      .from('users')
+      .select('consultas_realizadas')
+      .eq('id', userId)
+      .single()
+
+    if (selectError) {
+      console.error('Erro ao buscar consultas realizadas:', selectError)
+      return { success: false, error: selectError.message }
+    }
+
+    const novoValor = (user?.consultas_realizadas || 0) + quantidade
+
     const { error } = await supabase
       .from('users')
       .update({
-        consultas_realizadas: supabase.raw(`consultas_realizadas + ${quantidade}`)
+        consultas_realizadas: novoValor
       })
       .eq('id', userId)
 
