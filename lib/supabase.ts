@@ -80,6 +80,9 @@ export interface User {
   plano_customizado?: Record<string, any> // Overrides específicos
   limite_leads: number
   limite_consultas: number
+  leads_consumidos?: number
+  consultas_realizadas?: number
+  ultimo_reset_contagem?: string
   numero_instancias?: number
   created_at: string
   updated_at: string
