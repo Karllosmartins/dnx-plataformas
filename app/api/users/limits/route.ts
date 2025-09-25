@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '../../../../lib/supabase'
+import { supabase } from '../../../../lib/supabase'
 import { getLeadsBalance, getConsultasBalance } from '../../../../lib/permissions'
 
 export async function GET(request: NextRequest) {
@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar dados do usuário
-    const { data: userPlan, error } = await getSupabaseAdmin()
-      .from('view_usuarios_planos')
+    // Buscar dados do usuário da tabela users diretamente
+    const { data: userPlan, error } = await supabase
+      .from('users')
       .select('*')
       .eq('id', userId)
       .single()
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
       // Metadados
       ultimoReset: userPlan.ultimo_reset_contagem,
-      planoNome: userPlan.plano_nome || userPlan.plano
+      planoNome: userPlan.plano
     })
 
   } catch (error) {
