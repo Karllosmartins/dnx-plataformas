@@ -54,6 +54,8 @@ export default function ExtracaoProgress({
   // Função para verificar status da extração
   const verificarStatus = async () => {
     try {
+      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI })
+
       const response = await fetch('/api/extracoes', {
         method: 'PUT',
         headers: {
@@ -69,18 +71,31 @@ export default function ExtracaoProgress({
 
       if (response.ok) {
         const data = await response.json()
+        console.log('📊 Status recebido:', data.extracao)
         setStatus(data.extracao)
-        
+
         // Parar polling se processado, com erro ou cancelado
-        if (data.extracao.status === 'Processado' || 
-            data.extracao.status === 'Finalizada' || 
-            data.extracao.status === 'Erro' || 
+        if (data.extracao.status === 'Processado' ||
+            data.extracao.status === 'Finalizada' ||
+            data.extracao.status === 'Erro' ||
             data.extracao.status === 'Cancelada') {
+          console.log('✅ Extração finalizada, parando polling:', data.extracao.status)
           setPolling(false)
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+        console.error('❌ Erro na resposta da API:', response.status, errorData)
+
+        // Se erro 404, pode ser que a extração não existe na API - parar polling
+        if (response.status === 404) {
+          console.log('🚫 Extração não encontrada, parando polling')
+          setPolling(false)
+          setStatus(prev => ({ ...prev, status: 'Erro' }))
         }
       }
     } catch (error) {
-      console.error('Erro ao verificar status:', error)
+      console.error('💥 Erro ao verificar status:', error)
+      // Não parar polling em caso de erro de rede - pode ser temporário
     }
   }
 
@@ -88,16 +103,51 @@ export default function ExtracaoProgress({
   useEffect(() => {
     if (!polling) return
 
-    const interval = setInterval(verificarStatus, 3000) // Verificar a cada 3 segundos
+    // Verificar status imediatamente
+    verificarStatus()
+
+    // Continuar verificando a cada 5 segundos
+    const interval = setInterval(verificarStatus, 5000)
 
     return () => clearInterval(interval)
-  }, [polling])
+  }, [polling, extracaoId, idExtracaoAPI])
 
   // Função para download
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (status.status === 'Processado' || status.status === 'Finalizada') {
-      const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
-      window.open(downloadUrl, '_blank')
+      try {
+        const response = await fetch('/api/extracoes', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            idExtracaoAPI,
+            apiKey
+          })
+        })
+
+        if (response.ok) {
+          // Converter resposta em blob para download
+          const blob = await response.blob()
+          const filename = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || nomeArquivo
+
+          // Criar link de download
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = filename
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          window.URL.revokeObjectURL(url)
+        } else {
+          throw new Error('Erro ao fazer download')
+        }
+      } catch (error) {
+        console.error('Erro no download:', error)
+        alert('Erro ao fazer download do arquivo. Tente novamente.')
+      }
     }
   }
 
@@ -230,7 +280,7 @@ export default function ExtracaoProgress({
           {/* Atualização automática */}
           {polling && (
             <div className="text-xs text-gray-500 text-center">
-              Status atualizado automaticamente a cada 3 segundos
+              Status atualizado automaticamente a cada 5 segundos
             </div>
           )}
         </div>
