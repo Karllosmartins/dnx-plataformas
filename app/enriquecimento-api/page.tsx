@@ -486,12 +486,12 @@ export default function EnriquecimentoAPIPage() {
   const upsertContato = async (contato: any, tipo: string) => {
     const userId = parseInt(user?.id || '0')
 
-    // Verificar se já existe um lead com este user_id e numero_formatado
+    // Verificar se já existe um lead com este user_id e telefone
     const { data: existingLead, error: searchError } = await supabase
       .from('leads')
       .select('id')
       .eq('user_id', userId)
-      .eq('numero_formatado', contato.numero_formatado)
+      .eq('telefone', contato.telefone)
       .maybeSingle()
 
     if (searchError && searchError.code !== 'PGRST116') {
