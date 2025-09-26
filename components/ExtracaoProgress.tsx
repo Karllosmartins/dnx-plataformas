@@ -50,11 +50,15 @@ export default function ExtracaoProgress({
     status: initialStatus
   })
   const [polling, setPolling] = useState(true)
+  const [pollingCount, setPollingCount] = useState(0)
+  const [consultandoManual, setConsultandoManual] = useState(false)
 
   // Função para verificar status da extração
-  const verificarStatus = async () => {
+  const verificarStatus = async (manual = false) => {
+    if (manual) setConsultandoManual(true)
+
     try {
-      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI })
+      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI, tentativa: pollingCount + 1 })
 
       const response = await fetch('/api/extracoes', {
         method: 'PUT',
@@ -73,6 +77,7 @@ export default function ExtracaoProgress({
         const data = await response.json()
         console.log('📊 Status recebido:', data.extracao)
         setStatus(data.extracao)
+        setPollingCount(prev => prev + 1)
 
         // Parar polling se processado, com erro ou cancelado
         if (data.extracao.status === 'Processado' ||
@@ -96,6 +101,8 @@ export default function ExtracaoProgress({
     } catch (error) {
       console.error('💥 Erro ao verificar status:', error)
       // Não parar polling em caso de erro de rede - pode ser temporário
+    } finally {
+      if (manual) setConsultandoManual(false)
     }
   }
 
@@ -106,17 +113,31 @@ export default function ExtracaoProgress({
     // Verificar status imediatamente
     verificarStatus()
 
-    // Continuar verificando a cada 5 segundos
-    const interval = setInterval(verificarStatus, 5000)
+    // Continuar verificando a cada 10 segundos por até 10 minutos (60 tentativas)
+    const interval = setInterval(() => {
+      if (pollingCount < 60) {
+        verificarStatus()
+      } else {
+        console.log('⏰ Timeout do polling após 10 minutos')
+        setPolling(false)
+      }
+    }, 10000)
 
     return () => clearInterval(interval)
-  }, [polling, extracaoId, idExtracaoAPI])
+  }, [polling, pollingCount, extracaoId, idExtracaoAPI])
 
   // Função para download
   const handleDownload = () => {
     if (status.status === 'Processado' || status.status === 'Finalizada') {
       const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
       window.open(downloadUrl, '_blank')
+    }
+  }
+
+  // Função para deletar extração
+  const handleDelete = () => {
+    if (confirm('Tem certeza que deseja remover esta extração da lista?')) {
+      onClose()
     }
   }
 
@@ -233,11 +254,25 @@ export default function ExtracaoProgress({
                 {status.status === 'Erro' ? 'Erro no processamento. Tente novamente.' : 'Extração cancelada.'}
               </div>
             ) : (
-              <div className="flex-1 text-center text-gray-600 py-2">
-                {status.status === 'Processando' ? 'Processando arquivo...' : 'Aguarde...'}
-              </div>
+              <button
+                onClick={() => verificarStatus(true)}
+                disabled={consultandoManual}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-semibold flex items-center justify-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${consultandoManual ? 'animate-spin' : ''}`} />
+                {consultandoManual ? 'Consultando...' : 'Consultar Status'}
+              </button>
             )}
-            
+
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+              title="Remover extração da lista"
+            >
+              <X className="h-4 w-4" />
+              Deletar
+            </button>
+
             <button
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
@@ -249,7 +284,12 @@ export default function ExtracaoProgress({
           {/* Atualização automática */}
           {polling && (
             <div className="text-xs text-gray-500 text-center">
-              Status atualizado automaticamente a cada 5 segundos
+              Status atualizado automaticamente a cada 10 segundos ({pollingCount}/60 tentativas)
+            </div>
+          )}
+          {!polling && pollingCount >= 60 && (
+            <div className="text-xs text-yellow-600 text-center">
+              ⏰ Timeout após 10 minutos. Use "Consultar Status" para verificar manualmente.
             </div>
           )}
         </div>
