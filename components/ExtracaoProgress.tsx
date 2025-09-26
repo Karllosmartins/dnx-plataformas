@@ -113,41 +113,10 @@ export default function ExtracaoProgress({
   }, [polling, extracaoId, idExtracaoAPI])
 
   // Função para download
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (status.status === 'Processado' || status.status === 'Finalizada') {
-      try {
-        const response = await fetch('/api/extracoes', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            idExtracaoAPI,
-            apiKey
-          })
-        })
-
-        if (response.ok) {
-          // Converter resposta em blob para download
-          const blob = await response.blob()
-          const filename = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || nomeArquivo
-
-          // Criar link de download
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = filename
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
-        } else {
-          throw new Error('Erro ao fazer download')
-        }
-      } catch (error) {
-        console.error('Erro no download:', error)
-        alert('Erro ao fazer download do arquivo. Tente novamente.')
-      }
+      const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
+      window.open(downloadUrl, '_blank')
     }
   }
 
