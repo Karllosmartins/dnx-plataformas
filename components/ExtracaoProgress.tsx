@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Download, 
   RefreshCw, 
@@ -50,15 +50,17 @@ export default function ExtracaoProgress({
     status: initialStatus
   })
   const [polling, setPolling] = useState(true)
-  const [pollingCount, setPollingCount] = useState(0)
   const [consultandoManual, setConsultandoManual] = useState(false)
+  const pollingCountRef = useRef(0)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Função para verificar status da extração
   const verificarStatus = async (manual = false) => {
     if (manual) setConsultandoManual(true)
 
     try {
-      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI, tentativa: pollingCount + 1 })
+      pollingCountRef.current += 1
+      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI, tentativa: pollingCountRef.current })
 
       const response = await fetch('/api/extracoes', {
         method: 'PUT',
@@ -77,7 +79,6 @@ export default function ExtracaoProgress({
         const data = await response.json()
         console.log('📊 Status recebido:', data.extracao)
         setStatus(data.extracao)
-        setPollingCount(prev => prev + 1)
 
         // Parar polling se processado, com erro ou cancelado
         if (data.extracao.status === 'Processado' ||
@@ -86,6 +87,10 @@ export default function ExtracaoProgress({
             data.extracao.status === 'Cancelada') {
           console.log('✅ Extração finalizada, parando polling:', data.extracao.status)
           setPolling(false)
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
@@ -96,6 +101,10 @@ export default function ExtracaoProgress({
           console.log('🚫 Extração não encontrada, parando polling')
           setPolling(false)
           setStatus(prev => ({ ...prev, status: 'Erro' }))
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
         }
       }
     } catch (error) {
@@ -108,23 +117,43 @@ export default function ExtracaoProgress({
 
   // Polling para verificar status
   useEffect(() => {
-    if (!polling) return
+    if (!polling) {
+      // Limpar interval se polling foi desabilitado
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      return
+    }
 
-    // Verificar status imediatamente
-    verificarStatus()
+    // Verificar status imediatamente (apenas no primeiro uso)
+    if (pollingCountRef.current === 0) {
+      verificarStatus()
+    }
 
     // Continuar verificando a cada 10 segundos por até 10 minutos (60 tentativas)
-    const interval = setInterval(() => {
-      if (pollingCount < 60) {
-        verificarStatus()
-      } else {
-        console.log('⏰ Timeout do polling após 10 minutos')
-        setPolling(false)
-      }
-    }, 10000)
+    if (!intervalRef.current) {
+      intervalRef.current = setInterval(() => {
+        if (pollingCountRef.current < 60) {
+          verificarStatus()
+        } else {
+          console.log('⏰ Timeout do polling após 10 minutos')
+          setPolling(false)
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
+        }
+      }, 10000)
+    }
 
-    return () => clearInterval(interval)
-  }, [polling, pollingCount, extracaoId, idExtracaoAPI])
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [polling, extracaoId, idExtracaoAPI])
 
   // Função para download
   const handleDownload = () => {
@@ -284,10 +313,10 @@ export default function ExtracaoProgress({
           {/* Atualização automática */}
           {polling && (
             <div className="text-xs text-gray-500 text-center">
-              Status atualizado automaticamente a cada 10 segundos ({pollingCount}/60 tentativas)
+              Status atualizado automaticamente a cada 10 segundos ({pollingCountRef.current}/60 tentativas)
             </div>
           )}
-          {!polling && pollingCount >= 60 && (
+          {!polling && pollingCountRef.current >= 60 && (
             <div className="text-xs text-yellow-600 text-center">
               ⏰ Timeout após 10 minutos. Use "Consultar Status" para verificar manualmente.
             </div>

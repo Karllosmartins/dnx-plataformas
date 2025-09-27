@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthWrapper'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../lib/supabase'
-import { 
-  History, 
-  RefreshCw, 
-  Settings, 
-  Database, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
+import {
+  History,
+  RefreshCw,
+  Settings,
+  Database,
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
   Download,
-  ExternalLink 
+  ExternalLink,
+  Trash2
 } from 'lucide-react'
 
 interface HistoricoContagensProps {
@@ -59,6 +60,50 @@ export default function HistoricoContagens({
       setContagens(contagensBanco || [])
     } catch (error) {
       console.error('Erro ao carregar histórico:', error)
+    } finally {
+      setLoadingHistorico(false)
+    }
+  }
+
+  // Deletar contagem
+  const deletarContagem = async (contagemId: number, nomeContagem: string) => {
+    if (!user) return
+
+    const confirmacao = confirm(`Tem certeza que deseja deletar a contagem "${nomeContagem}"?\n\nEsta ação irá remover:\n- A contagem do histórico\n- Todas as extrações relacionadas\n\nEsta ação não pode ser desfeita.`)
+
+    if (!confirmacao) return
+
+    try {
+      setLoadingHistorico(true)
+
+      // Deletar extrações relacionadas primeiro
+      const { error: errorExtracoes } = await supabase
+        .from('extracoes_profile')
+        .delete()
+        .eq('contagem_id', contagemId)
+        .eq('user_id', user.id)
+
+      if (errorExtracoes) {
+        throw errorExtracoes
+      }
+
+      // Deletar a contagem
+      const { error: errorContagem } = await supabase
+        .from('contagens_profile')
+        .delete()
+        .eq('id', contagemId)
+        .eq('user_id', user.id)
+
+      if (errorContagem) {
+        throw errorContagem
+      }
+
+      // Recarregar histórico
+      await loadHistorico()
+
+    } catch (error) {
+      console.error('Erro ao deletar contagem:', error)
+      alert('Erro ao deletar contagem. Tente novamente.')
     } finally {
       setLoadingHistorico(false)
     }
@@ -148,7 +193,7 @@ export default function HistoricoContagens({
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
+                    Total Contagem
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Extrações
@@ -217,7 +262,7 @@ export default function HistoricoContagens({
                       {contagem.extracoes_profile && contagem.extracoes_profile.length > 0 ? (
                         <div className="space-y-1">
                           {contagem.extracoes_profile.map((extracao, idx) => (
-                            <div key={idx} className="flex items-center gap-1">
+                            <div key={idx} className="flex items-center gap-2">
                               <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
                                 extracao.status === 'concluida' ? 'bg-green-100 text-green-800' :
                                 extracao.status === 'processando' ? 'bg-yellow-100 text-yellow-800' :
@@ -225,6 +270,9 @@ export default function HistoricoContagens({
                                 'bg-gray-100 text-gray-800'
                               }`}>
                                 {extracao.formato_arquivo.toUpperCase()}
+                              </span>
+                              <span className="text-xs text-gray-600">
+                                ({extracao.total_registros_extraidos?.toLocaleString('pt-BR') || '?'} leads)
                               </span>
                               {extracao.status === 'concluida' && extracao.id_extracao_api && (
                                 <button
@@ -296,6 +344,15 @@ export default function HistoricoContagens({
                             <FileText className="h-4 w-4" />
                           </button>
                         )}
+
+                        <button
+                          onClick={() => deletarContagem(contagem.id, contagem.nome_contagem || 'Sem nome')}
+                          disabled={loadingHistorico}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          title="Deletar contagem e extrações"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
