@@ -7,6 +7,27 @@ const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 // Marcar como dinâmico para evitar erro de pré-renderização
 export const dynamic = 'force-dynamic'
 
+// Função para validar e converter data
+function parseDataFinalizacao(dataStr: string | null | undefined): string | null {
+  if (!dataStr) return null
+
+  try {
+    // Tentar criar uma nova data
+    const date = new Date(dataStr)
+
+    // Verificar se a data é válida
+    if (isNaN(date.getTime())) {
+      console.log('❌ Data inválida recebida da API Profile:', dataStr)
+      return null
+    }
+
+    return date.toISOString()
+  } catch (error) {
+    console.log('❌ Erro ao processar data da API Profile:', dataStr, error)
+    return null
+  }
+}
+
 // Função para autenticar na API Profile - ATUALIZADA PARA JSON
 async function authenticateAPI(apiKey: string) {
   console.log('🔐 Tentando autenticar com API Key:', apiKey ? 'presente' : 'ausente')
@@ -318,6 +339,13 @@ export async function PUT(request: NextRequest) {
       throw new Error(`API Profile retornou erro: ${detalhesExtracao.msg}`)
     }
 
+    // Log para debug da data
+    console.log('📊 Detalhes da extração recebidos:', {
+      status: detalhesExtracao.status,
+      dataFinalizacao: detalhesExtracao.dataFinalizacao,
+      tipoDataFinalizacao: typeof detalhesExtracao.dataFinalizacao
+    })
+
     // Atualizar status no banco local se tiver extracaoId
     if (extracaoId) {
       let statusLocal = 'processando'
@@ -331,7 +359,7 @@ export async function PUT(request: NextRequest) {
         .from('extracoes_profile')
         .update({
           status: statusLocal,
-          data_conclusao: detalhesExtracao.dataFinalizacao ? new Date(detalhesExtracao.dataFinalizacao).toISOString() : null
+          data_conclusao: parseDataFinalizacao(detalhesExtracao.dataFinalizacao)
         })
         .eq('id', extracaoId)
         .eq('user_id', userId)
