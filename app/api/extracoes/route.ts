@@ -7,21 +7,41 @@ const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 // Marcar como dinâmico para evitar erro de pré-renderização
 export const dynamic = 'force-dynamic'
 
-// Função para validar e converter data
+// Função para validar e converter data do formato brasileiro
 function parseDataFinalizacao(dataStr: string | null | undefined): string | null {
   if (!dataStr) return null
 
   try {
-    // Tentar criar uma nova data
-    const date = new Date(dataStr)
+    // Converter formato brasileiro "26/09/2025 13:57:05" para formato ISO
+    if (dataStr.includes('/')) {
+      // Formato: DD/MM/YYYY HH:MM:SS
+      const [datePart, timePart] = dataStr.split(' ')
+      const [day, month, year] = datePart.split('/')
 
-    // Verificar se a data é válida
-    if (isNaN(date.getTime())) {
-      console.log('❌ Data inválida recebida da API Profile:', dataStr)
-      return null
+      // Criar data no formato ISO: YYYY-MM-DD HH:MM:SS
+      const isoDateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}${timePart ? ' ' + timePart : ''}`
+      console.log('🔄 Convertendo data BR para ISO:', dataStr, '->', isoDateStr)
+
+      const date = new Date(isoDateStr)
+
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) {
+        console.log('❌ Data convertida é inválida:', isoDateStr)
+        return null
+      }
+
+      return date.toISOString()
+    } else {
+      // Tentar formato ISO direto
+      const date = new Date(dataStr)
+
+      if (isNaN(date.getTime())) {
+        console.log('❌ Data inválida recebida da API Profile:', dataStr)
+        return null
+      }
+
+      return date.toISOString()
     }
-
-    return date.toISOString()
   } catch (error) {
     console.log('❌ Erro ao processar data da API Profile:', dataStr, error)
     return null
