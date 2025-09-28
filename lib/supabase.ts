@@ -177,6 +177,10 @@ export interface InstanciaWhats {
   // Campos para API oficial do WhatsApp
   waba_id?: string
   is_official_api?: boolean
+  id_telefone?: string
+
+  // Vinculação com agente
+  agante_id?: number
 
   created_at: string
 }

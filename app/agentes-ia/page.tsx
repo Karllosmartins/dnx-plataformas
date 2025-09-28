@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
-import { supabase, AgenteIA, Tool, UserTool } from '../../lib/supabase'
+import { supabase, AgenteIA, Tool, UserTool, InstanciaWhats } from '../../lib/supabase'
 import PlanProtection from '../../components/PlanProtection'
 import VectorStoreManager from '../../components/VectorStoreManager'
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
+import {
+  Plus,
+  Edit2,
+  Trash2,
   Bot,
   Settings,
-  Wrench
+  Wrench,
+  MessageCircle
 } from 'lucide-react'
 
 export default function AgentesIAPage() {
@@ -22,12 +23,15 @@ export default function AgentesIAPage() {
   const [tools, setTools] = useState<Tool[]>([])
   const [userTools, setUserTools] = useState<UserTool[]>([])
   const [showAgentTools, setShowAgentTools] = useState<{[key: number]: boolean}>({})
+  const [instancias, setInstancias] = useState<InstanciaWhats[]>([])
+  const [showAgentInstance, setShowAgentInstance] = useState<{[key: number]: boolean}>({})
 
   useEffect(() => {
     if (currentUser) {
       loadAgentes()
       loadTools()
       loadUserTools()
+      loadInstancias()
     }
   }, [currentUser])
 
@@ -88,6 +92,25 @@ export default function AgentesIAPage() {
     }
   }
 
+  const loadInstancias = async () => {
+    if (!currentUser) return
+
+    try {
+      const { data, error } = await supabase
+        .from('instancia_whtats')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      if (data) {
+        setInstancias(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar instâncias:', error)
+    }
+  }
+
   const toggleAgentTool = async (agentId: number, toolId: number, currentState: boolean) => {
     if (!currentUser) return
 
@@ -130,13 +153,48 @@ export default function AgentesIAPage() {
   }
 
   const isAgentToolActive = (agentId: number, toolId: number): boolean => {
-    const userTool = userTools.find(ut => 
-      ut.tool_id === toolId && 
+    const userTool = userTools.find(ut =>
+      ut.tool_id === toolId &&
       ut.user_id === parseInt(currentUser?.id || '0') &&
       ut.agente_id === agentId
     )
     // A ferramenta está ativa para este agente se existe um registro ativo
     return userTool?.is_active === true
+  }
+
+  const updateAgentInstance = async (agentId: number, instanciaId: number | null) => {
+    if (!currentUser) return
+
+    try {
+      // Primeiro, desvincula o agente de qualquer instância anterior
+      await supabase
+        .from('instancia_whtats')
+        .update({ agante_id: null })
+        .eq('agante_id', agentId)
+        .eq('user_id', currentUser.id)
+
+      // Se uma nova instância foi selecionada, vincula a ela
+      if (instanciaId) {
+        const { error } = await supabase
+          .from('instancia_whtats')
+          .update({ agante_id: agentId })
+          .eq('id', instanciaId)
+          .eq('user_id', currentUser.id)
+
+        if (error) throw error
+      }
+
+      // Recarregar instâncias para atualizar a UI
+      loadInstancias()
+      alert('Instância do agente atualizada com sucesso!')
+    } catch (error) {
+      console.error('Erro ao atualizar instância do agente:', error)
+      alert('Erro ao atualizar instância do agente')
+    }
+  }
+
+  const getAgentInstance = (agentId: number): InstanciaWhats | null => {
+    return instancias.find(inst => inst.agante_id === agentId) || null
   }
 
   const saveAgent = async (agentData: Partial<AgenteIA>) => {
@@ -317,6 +375,68 @@ export default function AgentesIAPage() {
                       {/* Vector Store Manager */}
                       <VectorStoreManager agentId={agente.id} />
                       
+                      {/* Instância WhatsApp do Agente */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-5 w-5 text-green-600" />
+                            <h5 className="text-sm font-medium text-gray-900">Instância WhatsApp</h5>
+                          </div>
+                          <button
+                            onClick={() => setShowAgentInstance({
+                              ...showAgentInstance,
+                              [agente.id]: !showAgentInstance[agente.id]
+                            })}
+                            className="text-xs text-green-600 hover:text-green-800"
+                          >
+                            {showAgentInstance[agente.id] ? 'Ocultar' : 'Mostrar'}
+                          </button>
+                        </div>
+
+                        {showAgentInstance[agente.id] && (
+                          <div className="space-y-3">
+                            <div className="bg-white rounded-lg border p-3">
+                              <label className="block text-xs font-medium text-gray-900 mb-2">
+                                Selecionar Instância WhatsApp:
+                              </label>
+                              <select
+                                value={getAgentInstance(agente.id)?.id || ''}
+                                onChange={(e) => {
+                                  const instanciaId = e.target.value ? parseInt(e.target.value) : null
+                                  updateAgentInstance(agente.id, instanciaId)
+                                }}
+                                className="w-full text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              >
+                                <option value="">Nenhuma instância selecionada</option>
+                                {instancias.map((instancia) => (
+                                  <option key={instancia.id} value={instancia.id}>
+                                    {instancia.instancia} {instancia.is_official_api ? '(API Oficial)' : '(Evolution API)'}
+                                  </option>
+                                ))}
+                              </select>
+
+                              {getAgentInstance(agente.id) && (
+                                <div className="mt-2 p-2 bg-green-100 rounded text-xs">
+                                  <strong>Instância vinculada:</strong> {getAgentInstance(agente.id)?.instancia}
+                                  <br />
+                                  <strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'Evolution API'}
+                                </div>
+                              )}
+                            </div>
+
+                            {instancias.length === 0 && (
+                              <div className="text-xs text-gray-500 text-center py-2">
+                                Nenhuma instância WhatsApp configurada.
+                                <br />
+                                <a href="/whatsapp" className="text-green-600 hover:text-green-800 underline">
+                                  Criar nova instância
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Ferramentas do Agente */}
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
                         <div className="flex items-center justify-between mb-4">
@@ -326,7 +446,7 @@ export default function AgentesIAPage() {
                           </div>
                           <button
                             onClick={() => setShowAgentTools({
-                              ...showAgentTools, 
+                              ...showAgentTools,
                               [agente.id]: !showAgentTools[agente.id]
                             })}
                             className="text-xs text-blue-600 hover:text-blue-800"
