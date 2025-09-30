@@ -6,6 +6,7 @@ import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
 import { getUserPlanInfo } from '../../lib/permissions'
 import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit, Crown, Info } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome
@@ -626,13 +627,35 @@ export default function LeadsPage() {
     valorMaximo: ''
   })
 
+  // Estados para dropdowns dinâmicos
+  const [campanhas, setCampanhas] = useState<string[]>([])
+  const [origens, setOrigens] = useState<string[]>([])
+
+  // Estados para métricas de disparo
+  const [disparoMetrics, setDisparoMetrics] = useState({
+    total: 0,
+    aceitos: 0,
+    erros: 0,
+    semWhatsapp: 0,
+    pendentes: 0
+  })
+
   useEffect(() => {
     if (user) {
       fetchLeads()
       fetchUserTipoNegocio()
       fetchUserPlanInfo()
+      fetchCampanhas()
+      fetchOrigens()
     }
   }, [user])
+
+  // Atualizar métricas de disparo quando a campanha mudar
+  useEffect(() => {
+    if (reportFilters.campanha) {
+      calculateDisparoMetrics()
+    }
+  }, [reportFilters.campanha, leads])
 
   const fetchUserTipoNegocio = async () => {
     if (!user) return
@@ -790,7 +813,7 @@ export default function LeadsPage() {
         .select('*')
         .eq('user_id', parseInt(user.id || '0'))
         .order('created_at', { ascending: false })
-      
+
       if (error) throw error
       setLeads(data || [])
     } catch (error) {
@@ -798,6 +821,102 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchCampanhas = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('nome_campanha')
+        .eq('user_id', parseInt(user.id || '0'))
+        .not('nome_campanha', 'is', null)
+        .order('nome_campanha')
+
+      if (error) throw error
+
+      // Extrair valores únicos
+      const uniqueCampanhas = Array.from(
+        new Set(data?.map((item: any) => item.nome_campanha).filter(Boolean))
+      ) as string[]
+
+      setCampanhas(uniqueCampanhas)
+    } catch (error) {
+      console.error('Erro ao carregar campanhas:', error)
+    }
+  }
+
+  const fetchOrigens = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('origem')
+        .eq('user_id', parseInt(user.id || '0'))
+        .not('origem', 'is', null)
+        .order('origem')
+
+      if (error) throw error
+
+      // Extrair valores únicos
+      const uniqueOrigens = Array.from(
+        new Set(data?.map((item: any) => item.origem).filter(Boolean))
+      ) as string[]
+
+      setOrigens(uniqueOrigens)
+    } catch (error) {
+      console.error('Erro ao carregar origens:', error)
+    }
+  }
+
+  const calculateDisparoMetrics = () => {
+    if (!reportFilters.campanha) {
+      setDisparoMetrics({
+        total: 0,
+        aceitos: 0,
+        erros: 0,
+        semWhatsapp: 0,
+        pendentes: 0
+      })
+      return
+    }
+
+    const campanhaLeads = leads.filter(lead =>
+      lead.nome_campanha &&
+      lead.nome_campanha.toLowerCase().includes(reportFilters.campanha.toLowerCase())
+    )
+
+    const total = campanhaLeads.length
+    const semWhatsapp = campanhaLeads.filter(lead => lead.efetuar_disparo === false).length
+    const comWhatsapp = campanhaLeads.filter(lead => lead.efetuar_disparo === true)
+
+    const aceitos = comWhatsapp.filter(lead =>
+      lead.status_disparo && lead.status_disparo.toLowerCase() === 'accepted'
+    ).length
+
+    const erros = comWhatsapp.filter(lead =>
+      lead.status_disparo &&
+      (lead.status_disparo.toLowerCase().includes('error') ||
+       lead.status_disparo.toLowerCase().includes('failed'))
+    ).length
+
+    // Pendentes = tem WhatsApp (efetuar_disparo = true) mas sem status ou status não finalizado
+    const pendentes = comWhatsapp.filter(lead =>
+      !lead.status_disparo ||
+      (lead.status_disparo.toLowerCase() !== 'accepted' &&
+       !lead.status_disparo.toLowerCase().includes('error') &&
+       !lead.status_disparo.toLowerCase().includes('failed'))
+    ).length
+
+    setDisparoMetrics({
+      total,
+      aceitos,
+      erros,
+      semWhatsapp,
+      pendentes
+    })
   }
 
   const downloadLeadsCSV = () => {
@@ -2066,13 +2185,16 @@ export default function LeadsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Campanha</label>
-              <input
-                type="text"
-                placeholder="Nome da campanha..."
+              <select
                 value={reportFilters.campanha}
                 onChange={(e) => setReportFilters(prev => ({ ...prev, campanha: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Todas as campanhas</option>
+                {campanhas.map((campanha) => (
+                  <option key={campanha} value={campanha}>{campanha}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -2082,15 +2204,10 @@ export default function LeadsPage() {
                 onChange={(e) => setReportFilters(prev => ({ ...prev, origemFilter: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="todos">Todas</option>
-                <option value="WhatsApp">WhatsApp</option>
-                <option value="Site">Site</option>
-                <option value="Indicação">Indicação</option>
-                <option value="Telefone">Telefone</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Instagram">Instagram</option>
-                <option value="Google">Google</option>
-                <option value="Outros">Outros</option>
+                <option value="todos">Todas as origens</option>
+                {origens.map((origem) => (
+                  <option key={origem} value={origem}>{origem}</option>
+                ))}
               </select>
             </div>
 
@@ -2203,6 +2320,101 @@ export default function LeadsPage() {
             </button>
           </div>
         </div>
+
+        {/* Card de Acompanhamento de Disparo */}
+        {reportFilters.campanha && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 border border-blue-200">
+            <div className="flex items-center mb-6">
+              <MessageSquare className="h-6 w-6 text-blue-600 mr-3" />
+              <h2 className="text-xl font-semibold text-gray-900">
+                Acompanhamento de Disparo: {reportFilters.campanha}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Total</span>
+                  <Users className="h-5 w-5 text-blue-500" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{disparoMetrics.total}</p>
+                <p className="text-xs text-gray-500 mt-1">contatos na campanha</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Enviados</span>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                </div>
+                <p className="text-2xl font-bold text-green-600">{disparoMetrics.aceitos}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {disparoMetrics.total > 0 ? ((disparoMetrics.aceitos / disparoMetrics.total) * 100).toFixed(1) : 0}% do total
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Pendentes</span>
+                  <Clock className="h-5 w-5 text-yellow-500" />
+                </div>
+                <p className="text-2xl font-bold text-yellow-600">{disparoMetrics.pendentes}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {disparoMetrics.total > 0 ? ((disparoMetrics.pendentes / disparoMetrics.total) * 100).toFixed(1) : 0}% aguardando
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Erros</span>
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                </div>
+                <p className="text-2xl font-bold text-red-600">{disparoMetrics.erros}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {disparoMetrics.total > 0 ? ((disparoMetrics.erros / disparoMetrics.total) * 100).toFixed(1) : 0}% falharam
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Sem WhatsApp</span>
+                  <X className="h-5 w-5 text-gray-500" />
+                </div>
+                <p className="text-2xl font-bold text-gray-600">{disparoMetrics.semWhatsapp}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {disparoMetrics.total > 0 ? ((disparoMetrics.semWhatsapp / disparoMetrics.total) * 100).toFixed(1) : 0}% sem WhatsApp
+                </p>
+              </div>
+            </div>
+
+            {/* Barra de progresso */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Progresso do Disparo</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {disparoMetrics.total > 0 ? (((disparoMetrics.aceitos + disparoMetrics.erros) / disparoMetrics.total) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="flex h-3 rounded-full overflow-hidden">
+                  <div
+                    className="bg-green-500"
+                    style={{ width: `${disparoMetrics.total > 0 ? (disparoMetrics.aceitos / disparoMetrics.total) * 100 : 0}%` }}
+                    title={`${disparoMetrics.aceitos} aceitos`}
+                  ></div>
+                  <div
+                    className="bg-red-500"
+                    style={{ width: `${disparoMetrics.total > 0 ? (disparoMetrics.erros / disparoMetrics.total) * 100 : 0}%` }}
+                    title={`${disparoMetrics.erros} erros`}
+                  ></div>
+                </div>
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-600">
+                <span>{disparoMetrics.aceitos + disparoMetrics.erros} processados</span>
+                <span>{disparoMetrics.pendentes} pendentes</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Indicadores principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -2403,6 +2615,142 @@ export default function LeadsPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* Gráficos de Visualização */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de Pizza - Distribuição por Status */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <BarChart3 className="h-6 w-6 text-indigo-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Distribuição por Status</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={getRelevantStatuses().map((status: string) => {
+                    const config = generateStatusConfig(status)
+                    const count = filteredReportLeads.filter(lead =>
+                      (lead.status_generico === status) || (lead.status_limpa_nome === status)
+                    ).length
+                    return {
+                      name: config.label,
+                      value: count,
+                      color: config.color.includes('blue') ? '#3B82F6' :
+                             config.color.includes('yellow') ? '#F59E0B' :
+                             config.color.includes('red') ? '#EF4444' :
+                             config.color.includes('purple') ? '#A855F7' :
+                             config.color.includes('orange') ? '#F97316' :
+                             config.color.includes('indigo') ? '#6366F1' : '#10B981'
+                    }
+                  }).filter((item: any) => item.value > 0)}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {getRelevantStatuses().map((status: string, index: number) => {
+                    const config = generateStatusConfig(status)
+                    const color = config.color.includes('blue') ? '#3B82F6' :
+                                  config.color.includes('yellow') ? '#F59E0B' :
+                                  config.color.includes('red') ? '#EF4444' :
+                                  config.color.includes('purple') ? '#A855F7' :
+                                  config.color.includes('orange') ? '#F97316' :
+                                  config.color.includes('indigo') ? '#6366F1' : '#10B981'
+                    return <Cell key={`cell-${index}`} fill={color} />
+                  })}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gráfico de Barras - Funil de Conversão */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <TrendingUp className="h-6 w-6 text-green-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Funil de Conversão</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[
+                  { name: getMetricsLabels().total, value: metrics.total, color: '#3B82F6' },
+                  { name: getMetricsLabels().qualificados, value: metrics.qualificados, color: '#F59E0B' },
+                  { name: userTipoNegocio?.nome === 'previdenciario' ? 'Casos Viáveis' : getMetricsLabels().pagouConsulta, value: metrics.pagouConsulta, color: '#A855F7' },
+                  { name: getMetricsLabels().constaDivida, value: metrics.constaDivida, color: '#F97316' },
+                  { name: getMetricsLabels().clientesFechados, value: metrics.clientesFechados, color: '#10B981' }
+                ]}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8">
+                  {[
+                    { color: '#3B82F6' },
+                    { color: '#F59E0B' },
+                    { color: '#A855F7' },
+                    { color: '#F97316' },
+                    { color: '#10B981' }
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gráfico de Distribuição por Origem */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <Activity className="h-6 w-6 text-blue-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Distribuição por Origem</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={origens.map(origem => ({
+                  name: origem,
+                  value: filteredReportLeads.filter(lead => lead.origem === origem).length
+                })).filter(item => item.value > 0)}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gráfico de Taxa de Conversão */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <Target className="h-6 w-6 text-purple-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Taxas de Conversão</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[
+                  { name: 'Qualificação', value: metrics.conversaoQualificacao },
+                  { name: 'Pagamento', value: metrics.conversaoPagamento },
+                  { name: 'Dívida', value: metrics.conversaoDivida },
+                  { name: 'Fechamento', value: metrics.conversaoFechamento }
+                ]}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: '%', angle: -90, position: 'insideLeft' }} />
+                <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                <Bar dataKey="value" fill="#A855F7" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
