@@ -373,6 +373,14 @@ export default function DisparoSimplesPage() {
             formData.append('waba_id', instance.waba_id || '')
             formData.append('access_token', instance.apikey || '') // apikey já é o token
           }
+
+          // Adicionar imagem se selecionada
+          if (selectedImage) {
+            formData.append('image', selectedImage)
+            formData.append('tipo_disparo', 'imagem')
+          } else {
+            formData.append('tipo_disparo', 'texto')
+          }
         } else {
           // Evolution API
           formData.append('tipo_api', 'evolution')
@@ -653,6 +661,58 @@ export default function DisparoSimplesPage() {
                   <p className="text-xs text-blue-600 mt-2">
                     ℹ️ As variáveis {'{'}variavel1{'},'} {'{'}variavel2{'}'} etc. serão substituídas pelos dados do CSV
                   </p>
+                </div>
+              )}
+
+              {/* Seção de Upload de Imagem - para API Oficial */}
+              {activeTab === 'official' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Image className="inline h-4 w-4 mr-1" />
+                    Imagem (Opcional)
+                  </label>
+
+                  {!imagePreview ? (
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
+                      <div className="space-y-2 text-center">
+                        <Image className="mx-auto h-8 w-8 text-gray-400" />
+                        <div className="flex justify-center text-sm text-gray-600">
+                          <label className="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-green-500">
+                            <span>Selecionar imagem</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="sr-only"
+                              disabled={sending}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF até 5MB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="mt-1 border-2 border-gray-300 rounded-md p-2">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="max-h-40 mx-auto rounded-md object-contain"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        disabled={sending}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="mt-2 text-sm text-gray-600 text-center">
+                        ✓ {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
