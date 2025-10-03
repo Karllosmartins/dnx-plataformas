@@ -95,7 +95,7 @@ export default function RelatoriosPage() {
       if (filters.campanha && lead.nome_campanha !== filters.campanha) return false
       if (filters.origem && lead.origem !== filters.origem) return false
       if (filters.status && lead.status_generico !== filters.status) return false
-      if (filters.cnpj && !(lead.cpf_cnpj || lead.cpfcnpj || '')?.includes(filters.cnpj)) return false
+      if (filters.cnpj && !lead.cpf_cnpj?.includes(filters.cnpj)) return false
 
       if (filters.dataInicio) {
         const leadDate = new Date(lead.created_at)

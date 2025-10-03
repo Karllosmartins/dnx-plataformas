@@ -6,7 +6,7 @@
 Installing dependencies...
 npm warn deprecated @supabase/auth-helpers-shared@0.7.0: This package is now deprecated - please use the @supabase/ssr package instead.
 npm warn deprecated @supabase/auth-helpers-nextjs@0.10.0: This package is now deprecated - please use the @supabase/ssr package instead.
-added 237 packages, and audited 238 packages in 18s
+added 237 packages, and audited 238 packages in 17s
 43 packages are looking for funding
   run `npm fund` for details
 3 vulnerabilities (2 high, 1 critical)
@@ -48,8 +48,8 @@ Installing devDependencies (npm):
 npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 npm warn deprecated glob@7.1.7: Glob versions prior to v9 are no longer supported
-npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
 npm warn deprecated @humanwhocodes/config-array@0.11.14: Use @eslint/config-array instead
+npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
 npm warn deprecated eslint@8.53.0: This version is no longer supported. Please see https://eslint.org/version-support for other options.
 added 227 packages, and audited 465 packages in 9s
 152 packages are looking for funding
@@ -63,12 +63,12 @@ Some issues need review, and may require choosing
 a different dependency.
 Run `npm audit` for details.
 Failed to compile.
-./app/relatorios/page.tsx:98:33
-Type error: Property 'cnpj' does not exist on type 'Lead'.
+./app/relatorios/page.tsx:98:51
+Type error: Property 'cpfcnpj' does not exist on type 'Lead'. Did you mean 'cpf_cnpj'?
    96 |       if (filters.origem && lead.origem !== filters.origem) return false
    97 |       if (filters.status && lead.status_generico !== filters.status) return false
->  98 |       if (filters.cnpj && !lead.cnpj?.includes(filters.cnpj)) return false
-      |                                 ^
+>  98 |       if (filters.cnpj && !(lead.cpf_cnpj || lead.cpfcnpj || '')?.includes(filters.cnpj)) return false
+      |                                                   ^
    99 |
   100 |       if (filters.dataInicio) {
   101 |         const leadDate = new Date(lead.created_at)
