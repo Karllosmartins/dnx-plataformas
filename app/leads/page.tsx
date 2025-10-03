@@ -2905,10 +2905,6 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* Sistema de Abas */}
-      <div className="bg-white rounded-lg shadow">
-      </div>
-
       {/* Conteúdo */}
       <div className="space-y-6">
           {/* Filtros */}
