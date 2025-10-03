@@ -236,10 +236,30 @@ export default function UsuariosSection() {
     firecrawl_api_key?: string
   }) => {
     try {
-      // Separar tipos_negocio dos dados do usuário
-      const { tipos_negocio, ...userDataOnly } = userData
+      // Separar tipos_negocio e campos que NÃO pertencem à tabela users
+      const {
+        tipos_negocio,
+        openai_api_token,
+        gemini_api_key,
+        modelo_ia,
+        tipo_tool_supabase,
+        reasoning_effort,
+        api_key_dados,
+        elevenlabs_api_key,
+        elevenlabs_voice_id,
+        firecrawl_api_key,
+        crm_url,
+        crm_usuario,
+        crm_senha,
+        crm_token,
+        pasta_drive,
+        id_pasta_rag,
+        nome_cliente_empresa,
+        structured_output_schema,
+        ...userDataOnly
+      } = userData
 
-      // Atualizar dados básicos do usuário
+      // Atualizar dados básicos do usuário (apenas campos que existem em users)
       const { error } = await supabase
         .from('users')
         .update({
