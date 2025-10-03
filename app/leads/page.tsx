@@ -3504,7 +3504,6 @@ export default function LeadsPage() {
             </>
           )}
         </div>
-      </div>
 
       {/* Modal de detalhes do lead */}
       {showLeadModal && selectedLead && (
