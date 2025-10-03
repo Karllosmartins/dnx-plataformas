@@ -140,6 +140,16 @@ export default function PlanosSection() {
           </div>
 
           <div className="space-y-4">
+            {showNewPlano && (
+              <PlanoCard
+                plano={{} as Plano}
+                isEditing={true}
+                isNew={true}
+                onSave={handleSavePlano}
+                onCancel={() => setShowNewPlano(false)}
+              />
+            )}
+
             {planos.map((plano) => (
               <PlanoCard
                 key={plano.id}
@@ -151,16 +161,6 @@ export default function PlanosSection() {
                 onDelete={() => handleDeletePlano(plano.id)}
               />
             ))}
-
-            {showNewPlano && (
-              <PlanoCard
-                plano={{} as Plano}
-                isEditing={true}
-                isNew={true}
-                onSave={handleSavePlano}
-                onCancel={() => setShowNewPlano(false)}
-              />
-            )}
           </div>
         </div>
 
@@ -252,6 +252,7 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
             'Agentes IA': plano.acesso_agentes_ia,
             'Extração': plano.acesso_extracao_leads,
             'Enriquecimento': plano.acesso_enriquecimento,
+            'Consulta': plano.acesso_consulta,
             'Usuários': plano.acesso_usuarios,
           }).map(([feature, hasAccess]) => (
             <div key={feature} className="flex items-center">
@@ -274,60 +275,89 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
       <div className="space-y-4">
         <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Nome do Plano
+          </label>
           <input
             type="text"
-            placeholder="Nome do plano"
+            placeholder="Ex: Premium, Enterprise, etc."
             value={formData.nome || ''}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
           />
         </div>
 
-        <textarea
-          placeholder="Descrição do plano"
-          value={formData.descricao || ''}
-          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-          rows={2}
-        />
-
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          {[
-            { key: 'acesso_dashboard', label: 'Dashboard' },
-            { key: 'acesso_crm', label: 'CRM' },
-            { key: 'acesso_whatsapp', label: 'WhatsApp' },
-            { key: 'acesso_disparo_simples', label: 'Disparo Simples' },
-            { key: 'acesso_disparo_ia', label: 'Disparo IA' },
-            { key: 'acesso_agentes_ia', label: 'Agentes IA' },
-            { key: 'acesso_extracao_leads', label: 'Extração' },
-            { key: 'acesso_enriquecimento', label: 'Enriquecimento' },
-            { key: 'acesso_usuarios', label: 'Usuários' },
-          ].map(({ key, label }) => (
-            <label key={key} className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData[key as keyof Plano] as boolean}
-                onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                className="mr-1"
-              />
-              {label}
-            </label>
-          ))}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Descrição
+          </label>
+          <textarea
+            placeholder="Descreva as características deste plano"
+            value={formData.descricao || ''}
+            onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            rows={2}
+          />
         </div>
 
-        <div className="flex justify-end space-x-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Selecione as abas que este plano terá acesso:
+          </label>
+          <div className="space-y-2">
+            {[
+              { key: 'acesso_dashboard', label: 'Dashboard', icon: '📊' },
+              { key: 'acesso_crm', label: 'CRM', icon: '👥' },
+              { key: 'acesso_whatsapp', label: 'WhatsApp', icon: '💬' },
+              { key: 'acesso_disparo_simples', label: 'Disparo Simples', icon: '📤' },
+              { key: 'acesso_disparo_ia', label: 'Disparo com IA', icon: '🤖' },
+              { key: 'acesso_agentes_ia', label: 'Agentes IA', icon: '🎯' },
+              { key: 'acesso_extracao_leads', label: 'Extração de Leads', icon: '🔍' },
+              { key: 'acesso_enriquecimento', label: 'Enriquecimento', icon: '✨' },
+              { key: 'acesso_consulta', label: 'Consulta', icon: '🔎' },
+              { key: 'acesso_usuarios', label: 'Gerenciar Usuários', icon: '⚙️' },
+            ].map(({ key, label, icon }) => (
+              <label
+                key={key}
+                className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData[key as keyof Plano]
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData[key as keyof Plano] as boolean}
+                  onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                />
+                <span className="ml-3 text-lg">{icon}</span>
+                <span className={`ml-2 text-sm font-medium ${
+                  formData[key as keyof Plano] ? 'text-green-900' : 'text-gray-700'
+                }`}>
+                  {label}
+                </span>
+                {formData[key as keyof Plano] && (
+                  <Check className="ml-auto h-4 w-4 text-green-600" />
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
           <button
             onClick={onCancel}
-            className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+            className="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
           >
-            <Save className="h-3 w-3 mr-1" />
-            Salvar
+            <Save className="h-4 w-4 mr-2" />
+            Salvar Plano
           </button>
         </div>
       </div>

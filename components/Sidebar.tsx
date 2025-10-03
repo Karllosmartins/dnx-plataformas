@@ -29,6 +29,7 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home, feature: 'dashboard' as const },
   { name: 'CRM', href: '/leads', icon: Users, feature: 'crm' as const },
+  { name: 'Relatórios', href: '/relatorios', icon: BarChart3, feature: 'dashboard' as const },
   { name: 'WhatsApp', href: '/whatsapp', icon: MessageCircle, feature: 'whatsapp' as const },
   { name: 'Agentes IA', href: '/agentes-ia', icon: Bot, feature: 'agentesIA' as const },
   { name: 'Disparo Simples', href: '/disparo-simples', icon: Send, feature: 'disparoSimples' as const },

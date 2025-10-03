@@ -599,7 +599,7 @@ export default function LeadsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [activeTab, setActiveTab] = useState<'leads' | 'relatorios'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads'>('leads')
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
   const [userPlanInfo, setUserPlanInfo] = useState<any>(null)
 
@@ -2907,41 +2907,10 @@ export default function LeadsPage() {
 
       {/* Sistema de Abas */}
       <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('leads')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'leads'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Gestão de Leads</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('relatorios')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'relatorios'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5" />
-                <span>Relatórios</span>
-              </div>
-            </button>
-          </nav>
-        </div>
       </div>
 
-      {/* Conteúdo das Abas */}
-      {activeTab === 'leads' ? (
-        <div className="space-y-6">
+      {/* Conteúdo */}
+      <div className="space-y-6">
           {/* Filtros */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="space-y-4">
@@ -3539,9 +3508,7 @@ export default function LeadsPage() {
             </>
           )}
         </div>
-      ) : (
-        renderReportsTab()
-      )}
+      </div>
 
       {/* Modal de detalhes do lead */}
       {showLeadModal && selectedLead && (

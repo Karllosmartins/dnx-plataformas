@@ -11,7 +11,8 @@ import {
   Phone,
   Mail,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react'
 
 export default function ConsultaPage() {
@@ -112,6 +113,47 @@ export default function ConsultaPage() {
     })
     setConsultaResult(null)
     setLimiteInfo(null)
+  }
+
+  const consultarDocumento = async (documento: string, tipoPessoa: 'PF' | 'PJ') => {
+    if (!user?.id) {
+      alert('Usuário não autenticado')
+      return
+    }
+
+    setConsultando(true)
+
+    try {
+      const response = await fetch('/api/datecode/consulta', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document: documento,
+          tipoPessoa: tipoPessoa,
+          userId: user.id
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro na consulta')
+      }
+
+      setConsultaResult(data.data)
+      setLimiteInfo(data.usage)
+
+      // Rolar para o topo dos resultados
+      window.scrollTo({ top: 400, behavior: 'smooth' })
+
+    } catch (error) {
+      console.error('Erro na consulta:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao realizar consulta')
+    } finally {
+      setConsultando(false)
+    }
   }
 
   return (
@@ -590,19 +632,35 @@ export default function ConsultaPage() {
                               <h5 className="font-medium text-cyan-900 mb-2">Sócios ({resultado.receitaFederal.socios.length}):</h5>
                               <div className="space-y-2 max-h-40 overflow-y-auto">
                                 {resultado.receitaFederal.socios.map((socio: any, idx: number) => (
-                                  <div key={idx} className="bg-white rounded px-3 py-2">
-                                    <div className="text-sm">
-                                      <strong>{socio.nomeRazaoSocial}</strong>
-                                      {socio.participacao > 0 && ` - ${socio.participacao}%`}
-                                    </div>
-                                    <div className="text-xs text-gray-600">
-                                      Doc: {socio.cpfCnpj} | {socio.qualificacaoDesc}
-                                      {socio.dataNascimentoAbertura && ` | Nascimento: ${socio.dataNascimentoAbertura}`}
-                                    </div>
-                                    {socio.representanteLegal && (
-                                      <div className="text-xs text-blue-600 mt-1">
-                                        Rep. Legal: {socio.representanteLegal.nome}
+                                  <div key={idx} className="bg-white rounded px-3 py-2 flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="text-sm">
+                                        <strong>{socio.nomeRazaoSocial}</strong>
+                                        {socio.participacao > 0 && ` - ${socio.participacao}%`}
                                       </div>
+                                      <div className="text-xs text-gray-600">
+                                        Doc: {socio.cpfCnpj} | {socio.qualificacaoDesc}
+                                        {socio.dataNascimentoAbertura && ` | Nascimento: ${socio.dataNascimentoAbertura}`}
+                                      </div>
+                                      {socio.representanteLegal && (
+                                        <div className="text-xs text-blue-600 mt-1">
+                                          Rep. Legal: {socio.representanteLegal.nome}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {socio.cpfCnpj && (
+                                      <button
+                                        onClick={() => {
+                                          const documento = socio.cpfCnpj.replace(/\D/g, '')
+                                          const tipo = documento.length === 11 ? 'PF' : 'PJ'
+                                          consultarDocumento(documento, tipo)
+                                        }}
+                                        disabled={consultando}
+                                        className="ml-3 p-2 text-cyan-600 hover:text-cyan-800 hover:bg-cyan-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Consultar este sócio"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </button>
                                     )}
                                   </div>
                                 ))}
