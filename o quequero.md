@@ -1,7 +1,3 @@
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  }
 }
 Installing dependencies...
 npm warn deprecated @supabase/auth-helpers-shared@0.7.0: This package is now deprecated - please use the @supabase/ssr package instead.
@@ -63,12 +59,16 @@ Some issues need review, and may require choosing
 a different dependency.
 Run `npm audit` for details.
 Failed to compile.
-./app/relatorios/page.tsx:98:51
-Type error: Property 'cpfcnpj' does not exist on type 'Lead'. Did you mean 'cpf_cnpj'?
-   96 |       if (filters.origem && lead.origem !== filters.origem) return false
-   97 |       if (filters.status && lead.status_generico !== filters.status) return false
->  98 |       if (filters.cnpj && !(lead.cpf_cnpj || lead.cpfcnpj || '')?.includes(filters.cnpj)) return false
-      |                                                   ^
+./app/relatorios/page.tsx:101:35
+Type error: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null' is not assignable to parameter of type 'string | number'.
    99 |
   100 |       if (filters.dataInicio) {
-  101 |         const leadDate = new Date(lead.created_at)
+> 101 |         const leadDate = new Date(lead.created_at)
+      |                                   ^
+  102 |         const filterDate = new Date(filters.dataInicio)
+  103 |         if (leadDate < filterDate) return false
+  104 |       }

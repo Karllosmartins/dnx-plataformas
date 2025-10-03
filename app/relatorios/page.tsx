@@ -97,13 +97,13 @@ export default function RelatoriosPage() {
       if (filters.status && lead.status_generico !== filters.status) return false
       if (filters.cnpj && !lead.cpf_cnpj?.includes(filters.cnpj)) return false
 
-      if (filters.dataInicio) {
+      if (filters.dataInicio && lead.created_at) {
         const leadDate = new Date(lead.created_at)
         const filterDate = new Date(filters.dataInicio)
         if (leadDate < filterDate) return false
       }
 
-      if (filters.dataFim) {
+      if (filters.dataFim && lead.created_at) {
         const leadDate = new Date(lead.created_at)
         const filterDate = new Date(filters.dataFim)
         filterDate.setHours(23, 59, 59)
