@@ -436,10 +436,10 @@ export default function UsuariosSection() {
 
       if (fetchError || !newUser) throw fetchError || new Error('Usuário não encontrado')
 
-      // 2. Criar configurações na tabela configuracoes_credenciais
+      // 2. Criar configurações na tabela configuracoes_credenciais (upsert para evitar conflito)
       const { error: configError } = await supabase
         .from('configuracoes_credenciais')
-        .insert([{
+        .upsert({
           user_id: newUser.id,
           cliente: userData.nome_cliente_empresa || userData.name,
           // Configurações operacionais
@@ -469,7 +469,9 @@ export default function UsuariosSection() {
           firecrawl_apikey: userData.firecrawl_api_key || null,
           // Structured output
           structured_output: userData.structured_output_schema ? JSON.parse(userData.structured_output_schema) : null
-        }])
+        }, {
+          onConflict: 'user_id'
+        })
 
       if (configError) throw configError
 

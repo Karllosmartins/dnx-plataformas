@@ -334,16 +334,31 @@ function TipoCard({
   }
 
   return (
-    <div className="bg-white border-2 border-blue-300 rounded-xl p-6 shadow-lg">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-gray-900 flex items-center">
-          <Building className="h-5 w-5 mr-2 text-blue-600" />
-          {isNew ? 'Criar Novo Tipo de Negócio' : 'Editar Tipo de Negócio'}
-        </h3>
-        <p className="text-sm text-gray-500 mt-1">Preencha as informações abaixo</p>
-      </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+      <div className="min-h-screen bg-white">
+        {/* Header fixo */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 p-6 shadow-lg">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-white flex items-center">
+                <Building className="h-7 w-7 mr-3" />
+                {isNew ? 'Criar Novo Tipo de Negócio' : 'Editar Tipo de Negócio'}
+              </h3>
+              <p className="text-blue-100 text-sm mt-1">Preencha as informações abaixo</p>
+            </div>
+            <button
+              onClick={onCancel}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              title="Fechar"
+            >
+              <X className="h-6 w-6 text-white" />
+            </button>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Conteúdo */}
+        <div className="max-w-7xl mx-auto p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Informações Básicas */}
         <div className="space-y-4">
           <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Informações Básicas</h4>
@@ -446,6 +461,26 @@ function TipoCard({
           </div>
         </div>
 
+        {/* Campos Personalizados */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Campos Personalizados</h4>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+              Configuração dos Campos
+            </label>
+            <textarea
+              placeholder="Em desenvolvimento - Campos personalizados do CRM"
+              value=""
+              disabled
+              rows={8}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400"
+            />
+            <p className="text-xs text-gray-500 mt-1.5">
+              Funcionalidade em desenvolvimento
+            </p>
+          </div>
+        </div>
+
         {/* Status do Funil */}
         <div className="space-y-4">
           <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Status do Funil</h4>
@@ -530,23 +565,30 @@ function TipoCard({
             />
           </div>
         </div>
-      </div>
+          </div>
+        </div>
 
-      <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
-        <button
-          onClick={onCancel}
-          className="px-5 py-2.5 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center transition-colors font-medium"
-        >
-          <X className="h-4 w-4 mr-2" />
-          Cancelar
-        </button>
-        <button
-          onClick={handleSave}
-          className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors font-medium shadow-sm"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          Salvar Tipo
-        </button>
+        {/* Footer fixo */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 shadow-lg">
+          <div className="max-w-7xl mx-auto px-8 py-4">
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={onCancel}
+                className="px-6 py-3 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center transition-colors font-medium"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-6 py-3 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors font-medium shadow-sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Tipo
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
