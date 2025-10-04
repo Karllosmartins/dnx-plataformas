@@ -132,7 +132,7 @@ export default function RelatoriosPage() {
     filteredLeads.forEach(lead => {
       const campanha = lead.nome_campanha || 'Sem campanha'
       campanhaCounts[campanha] = (campanhaCounts[campanha] || 0) + 1
-      campanhaValores[campanha] = (campanhaValores[campanha] || 0) + parseFloat(lead.valor_negociacao || '0')
+      campanhaValores[campanha] = (campanhaValores[campanha] || 0) + (lead.valor_contrato || 0)
     })
 
     // Métricas por origem
@@ -170,13 +170,13 @@ export default function RelatoriosPage() {
     const rows = filteredLeads.map(lead => [
       lead.nome_lead,
       lead.telefone,
-      lead.cpf || lead.cnpj,
+      lead.cpf || lead.cpf_cnpj,
       lead.status_generico,
       lead.nome_campanha || '',
       lead.origem || '',
-      lead.valor_negociacao || '0',
+      lead.valor_contrato || '0',
       lead.existe_whatsapp ? 'Sim' : 'Não',
-      new Date(lead.created_at).toLocaleDateString('pt-BR')
+      lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : ''
     ])
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
