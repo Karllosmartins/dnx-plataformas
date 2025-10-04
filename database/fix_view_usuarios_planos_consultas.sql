@@ -26,10 +26,10 @@ SELECT
     -- Dados do plano
     p.nome as plano_nome,
     p.descricao as plano_descricao,
-    p.preco as plano_preco,
     p.limite_leads as plano_limite_leads,
     p.limite_consultas as plano_limite_consultas,
     p.limite_instancias as plano_limite_instancias,
+    p.ativo as plano_ativo,
     p.acesso_dashboard,
     p.acesso_crm,
     p.acesso_whatsapp,
