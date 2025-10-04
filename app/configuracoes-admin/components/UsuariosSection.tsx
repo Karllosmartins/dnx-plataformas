@@ -408,7 +408,8 @@ export default function UsuariosSection() {
     ativo?: boolean
   }) => {
     try {
-      const { error } = await supabase
+      // 1. Criar usuário na tabela users (apenas campos que existem nela)
+      const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert([{
           name: userData.name,
@@ -419,44 +420,72 @@ export default function UsuariosSection() {
           cpf: userData.cpf || null,
           telefone: userData.telefone || null,
           active: userData.ativo !== false,
-          // Configurações operacionais
-          delay_entre_mensagens: userData.delay_entre_mensagens || 30,
-          delay_apos_intervencao: userData.delay_apos_intervencao || 0,
-          inicio_expediente: userData.inicio_expediente || 8,
-          fim_expediente: userData.fim_expediente || 18,
           numero_instancias: userData.numero_instancias || 1,
           limite_leads: userData.limite_leads || 100,
-          limite_consultas: userData.limite_consultas || 50,
-          // Tipos de negócio
-          tipos_negocio: userData.tipos_negocio ? JSON.stringify(userData.tipos_negocio) : null,
+          limite_consultas: userData.limite_consultas || 50
+        }])
+        .select()
+        .single()
+
+      if (userError) throw userError
+
+      // 2. Criar configurações na tabela configuracoes_credenciais
+      const { error: configError } = await supabase
+        .from('configuracoes_credenciais')
+        .insert([{
+          user_id: newUser.id,
+          cliente: userData.nome_cliente_empresa || userData.name,
+          // Configurações operacionais
+          delay_entre_mensagens_em_segundos: userData.delay_entre_mensagens || 30,
+          delay_apos_intervencao_humana_minutos: userData.delay_apos_intervencao || 0,
+          inicio_expediente: userData.inicio_expediente || 8,
+          fim_expediente: userData.fim_expediente || 18,
           // Integração CRM
-          crm_url: userData.crm_url || null,
-          crm_usuario: userData.crm_usuario || null,
-          crm_senha: userData.crm_senha || null,
-          crm_token: userData.crm_token || null,
+          url_crm: userData.crm_url || null,
+          usuario_crm: userData.crm_usuario || null,
+          senha_crm: userData.crm_senha || null,
+          token_crm: userData.crm_token || null,
           // Google Drive
           pasta_drive: userData.pasta_drive || null,
-          id_pasta_rag: userData.id_pasta_rag || null,
-          // Informações do cliente
-          nome_cliente_empresa: userData.nome_cliente_empresa || null,
-          structured_output_schema: userData.structured_output_schema || null,
+          id_pasta_drive_rag: userData.id_pasta_rag || null,
           // APIs de IA
           openai_api_token: userData.openai_api_token || null,
           gemini_api_key: userData.gemini_api_key || null,
-          modelo_ia: userData.modelo_ia || null,
-          tipo_tool_supabase: userData.tipo_tool_supabase || null,
+          model: userData.modelo_ia || 'gpt-4o',
+          type_tool_supabase: userData.tipo_tool_supabase || 'OpenAi',
           reasoning_effort: userData.reasoning_effort || null,
-          api_key_dados: userData.api_key_dados || null,
+          apikeydados: userData.api_key_dados || null,
           // ElevenLabs
-          elevenlabs_api_key: userData.elevenlabs_api_key || null,
-          elevenlabs_voice_id: userData.elevenlabs_voice_id || null,
+          apikey_elevenlabs: userData.elevenlabs_api_key || null,
+          id_voz_elevenlabs: userData.elevenlabs_voice_id || null,
           // FireCrawl
-          firecrawl_api_key: userData.firecrawl_api_key || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          firecrawl_apikey: userData.firecrawl_api_key || null,
+          // Structured output
+          structured_output: userData.structured_output_schema ? JSON.parse(userData.structured_output_schema) : null
         }])
 
-      if (error) throw error
+      if (configError) throw configError
+
+      // 3. Criar vínculos de tipos de negócio se houver
+      if (userData.tipos_negocio && userData.tipos_negocio.length > 0) {
+        for (const tipoNome of userData.tipos_negocio) {
+          const { data: tipoData } = await supabase
+            .from('tipos_negocio')
+            .select('id')
+            .eq('nome', tipoNome)
+            .single()
+
+          if (tipoData) {
+            await supabase
+              .from('user_tipos_negocio')
+              .insert({
+                user_id: newUser.id,
+                tipo_negocio_id: tipoData.id,
+                ativo: true
+              })
+          }
+        }
+      }
 
       await fetchUsuarios()
       setShowNewUser(false)
