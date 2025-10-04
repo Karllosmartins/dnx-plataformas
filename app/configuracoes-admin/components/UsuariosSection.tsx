@@ -234,6 +234,23 @@ export default function UsuariosSection() {
     elevenlabs_api_key?: string
     elevenlabs_voice_id?: string
     firecrawl_api_key?: string
+    // Campos da view que não devem ser atualizados
+    plano_legado?: string
+    plano_nome?: string
+    plano_descricao?: string
+    plano_preco?: number
+    plano_permissoes?: any
+    acesso_dashboard?: boolean
+    acesso_crm?: boolean
+    acesso_whatsapp?: boolean
+    acesso_disparo_simples?: boolean
+    acesso_disparo_ia?: boolean
+    acesso_agentes_ia?: boolean
+    acesso_extracao_leads?: boolean
+    acesso_enriquecimento?: boolean
+    acesso_usuarios?: boolean
+    acesso_consulta?: boolean
+    [key: string]: any // Para permitir outros campos da view
   }) => {
     try {
       // Separar tipos_negocio e campos que NÃO pertencem à tabela users
@@ -256,6 +273,22 @@ export default function UsuariosSection() {
         id_pasta_rag,
         nome_cliente_empresa,
         structured_output_schema,
+        // Campos da view que vêm da tabela planos
+        plano_legado,
+        plano_nome,
+        plano_descricao,
+        plano_preco,
+        plano_permissoes,
+        acesso_dashboard,
+        acesso_crm,
+        acesso_whatsapp,
+        acesso_disparo_simples,
+        acesso_disparo_ia,
+        acesso_agentes_ia,
+        acesso_extracao_leads,
+        acesso_enriquecimento,
+        acesso_usuarios,
+        acesso_consulta,
         ...userDataOnly
       } = userData
 
