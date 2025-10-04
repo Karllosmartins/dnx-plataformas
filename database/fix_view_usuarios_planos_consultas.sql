@@ -1,16 +1,8 @@
--- Migration: Adicionar consultas_realizadas e leads_consumidos
+-- Migration: Atualizar view_usuarios_planos com campos de consumo
 -- Data: 2025-10-04
--- Descrição: Adicionar campos de consumo na tabela users e atualizar view
+-- Descrição: Adicionar leads_consumidos e consultas_realizadas na view
 
--- 1. Adicionar colunas na tabela users se não existirem
-ALTER TABLE users ADD COLUMN IF NOT EXISTS leads_consumidos INTEGER DEFAULT 0;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS consultas_realizadas INTEGER DEFAULT 0;
-
--- 2. Adicionar índices para otimizar consultas
-CREATE INDEX IF NOT EXISTS idx_users_leads_consumidos ON users (leads_consumidos);
-CREATE INDEX IF NOT EXISTS idx_users_consultas_realizadas ON users (consultas_realizadas);
-
--- 3. Recriar a view com os novos campos
+-- Recriar a view incluindo os campos de consumo
 DROP VIEW IF EXISTS view_usuarios_planos;
 
 CREATE VIEW view_usuarios_planos AS
