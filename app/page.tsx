@@ -458,68 +458,68 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 border border-yellow-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg">
-                <Clock className="h-7 w-7 text-white" />
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-yellow-900">{metrics.qualificados}</div>
-                <div className="text-xs font-medium text-yellow-700 mt-1">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
-                <DollarSign className="h-7 w-7 text-white" />
-              </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-purple-900">{metrics.pagamentosRealizados}</div>
-                <div className="text-xs font-medium text-purple-700 mt-1">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.qualificados}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
-                <FileText className="h-7 w-7 text-white" />
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-purple-100 rounded-full">
+                <DollarSign className="h-6 w-6 text-purple-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-orange-900">{metrics.dividasEncontradas}</div>
-                <div className="text-xs font-medium text-orange-700 mt-1">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.pagamentosRealizados}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
-                <User className="h-7 w-7 text-white" />
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-orange-100 rounded-full">
+                <FileText className="h-6 w-6 text-orange-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-indigo-900">
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.dividasEncontradas}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-indigo-100 rounded-full">
+                <User className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">
                   {leads.filter(l => {
                     const status = l.status_generico || l.status_limpa_nome || ''
                     return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
                   }).length}
                 </div>
-                <div className="text-xs font-medium text-indigo-700 mt-1">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
-                <CheckCircle className="h-7 w-7 text-white" />
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-green-900">{metrics.clientesFechados}</div>
-                <div className="text-xs font-medium text-green-700 mt-1">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.clientesFechados}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg">
-                <XCircle className="h-7 w-7 text-white" />
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+                <XCircle className="h-6 w-6 text-red-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-red-900">{metrics.leadsPerdidos}</div>
-                <div className="text-xs font-medium text-red-700 mt-1">Leads Perdidos</div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.leadsPerdidos}</div>
+                <div className="text-xs text-gray-500">Leads Perdidos</div>
               </div>
             </div>
           </div>
@@ -528,39 +528,32 @@ export default function HomePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Leads Recentes */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-5">
-            <div className="flex items-center">
-              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="ml-3 text-xl font-bold text-white">Leads Recentes</h3>
-            </div>
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Leads Recentes</h3>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-200">
             {recentLeads.length > 0 ? (
               recentLeads.map((lead) => (
                 <div key={lead.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-gray-900 mb-1">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
                         {lead.nome_cliente || 'Nome não informado'}
                       </div>
-                      <div className="text-xs text-gray-500 flex items-center space-x-2">
-                        <span className="bg-gray-100 px-2 py-0.5 rounded">{lead.origem}</span>
-                        <span>•</span>
-                        <span>{lead.telefone}</span>
+                      <div className="text-sm text-gray-500">
+                        {lead.origem} • {lead.telefone}
                       </div>
                     </div>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${(() => {
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(() => {
                       const status = lead.status_generico || lead.status_limpa_nome || 'novo'
                       if (status.includes('fechado') || status.includes('finalizado') || status.includes('convertido'))
-                        return 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm'
+                        return 'bg-green-100 text-green-800'
                       if (status.includes('divida') || status.includes('viavel') || status.includes('consta'))
-                        return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm'
+                        return 'bg-orange-100 text-orange-800'
                       if (status.includes('qualific') || status.includes('analise'))
-                        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-sm'
-                      return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
+                        return 'bg-yellow-100 text-yellow-800'
+                      return 'bg-blue-100 text-blue-800'
                     })()}`}>
                       {(lead.status_generico || lead.status_limpa_nome)?.replace(/_/g, ' ') || 'novo lead'}
                     </span>
@@ -582,26 +575,21 @@ export default function HomePage() {
         </div>
 
         {/* Ações Rápidas */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5">
-            <div className="flex items-center">
-              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
-                <Settings className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="ml-3 text-xl font-bold text-white">Ações Rápidas</h3>
-            </div>
+        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Ações Rápidas</h3>
           </div>
           <div className="p-6 space-y-3">
             <Link href="/leads" className="group block">
-              <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 hover:shadow-md transition-all">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
-                  <Users className="h-6 w-6 text-white" />
+              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-bold text-blue-900 group-hover:text-blue-700">
+                  <h4 className="text-sm font-semibold text-gray-900">
                     Gerenciar Leads
                   </h4>
-                  <p className="text-xs text-blue-700 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Visualizar e editar leads do funil
                   </p>
                 </div>
@@ -609,15 +597,15 @@ export default function HomePage() {
             </Link>
 
             <Link href="/configuracoes-admin" className="group block">
-              <div className="flex items-center p-4 bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-xl hover:from-green-100 hover:to-green-200 hover:border-green-300 hover:shadow-md transition-all">
-                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
-                  <Settings className="h-6 w-6 text-white" />
+              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Settings className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-bold text-green-900 group-hover:text-green-700">
+                  <h4 className="text-sm font-semibold text-gray-900">
                     Configurações
                   </h4>
-                  <p className="text-xs text-green-700 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Gerenciar planos e tipos de negócio
                   </p>
                 </div>
@@ -625,15 +613,15 @@ export default function HomePage() {
             </Link>
 
             <Link href="/relatorios" className="group block">
-              <div className="flex items-center p-4 bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl hover:from-purple-100 hover:to-purple-200 hover:border-purple-300 hover:shadow-md transition-all">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
-                  <FileText className="h-6 w-6 text-white" />
+              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm transition-all">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <FileText className="h-5 w-5 text-purple-600" />
                 </div>
                 <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-bold text-purple-900 group-hover:text-purple-700">
+                  <h4 className="text-sm font-semibold text-gray-900">
                     Relatórios
                   </h4>
-                  <p className="text-xs text-purple-700 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Análises e métricas detalhadas
                   </p>
                 </div>
