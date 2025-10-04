@@ -117,7 +117,7 @@ export default function RelatoriosPage() {
   const calculateMetrics = (filteredLeads: Lead[]) => {
     const total = filteredLeads.length
     const comWhatsApp = filteredLeads.filter(l => l.existe_whatsapp).length
-    const valorTotal = filteredLeads.reduce((sum, l) => sum + (parseFloat(l.valor_negociacao || '0')), 0)
+    const valorTotal = filteredLeads.reduce((sum, l) => sum + (l.valor_contrato || 0), 0)
 
     // Métricas por status
     const statusCounts: Record<string, number> = {}

@@ -1,3 +1,7 @@
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
 }
 Installing dependencies...
 npm warn deprecated @supabase/auth-helpers-shared@0.7.0: This package is now deprecated - please use the @supabase/ssr package instead.
@@ -44,8 +48,8 @@ Installing devDependencies (npm):
 npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 npm warn deprecated glob@7.1.7: Glob versions prior to v9 are no longer supported
-npm warn deprecated @humanwhocodes/config-array@0.11.14: Use @eslint/config-array instead
 npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+npm warn deprecated @humanwhocodes/config-array@0.11.14: Use @eslint/config-array instead
 npm warn deprecated eslint@8.53.0: This version is no longer supported. Please see https://eslint.org/version-support for other options.
 added 227 packages, and audited 465 packages in 9s
 152 packages are looking for funding
@@ -59,16 +63,12 @@ Some issues need review, and may require choosing
 a different dependency.
 Run `npm audit` for details.
 Failed to compile.
-./app/relatorios/page.tsx:101:35
-Type error: No overload matches this call.
-  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
-    Argument of type 'string | null' is not assignable to parameter of type 'string | number | Date'.
-  Overload 2 of 4, '(value: string | number): Date', gave the following error.
-    Argument of type 'string | null' is not assignable to parameter of type 'string | number'.
-   99 |
-  100 |       if (filters.dataInicio) {
-> 101 |         const leadDate = new Date(lead.created_at)
-      |                                   ^
-  102 |         const filterDate = new Date(filters.dataInicio)
-  103 |         if (leadDate < filterDate) return false
-  104 |       }
+./app/relatorios/page.tsx:120:77
+Type error: Property 'valor_negociacao' does not exist on type 'Lead'.
+  118 |     const total = filteredLeads.length
+  119 |     const comWhatsApp = filteredLeads.filter(l => l.existe_whatsapp).length
+> 120 |     const valorTotal = filteredLeads.reduce((sum, l) => sum + (parseFloat(l.valor_negociacao || '0')), 0)
+      |                                                                             ^
+  121 |
+  122 |     // Métricas por status
+  123 |     const statusCounts: Record<string, number> = {}
