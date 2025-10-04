@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Plano, UsuarioComPlano } from '../../../lib/supabase'
+import { supabase, Plano } from '../../../lib/supabase'
 import { useAuth } from '../../../components/AuthWrapper'
 import {
   Crown,
@@ -19,14 +19,12 @@ import {
 export default function PlanosSection() {
   const { user } = useAuth()
   const [planos, setPlanos] = useState<Plano[]>([])
-  const [usuarios, setUsuarios] = useState<UsuarioComPlano[]>([])
   const [loading, setLoading] = useState(true)
   const [editingPlano, setEditingPlano] = useState<number | null>(null)
   const [showNewPlano, setShowNewPlano] = useState(false)
 
   useEffect(() => {
     fetchPlanos()
-    fetchUsuarios()
   }, [])
 
   const fetchPlanos = async () => {
@@ -43,23 +41,8 @@ export default function PlanosSection() {
     }
   }
 
-  const fetchUsuarios = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('view_usuarios_planos')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setUsuarios(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar usuários:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleSavePlano = async (plano: Partial<Plano>) => {
+    setLoading(false)
     try {
       const { error } = await supabase
         .from('planos')
@@ -91,22 +74,6 @@ export default function PlanosSection() {
     } catch (error) {
       console.error('Erro ao excluir plano:', error)
       alert('Erro ao excluir plano')
-    }
-  }
-
-  const handleChangeUserPlan = async (userId: number, planoId: number) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ plano_id: planoId })
-        .eq('id', userId)
-
-      if (error) throw error
-
-      await fetchUsuarios()
-    } catch (error) {
-      console.error('Erro ao alterar plano do usuário:', error)
-      alert('Erro ao alterar plano do usuário')
     }
   }
 
@@ -159,27 +126,6 @@ export default function PlanosSection() {
                 onSave={handleSavePlano}
                 onCancel={() => setEditingPlano(null)}
                 onDelete={() => handleDeletePlano(plano.id)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Seção de Usuários */}
-        <div>
-          <div className="flex items-center mb-6">
-            <Users className="h-5 w-5 mr-2 text-gray-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Usuários e Planos
-            </h2>
-          </div>
-
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            {usuarios.map((usuario) => (
-              <UsuarioCard
-                key={usuario.id}
-                usuario={usuario}
-                planos={planos}
-                onChangePlan={handleChangeUserPlan}
               />
             ))}
           </div>
@@ -365,38 +311,3 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
   )
 }
 
-interface UsuarioCardProps {
-  usuario: UsuarioComPlano
-  planos: Plano[]
-  onChangePlan: (userId: number, planoId: number) => void
-}
-
-function UsuarioCard({ usuario, planos, onChangePlan }: UsuarioCardProps) {
-  return (
-    <div className="border border-gray-200 rounded-lg p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-        <div className="flex-1">
-          <h3 className="font-medium text-gray-900">{usuario.name}</h3>
-          <p className="text-sm text-gray-600">{usuario.email}</p>
-          <span className="inline-block mt-1 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 capitalize">
-            {usuario.plano_nome || usuario.plano}
-          </span>
-        </div>
-        <div className="flex-shrink-0 sm:ml-4">
-          <select
-            value={usuario.plano_id || ''}
-            onChange={(e) => onChangePlan(usuario.id, parseInt(e.target.value))}
-            className="w-full sm:w-auto text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Alterar plano...</option>
-            {planos.map((plano) => (
-              <option key={plano.id} value={plano.id}>
-                {plano.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
-  )
-}

@@ -741,7 +741,7 @@ function UsuarioCard({
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-2">{usuario.email}</p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 capitalize">
                 {usuario.plano_nome || usuario.plano || 'Sem plano'}
               </span>
@@ -756,6 +756,20 @@ function UsuarioCard({
                 </span>
               )}
             </div>
+            {/* Tipos de Negócio */}
+            {(usuario as any).tipos_negocio_selecionados && (usuario as any).tipos_negocio_selecionados.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-gray-500 font-medium">Negócios:</span>
+                {(usuario as any).tipos_negocio_selecionados.map((tipo: any) => (
+                  <span
+                    key={tipo.id}
+                    className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800"
+                  >
+                    {tipo.nome_exibicao}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <button

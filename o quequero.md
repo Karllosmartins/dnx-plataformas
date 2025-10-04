@@ -157,3 +157,54 @@ create index IF not exists idx_config_instancia on public.configuracoes_credenci
 create trigger update_configuracoes_updated_at BEFORE
 update on configuracoes_credenciais for EACH row
 execute FUNCTION update_updated_at_column ();
+
+create table public.user_tipos_negocio (
+  id bigserial not null,
+  user_id bigint not null,
+  tipo_negocio_id bigint not null,
+  configuracoes_usuario jsonb null default '{}'::jsonb,
+  ativo boolean null default true,
+  data_atribuicao timestamp with time zone null default now(),
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint user_tipos_negocio_pkey primary key (id),
+  constraint unique_user_tipo unique (user_id, tipo_negocio_id),
+  constraint user_tipos_negocio_tipo_negocio_id_fkey foreign KEY (tipo_negocio_id) references tipos_negocio (id) on delete CASCADE,
+  constraint user_tipos_negocio_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_user_tipos_negocio_user_id on public.user_tipos_negocio using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_user_tipos_negocio_tipo_id on public.user_tipos_negocio using btree (tipo_negocio_id) TABLESPACE pg_default;
+
+create index IF not exists idx_user_tipos_negocio_ativo on public.user_tipos_negocio using btree (ativo) TABLESPACE pg_default;
+
+create trigger update_user_tipos_negocio_updated_at BEFORE
+update on user_tipos_negocio for EACH row
+execute FUNCTION update_updated_at_column ();
+
+create table public.tipos_negocio (
+  id bigserial not null,
+  nome character varying(50) not null,
+  nome_exibicao character varying(100) not null,
+  descricao text null,
+  icone character varying(50) null default 'building'::character varying,
+  cor character varying(7) null default '#3B82F6'::character varying,
+  campos_personalizados jsonb null default '[]'::jsonb,
+  status_personalizados jsonb null default '[]'::jsonb,
+  metricas_config jsonb null default '{"campos_receita": [], "campos_conversao": [], "metricas_principais": []}'::jsonb,
+  ativo boolean null default true,
+  ordem integer null default 1,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint tipos_negocio_pkey primary key (id),
+  constraint tipos_negocio_nome_key unique (nome)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_tipos_negocio_nome on public.tipos_negocio using btree (nome) TABLESPACE pg_default;
+
+create index IF not exists idx_tipos_negocio_ativo on public.tipos_negocio using btree (ativo) TABLESPACE pg_default;
+
+create trigger update_tipos_negocio_updated_at BEFORE
+update on tipos_negocio for EACH row
+execute FUNCTION update_updated_at_column ();
