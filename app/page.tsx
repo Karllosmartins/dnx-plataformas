@@ -353,82 +353,61 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
-      {/* Header com Gradient */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-8 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">
-              {dashboardConfig?.title || 'DNX Plataformas'}
-            </h1>
-            <p className="text-blue-100 text-lg">
-              {dashboardConfig?.subtitle || 'Dashboard CRM'} • Bem-vindo, {user?.name}
-            </p>
-          </div>
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="text-right">
-              <div className="text-sm text-blue-200">Total de Leads</div>
-              <div className="text-3xl font-bold">{metrics.totalLeads}</div>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6 p-6">
+      {/* Cabeçalho */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {dashboardConfig?.title || 'DNX Plataformas'}
+        </h1>
+        <p className="mt-2 text-gray-600">
+          {dashboardConfig?.subtitle || 'Dashboard CRM'} - Bem-vindo, {user?.name}
+        </p>
       </div>
 
-      {/* Filtro de Data - Card Moderno */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Clock className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="ml-3 text-lg font-semibold text-gray-900">Filtros de Período</h3>
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={clearDateFilter}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Limpar filtros
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Data início
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Data fim
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
+      {/* Filtro de Data */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
           {(startDate || endDate) && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium">
-                📊 Mostrando dados de {filteredLeads.length} leads
-                {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
-                {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
-              </p>
-            </div>
+            <button
+              onClick={clearDateFilter}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Limpar filtros
+            </button>
           )}
         </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data início
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data fim
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        {(startDate || endDate) && (
+          <div className="mt-3 text-sm text-gray-600">
+            Mostrando dados de {filteredLeads.length} leads
+            {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
+            {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
+          </div>
+        )}
       </div>
 
       {/* Métricas principais */}
@@ -463,24 +442,19 @@ export default function HomePage() {
       </div>
 
       {/* Funil de Conversão */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-700 px-6 py-5">
-          <div className="flex items-center">
-            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-white" />
-            </div>
-            <h3 className="ml-3 text-xl font-bold text-white">Funil de Conversão</h3>
-          </div>
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Funil de Conversão</h3>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
-                <Users className="h-7 w-7 text-white" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-blue-100 rounded-full">
+                <Users className="h-6 w-6 text-blue-600" />
               </div>
-              <div className="mt-3 text-center">
-                <div className="text-3xl font-bold text-blue-900">{metrics.novosLeads}</div>
-                <div className="text-xs font-medium text-blue-700 mt-1">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold text-gray-900">{metrics.novosLeads}</div>
+                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
               </div>
             </div>
 
