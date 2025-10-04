@@ -693,8 +693,25 @@ function UsuarioCard({
       formData.firecrawl_api_key !== ((usuario as any).firecrawl_api_key || '') ||
       tiposChanged
 
-    if (hasChanges) {
-      await onUpdateUser(usuario.id, formData)
+    if (hasChanges || tiposChanged) {
+      // Enviar apenas os campos que existem na tabela users
+      const updateData: any = {}
+
+      // Campos básicos que existem em users
+      if (formData.name !== usuario.name) updateData.name = formData.name
+      if (formData.email !== usuario.email) updateData.email = formData.email
+      if (formData.cpf !== (usuario.cpf || '')) updateData.cpf = formData.cpf
+      if (formData.telefone !== (usuario.telefone || '')) updateData.telefone = formData.telefone
+      if (formData.limite_leads !== (usuario as any).limite_leads) updateData.limite_leads = formData.limite_leads
+      if (formData.limite_consultas !== (usuario as any).limite_consultas) updateData.limite_consultas = formData.limite_consultas
+      if (formData.numero_instancias !== (usuario as any).numero_instancias) updateData.numero_instancias = formData.numero_instancias
+
+      // Tipos de negócio (sempre enviar se mudou)
+      if (tiposChanged) {
+        updateData.tipos_negocio = formData.tipos_negocio
+      }
+
+      await onUpdateUser(usuario.id, updateData)
     } else {
       onCancel()
     }
