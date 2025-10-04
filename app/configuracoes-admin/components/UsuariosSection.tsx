@@ -256,6 +256,11 @@ export default function UsuariosSection() {
       // Separar tipos_negocio e campos que NÃO pertencem à tabela users
       const {
         tipos_negocio,
+        // Campos que não existem na tabela users (serão ignorados)
+        delay_entre_mensagens,
+        delay_apos_intervencao,
+        inicio_expediente,
+        fim_expediente,
         openai_api_token,
         gemini_api_key,
         modelo_ia,
