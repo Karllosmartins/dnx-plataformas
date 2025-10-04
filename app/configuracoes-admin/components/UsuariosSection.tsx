@@ -49,7 +49,7 @@ export default function UsuariosSection() {
 
           return {
             ...usuario,
-            tipos_negocio_selecionados: tiposData?.map((item: any) => item.tipos_negocio?.nome) || []
+            tipos_negocio_selecionados: tiposData?.map((item: any) => item.tipos_negocio).filter(Boolean) || []
           }
         })
       )
@@ -611,8 +611,8 @@ function UsuarioCard({
     numero_instancias: (usuario as any).numero_instancias || 1,
     limite_leads: (usuario as any).limite_leads || 100,
     limite_consultas: (usuario as any).limite_consultas || 50,
-    // Tipos de negócio
-    tipos_negocio: (usuario as any).tipos_negocio_selecionados || [],
+    // Tipos de negócio (array de nomes)
+    tipos_negocio: (usuario as any).tipos_negocio_selecionados?.map((t: any) => t.nome) || [],
     // Integração CRM
     crm_url: (usuario as any).crm_url || '',
     crm_usuario: (usuario as any).crm_usuario || '',
@@ -659,7 +659,7 @@ function UsuarioCard({
     }
 
     // Atualizar outros dados se mudaram
-    const tiposOriginais = (usuario as any).tipos_negocio_selecionados || []
+    const tiposOriginais = (usuario as any).tipos_negocio_selecionados?.map((t: any) => t.nome) || []
     const tiposChanged = JSON.stringify(formData.tipos_negocio.sort()) !== JSON.stringify(tiposOriginais.sort())
 
     const hasChanges =

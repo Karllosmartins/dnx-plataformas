@@ -38,11 +38,12 @@ export default function PlanosSection() {
       setPlanos(data || [])
     } catch (error) {
       console.error('Erro ao buscar planos:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleSavePlano = async (plano: Partial<Plano>) => {
-    setLoading(false)
     try {
       const { error } = await supabase
         .from('planos')
