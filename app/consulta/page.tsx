@@ -362,16 +362,22 @@ export default function ConsultaPage() {
                     />
                   </div>
 
-                  {/* Informações de limite */}
+                  {/* Informações de limite - Cards com gradiente */}
                   {limiteInfo && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                      <h4 className="text-sm font-medium text-blue-800 mb-2">
-                        📊 Uso de Consultas
-                      </h4>
-                      <div className="text-sm text-blue-700 space-y-1">
-                        <p>Consultas realizadas: {limiteInfo.consultasRealizadas}</p>
-                        <p>Limite total: {limiteInfo.limiteConsultas}</p>
-                        <p>Consultas restantes: {limiteInfo.consultasRestantes}</p>
+                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white">
+                        <p className="text-blue-100 text-xs font-medium uppercase">Realizadas</p>
+                        <p className="text-3xl font-bold mt-1">{limiteInfo.consultasRealizadas}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white">
+                        <p className="text-purple-100 text-xs font-medium uppercase">Limite Total</p>
+                        <p className="text-3xl font-bold mt-1">{limiteInfo.limiteConsultas}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white">
+                        <p className="text-green-100 text-xs font-medium uppercase">Restantes</p>
+                        <p className="text-3xl font-bold mt-1">{limiteInfo.consultasRestantes}</p>
                       </div>
                     </div>
                   )}

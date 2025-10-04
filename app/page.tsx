@@ -5,17 +5,18 @@ import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../lib/supabase'
 import { useAuth } from '../components/AuthWrapper'
 import MetricCard from '../components/MetricCard'
-import { 
-  Settings, 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
-  AlertCircle, 
+import {
+  Settings,
+  Users,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
   CheckCircle,
   Clock,
   FileText,
   User,
-  XCircle
+  XCircle,
+  Target
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -442,86 +443,60 @@ export default function HomePage() {
       </div>
 
       {/* Funil de Conversão */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Funil de Conversão</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-blue-100 rounded-full">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.novosLeads}</div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
-              </div>
-            </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-6">Funil de Conversão</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <Users className="h-8 w-8 mx-auto mb-2 text-blue-100" />
+            <div className="text-2xl font-bold">{metrics.novosLeads}</div>
+            <div className="text-xs text-blue-100 mt-1">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.qualificados}</div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-100" />
+            <div className="text-2xl font-bold">{metrics.qualificados}</div>
+            <div className="text-xs text-yellow-100 mt-1">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-purple-100 rounded-full">
-                <DollarSign className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.pagamentosRealizados}</div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <DollarSign className="h-8 w-8 mx-auto mb-2 text-purple-100" />
+            <div className="text-2xl font-bold">{metrics.pagamentosRealizados}</div>
+            <div className="text-xs text-purple-100 mt-1">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-orange-100 rounded-full">
-                <FileText className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.dividasEncontradas}</div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <FileText className="h-8 w-8 mx-auto mb-2 text-orange-100" />
+            <div className="text-2xl font-bold">{metrics.dividasEncontradas}</div>
+            <div className="text-xs text-orange-100 mt-1">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-indigo-100 rounded-full">
-                <User className="h-6 w-6 text-indigo-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">
-                  {leads.filter(l => {
-                    const status = l.status_generico || l.status_limpa_nome || ''
-                    return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
-                  }).length}
-                </div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
-              </div>
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <User className="h-8 w-8 mx-auto mb-2 text-indigo-100" />
+            <div className="text-2xl font-bold">
+              {leads.filter(l => {
+                const status = l.status_generico || l.status_limpa_nome || ''
+                return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
+              }).length}
             </div>
+            <div className="text-xs text-indigo-100 mt-1">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.clientesFechados}</div>
-                <div className="text-xs text-gray-500">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-100" />
+            <div className="text-2xl font-bold">{metrics.clientesFechados}</div>
+            <div className="text-xs text-green-100 mt-1">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
-                <XCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold text-gray-900">{metrics.leadsPerdidos}</div>
-                <div className="text-xs text-gray-500">Leads Perdidos</div>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <XCircle className="h-8 w-8 mx-auto mb-2 text-red-100" />
+            <div className="text-2xl font-bold">{metrics.leadsPerdidos}</div>
+            <div className="text-xs text-red-100 mt-1">Leads Perdidos</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg shadow-lg p-4 text-white text-center">
+            <Target className="h-8 w-8 mx-auto mb-2 text-gray-100" />
+            <div className="text-2xl font-bold">{leads.length}</div>
+            <div className="text-xs text-gray-100 mt-1">Total Geral</div>
           </div>
         </div>
       </div>
