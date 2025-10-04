@@ -1,74 +1,60 @@
-npm warn deprecated @supabase/auth-helpers-shared@0.7.0: This package is now deprecated - please use the @supabase/ssr package instead.
-npm warn deprecated @supabase/auth-helpers-nextjs@0.10.0: This package is now deprecated - please use the @supabase/ssr package instead.
-added 237 packages, and audited 238 packages in 17s
-43 packages are looking for funding
-  run `npm fund` for details
-3 vulnerabilities (2 high, 1 critical)
-To address issues that do not require attention, run:
-  npm audit fix
-To address all issues possible, run:
-  npm audit fix --force
-Some issues need review, and may require choosing
-a different dependency.
-Run `npm audit` for details.
-npm notice
-npm notice New major version of npm available! 10.8.2 -> 11.6.1
-npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.1
-npm notice To update run: npm install -g npm@11.6.1
-npm notice
-Building application...
-> dnx-plataformas-crm@1.0.0 build
-
-> next build
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
-   ▲ Next.js 14.0.0
-   Creating an optimized production build ...
- ⚠ Compiled with warnings
-./node_modules/next/dist/esm/shared/lib/router/utils/app-paths.js
-A Node.js module is loaded ('url' at line 3) which is not supported in the Edge Runtime.
-Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
-Import trace for requested module:
-./node_modules/next/dist/esm/shared/lib/router/utils/app-paths.js
-   Linting and checking validity of types ...
-It looks like you're trying to use TypeScript but do not have the required package(s) installed.
-Installing dependencies
-If you are not trying to use TypeScript, please remove the tsconfig.json file from your package root (and any TypeScript files in your pages directory).
-Installing devDependencies (npm):
-
-- typescript
-npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
-npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-npm warn deprecated glob@7.1.7: Glob versions prior to v9 are no longer supported
-npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
-npm warn deprecated @humanwhocodes/config-array@0.11.14: Use @eslint/config-array instead
-npm warn deprecated eslint@8.53.0: This version is no longer supported. Please see https://eslint.org/version-support for other options.
-added 227 packages, and audited 465 packages in 9s
-152 packages are looking for funding
-  run `npm fund` for details
-3 vulnerabilities (2 high, 1 critical)
-To address issues that do not require attention, run:
-  npm audit fix
-To address all issues possible, run:
-  npm audit fix --force
-Some issues need review, and may require choosing
-a different dependency.
-Run `npm audit` for details.
-Failed to compile.
-./app/relatorios/page.tsx:148:29
-Type error: No overload matches this call.
-  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
-    Argument of type 'string | null' is not assignable to parameter of type 'string | number | Date'.
-      Type 'null' is not assignable to type 'string | number | Date'.
-  Overload 2 of 4, '(value: string | number): Date', gave the following error.
-    Argument of type 'string | null' is not assignable to parameter of type 'string | number'.
-      Type 'null' is not assignable to type 'string | number'.
-  146 |     const timeline: Record<string, number> = {}
-  147 |     filteredLeads.forEach(lead => {
-> 148 |       const date = new Date(lead.created_at).toLocaleDateString('pt-BR')
-      |                             ^
-  149 |       timeline[date] = (timeline[date] || 0) + 1
-  150 |     })
-  151 |
+661-bdcc899354e3647e.js:1 User string from localStorage: {"id":"24","email":"karllosmartins1000@gmail.com","name":"Karllos Martins","role":"admin","created_at":"2025-09-03T00:32:07.725098+00:00","active":true}
+661-bdcc899354e3647e.js:1 Usuario atual: Object
+page-00fddbb880721e36.js:1 Tipo de negócio: limpa_nome
+page-00fddbb880721e36.js:1 Status personalizados: Array(8)
+page-00fddbb880721e36.js:1 Status encontrados nos leads: Array(3)
+feature_collector.js:23 using deprecated parameters for the initialization function; pass a single object instead
+H @ feature_collector.js:23
+page-19332f85c238f95d.js:1 Dashboard: Buscando tipo de negócio para usuário: 24
+page-19332f85c238f95d.js:1 Plan info loaded: Object
+page-19332f85c238f95d.js:1 Dashboard: Resultado da busca: Object Error: null
+page-19332f85c238f95d.js:1 Dashboard: Tipo configurado: Object
+661-bdcc899354e3647e.js:1 AuthWrapper: Iniciando processo de login
+661-bdcc899354e3647e.js:1 Tentativa de login: nilcilenersm@gmail.com
+661-bdcc899354e3647e.js:1 Resultado da busca no Supabase: Object
+661-bdcc899354e3647e.js:1 Verificando senha...
+661-bdcc899354e3647e.js:1 Login bem-sucedido!
+661-bdcc899354e3647e.js:1 AuthWrapper: Resultado do login: Object
+661-bdcc899354e3647e.js:1 AuthWrapper: Login bem-sucedido, definindo usuário
+661-bdcc899354e3647e.js:1 AuthWrapper: Iniciando processo de login
+661-bdcc899354e3647e.js:1 Tentativa de login: karllosmartins1000@gmail.com
+661-bdcc899354e3647e.js:1 Resultado da busca no Supabase: Object
+661-bdcc899354e3647e.js:1 Verificando senha...
+472-ceed697e056bc12d.js:1 Senha incorreta
+push.20811.window.console.error @ 472-ceed697e056bc12d.js:1
+472-ceed697e056bc12d.js:1 Erro no processo de login: Error: Senha incorreta
+    at Object.signIn (661-bdcc899354e3647e.js:1:664)
+    at async login (661-bdcc899354e3647e.js:1:11919)
+    at async handleSubmit (661-bdcc899354e3647e.js:1:8576)
+push.20811.window.console.error @ 472-ceed697e056bc12d.js:1
+661-bdcc899354e3647e.js:1 AuthWrapper: Resultado do login: Object
+661-bdcc899354e3647e.js:1 AuthWrapper: Login falhou: Senha incorreta
+661-bdcc899354e3647e.js:1 AuthWrapper: Iniciando processo de login
+661-bdcc899354e3647e.js:1 Tentativa de login: nilcilenersm@gmail.com
+661-bdcc899354e3647e.js:1 Resultado da busca no Supabase: Object
+661-bdcc899354e3647e.js:1 Verificando senha...
+661-bdcc899354e3647e.js:1 Login bem-sucedido!
+661-bdcc899354e3647e.js:1 AuthWrapper: Resultado do login: Object
+661-bdcc899354e3647e.js:1 AuthWrapper: Login bem-sucedido, definindo usuário
+661-bdcc899354e3647e.js:1 AuthWrapper: Iniciando processo de login
+661-bdcc899354e3647e.js:1 Tentativa de login: karllosmartins1000@gmail.com
+661-bdcc899354e3647e.js:1 Resultado da busca no Supabase: Object
+661-bdcc899354e3647e.js:1 Verificando senha...
+661-bdcc899354e3647e.js:1 Login bem-sucedido!
+661-bdcc899354e3647e.js:1 AuthWrapper: Resultado do login: Object
+661-bdcc899354e3647e.js:1 AuthWrapper: Login bem-sucedido, definindo usuário
+472-ceed697e056bc12d.js:1 Erro ao carregar dados do usuário: Error: supabaseAdmin should only be used on the server side
+    at getSupabaseAdmin (661-bdcc899354e3647e.js:1:16508)
+    at carregarDadosUsuario (page-1ea5ce050569bd79.js:1:2783)
+    at page-1ea5ce050569bd79.js:1:2681
+    at ej (fd9d1056-053a427fed818d2b.js:9:81505)
+    at Nj (fd9d1056-053a427fed818d2b.js:9:93255)
+    at Rj (fd9d1056-053a427fed818d2b.js:9:93892)
+    at Qj (fd9d1056-053a427fed818d2b.js:9:93776)
+    at Rj (fd9d1056-053a427fed818d2b.js:9:93872)
+    at Qj (fd9d1056-053a427fed818d2b.js:9:93776)
+    at Rj (fd9d1056-053a427fed818d2b.js:9:94381)
+push.20811.window.console.error @ 472-ceed697e056bc12d.js:1
+enwxbkyvnrjderqdygtl.supabase.co/rest/v1/users?id=eq.27:1  Failed to load resource: the server responded with a status of 400 ()
+472-ceed697e056bc12d.js:1 Erro ao atualizar usuário: Object
+push.20811.window.console.error @ 472-ceed697e056bc12d.js:1

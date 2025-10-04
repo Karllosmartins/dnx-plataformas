@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
-import { supabase, getSupabaseAdmin } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { hasAvailableLeads, consumeLeads, getLeadsBalance, calculateEnriquecimentoLeadsConsumption } from '../../lib/permissions'
 import {
   Upload,
@@ -128,7 +128,7 @@ export default function EnriquecimentoAPIPage() {
 
   const carregarDadosUsuario = async () => {
     try {
-      const { data, error } = await getSupabaseAdmin()
+      const { data, error } = await supabase
         .from('view_usuarios_planos')
         .select('*')
         .eq('id', user?.id)
@@ -405,7 +405,7 @@ export default function EnriquecimentoAPIPage() {
         const leadsParaConsumir = calculateEnriquecimentoLeadsConsumption(sociosData.length)
 
         // Verificar se ainda tem leads suficientes
-        const userAtualizado = await getSupabaseAdmin()
+        const userAtualizado = await supabase
           .from('view_usuarios_planos')
           .select('*')
           .eq('id', user?.id)
