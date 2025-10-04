@@ -422,27 +422,27 @@ export default function ConsultaPage() {
 
                       {/* Dados da Empresa */}
                       {resultado.empresa && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                          <h4 className="font-medium text-blue-900 mb-3 flex items-center">
-                            <Building className="h-4 w-4 mr-2" />
+                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+                          <h4 className="text-xl font-bold mb-4 flex items-center">
+                            <Building className="h-5 w-5 mr-2" />
                             Dados da Empresa
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>Razão Social:</strong> {resultado.empresa.razaoSocial}</div>
-                            <div><strong>CNPJ:</strong> {resultado.empresa.cnpjFormatado}</div>
-                            <div><strong>Nome Fantasia:</strong> {resultado.empresa.nomefantasia || 'N/A'}</div>
-                            <div><strong>Data de Abertura:</strong> {resultado.empresa.dataAbertura}</div>
-                            <div><strong>CNAE:</strong> {resultado.empresa.cnae}</div>
-                            <div><strong>Porte:</strong> {resultado.empresa.porte}</div>
-                            <div><strong>Natureza Jurídica:</strong> {resultado.empresa.nJur}</div>
-                            <div><strong>Faturamento Anual:</strong> R$ {resultado.empresa.faturamentoPresumidoAnual ? Number(resultado.empresa.faturamentoPresumidoAnual).toLocaleString('pt-BR') : 'N/A'}</div>
-                            <div><strong>Score:</strong> {resultado.empresa.score}</div>
-                            <div>
+                            <div className="bg-white/10 rounded p-2"><strong>Razão Social:</strong> {resultado.empresa.razaoSocial}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>CNPJ:</strong> {resultado.empresa.cnpjFormatado}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Nome Fantasia:</strong> {resultado.empresa.nomefantasia || 'N/A'}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Data de Abertura:</strong> {resultado.empresa.dataAbertura}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>CNAE:</strong> {resultado.empresa.cnae}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Porte:</strong> {resultado.empresa.porte}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Natureza Jurídica:</strong> {resultado.empresa.nJur}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Faturamento Anual:</strong> R$ {resultado.empresa.faturamentoPresumidoAnual ? Number(resultado.empresa.faturamentoPresumidoAnual).toLocaleString('pt-BR') : 'N/A'}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Score:</strong> {resultado.empresa.score}</div>
+                            <div className="bg-white/10 rounded p-2">
                               <strong>Risco:</strong>
-                              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                                resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-100 text-red-800' :
-                                resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
+                              <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
+                                resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-600 text-white' :
+                                resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-500 text-white' :
+                                'bg-green-600 text-white'
                               }`}>
                                 {resultado.empresa.risco}
                               </span>
@@ -453,35 +453,35 @@ export default function ConsultaPage() {
 
                       {/* Dados da Pessoa */}
                       {resultado.pessoa && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                          <h4 className="font-medium text-blue-900 mb-3 flex items-center">
-                            <User className="h-4 w-4 mr-2" />
+                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+                          <h4 className="text-xl font-bold mb-4 flex items-center">
+                            <User className="h-5 w-5 mr-2" />
                             Dados Pessoais
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>Nome:</strong> {resultado.pessoa.nome}</div>
-                            <div><strong>CPF:</strong> {resultado.pessoa.cpfFormatado}</div>
-                            <div><strong>Sexo:</strong> {resultado.pessoa.sexo}</div>
-                            <div><strong>Data de Nascimento:</strong> {resultado.pessoa.dataNascimento}</div>
-                            <div><strong>Idade:</strong> {resultado.pessoa.idade} anos</div>
-                            <div><strong>Signo:</strong> {resultado.pessoa.signo}</div>
-                            <div><strong>Nome da Mãe:</strong> {resultado.pessoa.nomeMae}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Nome:</strong> {resultado.pessoa.nome}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>CPF:</strong> {resultado.pessoa.cpfFormatado}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Sexo:</strong> {resultado.pessoa.sexo}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Data de Nascimento:</strong> {resultado.pessoa.dataNascimento}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Idade:</strong> {resultado.pessoa.idade} anos</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Signo:</strong> {resultado.pessoa.signo}</div>
+                            <div className="bg-white/10 rounded p-2"><strong>Nome da Mãe:</strong> {resultado.pessoa.nomeMae}</div>
                           </div>
                         </div>
                       )}
 
                       {/* Telefones */}
                       {resultado.telefones && resultado.telefones.length > 0 && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-md p-4">
-                          <h4 className="font-medium text-purple-900 mb-3 flex items-center">
-                            <Phone className="h-4 w-4 mr-2" />
+                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Phone className="h-5 w-5 mr-2 text-green-600" />
                             Telefones ({resultado.telefones.length})
                           </h4>
                           <div className="space-y-2">
                             {resultado.telefones.map((telefone: any, idx: number) => (
-                              <div key={idx} className="flex justify-between items-center bg-white rounded px-3 py-2">
-                                <span><strong>{telefone.telefoneFormatado}</strong> - {telefone.tipoTelefone}</span>
-                                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
+                                <span className="font-medium text-gray-900"><strong>{telefone.telefoneFormatado}</strong> - {telefone.tipoTelefone}</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
                                   Q: {telefone.qualificacao}
                                 </span>
                               </div>
@@ -492,22 +492,22 @@ export default function ConsultaPage() {
 
                       {/* Endereços */}
                       {resultado.enderecos && resultado.enderecos.length > 0 && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
-                          <h4 className="font-medium text-orange-900 mb-3 flex items-center">
-                            <Building className="h-4 w-4 mr-2" />
+                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Building className="h-5 w-5 mr-2 text-orange-600" />
                             Endereços ({resultado.enderecos.length})
                           </h4>
                           <div className="space-y-2">
                             {resultado.enderecos.map((endereco: any, idx: number) => (
-                              <div key={idx} className="bg-white rounded px-3 py-2">
-                                <div className="text-sm">
+                              <div key={idx} className="bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
+                                <div className="text-sm font-medium text-gray-900">
                                   <strong>{endereco.endereco}</strong>
                                   {endereco.numero && `, ${endereco.numero}`}
                                 </div>
-                                <div className="text-xs text-gray-600">
+                                <div className="text-xs text-gray-600 mt-1">
                                   {endereco.bairro} - {endereco.cidade}/{endereco.uf} - {endereco.cepFormatado}
                                 </div>
-                                <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                                <span className="inline-block mt-2 text-xs bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-medium">
                                   Qualificação: {endereco.qualificacao}
                                 </span>
                               </div>
@@ -518,16 +518,16 @@ export default function ConsultaPage() {
 
                       {/* E-mails */}
                       {resultado.emails && resultado.emails.length > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                          <h4 className="font-medium text-green-900 mb-3 flex items-center">
-                            <Mail className="h-4 w-4 mr-2" />
+                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Mail className="h-5 w-5 mr-2 text-blue-600" />
                             E-mails ({resultado.emails.length})
                           </h4>
                           <div className="space-y-2">
                             {resultado.emails.map((email: any, idx: number) => (
-                              <div key={idx} className="flex justify-between items-center bg-white rounded px-3 py-2">
-                                <span>{email.email}</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
+                                <span className="font-medium text-gray-900">{email.email}</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
                                   Q: {email.qualificacao}
                                 </span>
                               </div>
@@ -690,14 +690,29 @@ export default function ConsultaPage() {
                           </h4>
                           <div className="space-y-2">
                             {resultado.participacaoEmpresarial.map((empresa: any, idx: number) => (
-                              <div key={idx} className="bg-white rounded px-3 py-2">
-                                <div className="text-sm">
-                                  <strong>{empresa.razaoSocial}</strong>
-                                  {empresa.nomeFantasia && ` (${empresa.nomeFantasia})`}
+                              <div key={idx} className="bg-white rounded px-3 py-2 flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="text-sm">
+                                    <strong>{empresa.razaoSocial}</strong>
+                                    {empresa.nomeFantasia && ` (${empresa.nomeFantasia})`}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    CNPJ: {empresa.cnpjFormatado} | Participação: {empresa.participacao}%
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-600">
-                                  CNPJ: {empresa.cnpjFormatado} | Participação: {empresa.participacao}%
-                                </div>
+                                {empresa.cnpjFormatado && (
+                                  <button
+                                    onClick={() => {
+                                      const cnpj = empresa.cnpjFormatado.replace(/\D/g, '')
+                                      consultarDocumento(cnpj, 'PJ')
+                                    }}
+                                    disabled={consultando}
+                                    className="ml-3 p-2 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Consultar esta empresa"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>
