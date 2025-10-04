@@ -343,10 +343,11 @@ function TipoCard({
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Informações Básicas */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Informações Básicas</h4>
+        <div className="space-y-6">
+          {/* Linha 1: Informações Básicas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Informações Básicas</h4>
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -443,12 +444,11 @@ function TipoCard({
                 <option value="false">Inativo</option>
               </select>
             </div>
-          </div>
-        </div>
+            </div>
 
-        {/* Status do Funil */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Status do Funil</h4>
+            {/* Status do Funil */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Status do Funil</h4>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Status Personalizados
@@ -466,12 +466,12 @@ function TipoCard({
             <p className="text-xs text-gray-500 mt-1.5">
               Ex: novo_lead, qualificacao, convertido
             </p>
-          </div>
-        </div>
+              </div>
+            </div>
 
-        {/* Configuração de Métricas */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Métricas</h4>
+            {/* Configuração de Métricas */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Métricas</h4>
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -528,8 +528,37 @@ function TipoCard({
               rows={4}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Linha 2: Campos Personalizados */}
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200 mb-4">Campos Personalizados</h4>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Configuração dos Campos (JSON)
+              </label>
+              <textarea
+                placeholder='Ex: [{"nome": "tempo_negativado", "tipo": "select", "label": "Há quanto tempo está negativado?", "opcoes": ["menos_1_ano", "1_2_anos"], "obrigatorio": false}]'
+                value={typeof editData.campos_personalizados === 'string' ? editData.campos_personalizados : JSON.stringify(editData.campos_personalizados || [], null, 2)}
+                onChange={(e) => {
+                  try {
+                    const parsed = JSON.parse(e.target.value)
+                    setEditData({ ...editData, campos_personalizados: parsed })
+                  } catch {
+                    // Se não for JSON válido, guarda como string temporariamente
+                    setEditData({ ...editData, campos_personalizados: e.target.value as any })
+                  }
+                }}
+                rows={10}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Formato: Array de objetos com: nome, tipo (text|number|select|multiselect|boolean|date|textarea), label, opcoes (array), obrigatorio (boolean)
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
