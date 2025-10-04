@@ -326,15 +326,22 @@ export default function UsuariosSection() {
             .single()
 
           if (tipoData) {
-            // Tentar atualizar registro existente
-            const { error: updateError } = await supabase
+            // Verificar se já existe o relacionamento
+            const { data: existingRelation } = await supabase
               .from('user_tipos_negocio')
-              .update({ ativo: true })
+              .select('id')
               .eq('user_id', userId)
               .eq('tipo_negocio_id', tipoData.id)
+              .single()
 
-            // Se não existe, criar novo
-            if (updateError) {
+            if (existingRelation) {
+              // Reativar relacionamento existente
+              await supabase
+                .from('user_tipos_negocio')
+                .update({ ativo: true })
+                .eq('id', existingRelation.id)
+            } else {
+              // Criar novo relacionamento
               await supabase
                 .from('user_tipos_negocio')
                 .insert({
