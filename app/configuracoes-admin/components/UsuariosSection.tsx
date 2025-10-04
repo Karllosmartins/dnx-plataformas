@@ -409,9 +409,9 @@ export default function UsuariosSection() {
   }) => {
     try {
       // 1. Criar usuário na tabela users (apenas campos que existem nela)
-      const { data: newUser, error: userError } = await supabase
+      const { error: userError } = await supabase
         .from('users')
-        .insert([{
+        .insert({
           name: userData.name,
           email: userData.email,
           password: userData.password,
@@ -423,11 +423,18 @@ export default function UsuariosSection() {
           numero_instancias: userData.numero_instancias || 1,
           limite_leads: userData.limite_leads || 100,
           limite_consultas: userData.limite_consultas || 50
-        }])
-        .select()
-        .single()
+        })
 
       if (userError) throw userError
+
+      // Buscar o usuário recém-criado
+      const { data: newUser, error: fetchError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userData.email)
+        .single()
+
+      if (fetchError || !newUser) throw fetchError || new Error('Usuário não encontrado')
 
       // 2. Criar configurações na tabela configuracoes_credenciais
       const { error: configError } = await supabase

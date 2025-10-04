@@ -137,42 +137,65 @@ export default function TiposNegocioSection() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Building className="h-5 w-5 mr-2 text-gray-600" />
-          <h2 className="text-xl font-semibold text-gray-900">
-            Tipos de Negócio
-          </h2>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Building className="h-7 w-7 mr-3 text-blue-600" />
+              Tipos de Negócio
+            </h1>
+            <p className="text-gray-600 mt-1">Configure tipos de negócio e suas características</p>
+          </div>
+          <button
+            onClick={() => {
+              setCriandoNovo(true)
+              setTipoEditando({
+                nome: '',
+                nome_exibicao: '',
+                descricao: '',
+                icone: 'building',
+                cor: '#3B82F6',
+                campos_personalizados: [],
+                status_personalizados: ['novo_lead', 'qualificacao', 'convertido'],
+                metricas_config: {
+                  campos_receita: [],
+                  campos_conversao: [],
+                  metricas_principais: []
+                },
+                ativo: true,
+                ordem: tipos.length + 1
+              })
+            }}
+            className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 flex items-center text-sm font-medium shadow-sm transition-colors"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Criar Novo Tipo
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setCriandoNovo(true)
-            setTipoEditando({
-              nome: '',
-              nome_exibicao: '',
-              descricao: '',
-              icone: 'building',
-              cor: '#3B82F6',
-              campos_personalizados: [],
-              status_personalizados: ['novo_lead', 'qualificacao', 'convertido'],
-              metricas_config: {
-                campos_receita: [],
-                campos_conversao: [],
-                metricas_principais: []
-              },
-              ativo: true,
-              ordem: tipos.length + 1
-            })
-          }}
-          className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 flex items-center text-sm"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Novo Tipo
-        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+      {/* Formulário de Novo Tipo */}
+      {criandoNovo && (
+        <div className="mb-6">
+          <TipoCard
+            tipo={{} as TipoNegocio}
+            isEditing={true}
+            isNew={true}
+            onSave={salvarTipo}
+            onCancel={() => {
+              setCriandoNovo(false)
+              setTipoEditando({})
+            }}
+            editData={tipoEditando}
+            setEditData={setTipoEditando}
+          />
+        </div>
+      )}
+
+      {/* Grid de Tipos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {tipos.map((tipo) => (
           <TipoCard
             key={tipo.id}
@@ -192,21 +215,6 @@ export default function TiposNegocioSection() {
             setEditData={setTipoEditando}
           />
         ))}
-
-        {criandoNovo && (
-          <TipoCard
-            tipo={{} as TipoNegocio}
-            isEditing={true}
-            isNew={true}
-            onSave={salvarTipo}
-            onCancel={() => {
-              setCriandoNovo(false)
-              setTipoEditando({})
-            }}
-            editData={tipoEditando}
-            setEditData={setTipoEditando}
-          />
-        )}
       </div>
     </div>
   )
@@ -242,104 +250,138 @@ function TipoCard({
 
   if (!isEditing) {
     return (
-      <div className="border border-gray-200 rounded-lg p-3 bg-white hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between mb-2">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-            style={{ backgroundColor: tipo.cor }}
-          >
-            <Building className="h-4 w-4" />
-          </div>
-          <div className="flex space-x-1">
-            <button
-              onClick={onEdit}
-              className="text-blue-600 hover:text-blue-800 p-1"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-            {onDelete && (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+        {/* Header do Card */}
+        <div
+          className="p-5 bg-gradient-to-br from-blue-600 to-indigo-700"
+          style={{
+            background: `linear-gradient(135deg, ${tipo.cor} 0%, ${tipo.cor}dd 100%)`
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                <Building className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-xl font-bold text-white">{tipo.nome_exibicao}</h3>
+                <p className="text-white/80 text-sm">ID: {tipo.nome}</p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
               <button
-                onClick={onDelete}
-                className="text-red-600 hover:text-red-800 p-1"
+                onClick={onEdit}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                title="Editar tipo"
               >
-                <Trash2 className="h-4 w-4" />
+                <Edit className="h-4 w-4 text-white" />
               </button>
-            )}
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors"
+                  title="Excluir tipo"
+                >
+                  <Trash2 className="h-4 w-4 text-white" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <h3 className="font-semibold text-gray-900 mb-1 text-base">{tipo.nome_exibicao}</h3>
-        <p className="text-sm text-gray-500 mb-1">ID: {tipo.nome}</p>
-        {tipo.descricao && (
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{tipo.descricao}</p>
-        )}
+        {/* Conteúdo do Card */}
+        <div className="p-5">
+          {tipo.descricao && (
+            <p className="text-sm text-gray-600 mb-4 pb-4 border-b border-gray-100">
+              {tipo.descricao}
+            </p>
+          )}
 
-        <div className="space-y-1 mb-2">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>{tipo.campos_personalizados?.length || 0} campos</span>
-            <span>•</span>
-            <span>{tipo.status_personalizados?.length || 0} status</span>
+          {/* Estatísticas */}
+          <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-100">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{tipo.campos_personalizados?.length || 0}</div>
+              <div className="text-xs text-gray-500 mt-1">Campos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{tipo.status_personalizados?.length || 0}</div>
+              <div className="text-xs text-gray-500 mt-1">Status</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {(tipo.metricas_config?.campos_receita?.length || 0) +
+                 (tipo.metricas_config?.campos_conversao?.length || 0) +
+                 (tipo.metricas_config?.metricas_principais?.length || 0)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Métricas</div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Métricas: {(tipo.metricas_config?.campos_receita?.length || 0) + (tipo.metricas_config?.campos_conversao?.length || 0) + (tipo.metricas_config?.metricas_principais?.length || 0)}</span>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <span className={`px-2 py-1 text-sm rounded-full ${
-            tipo.ativo
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {tipo.ativo ? 'Ativo' : 'Inativo'}
-          </span>
-          <span className="text-sm text-gray-400">#{tipo.ordem}</span>
+          {/* Status e Ordem */}
+          <div className="flex items-center justify-between">
+            <span className={`px-3 py-1.5 text-sm font-medium rounded-full ${
+              tipo.ativo
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+            }`}>
+              {tipo.ativo ? 'Ativo' : 'Inativo'}
+            </span>
+            <span className="text-sm font-medium text-gray-400">Ordem #{tipo.ordem}</span>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="border border-blue-200 rounded-lg p-3 bg-blue-50 col-span-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="bg-white border-2 border-blue-300 rounded-xl p-6 shadow-lg">
+      <div className="mb-6">
+        <h3 className="text-lg font-bold text-gray-900 flex items-center">
+          <Building className="h-5 w-5 mr-2 text-blue-600" />
+          {isNew ? 'Criar Novo Tipo de Negócio' : 'Editar Tipo de Negócio'}
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">Preencha as informações abaixo</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Informações Básicas */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-base text-gray-800 mb-2">Informações Básicas</h4>
+        <div className="space-y-4">
+          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Informações Básicas</h4>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Nome de Exibição *
             </label>
             <input
               type="text"
               value={editData.nome_exibicao || ''}
               onChange={(e) => setEditData({ ...editData, nome_exibicao: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Ex: Limpeza de Nome"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               ID do Tipo *
             </label>
             <input
               type="text"
               value={editData.nome || ''}
               onChange={(e) => setEditData({ ...editData, nome: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Ex: limpa_nome"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Descrição
             </label>
             <textarea
               value={editData.descricao || ''}
               onChange={(e) => setEditData({ ...editData, descricao: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows={3}
               placeholder="Descrição do tipo de negócio"
             />
@@ -347,13 +389,13 @@ function TipoCard({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
                 Ícone
               </label>
               <select
                 value={editData.icone || 'building'}
                 onChange={(e) => setEditData({ ...editData, icone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="building">Building</option>
                 <option value="scale">Scale</option>
@@ -363,21 +405,21 @@ function TipoCard({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
                 Cor
               </label>
               <input
                 type="color"
                 value={editData.cor || '#3B82F6'}
                 onChange={(e) => setEditData({ ...editData, cor: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-2 py-2 h-10"
+                className="w-full border border-gray-300 rounded-lg px-2 py-2 h-10 cursor-pointer"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
                 Ordem
               </label>
               <input
@@ -385,17 +427,17 @@ function TipoCard({
                 min="1"
                 value={editData.ordem || 1}
                 onChange={(e) => setEditData({ ...editData, ordem: parseInt(e.target.value) || 1 })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
                 Status
               </label>
               <select
                 value={editData.ativo ? 'true' : 'false'}
                 onChange={(e) => setEditData({ ...editData, ativo: e.target.value === 'true' })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="true">Ativo</option>
                 <option value="false">Inativo</option>
@@ -405,10 +447,10 @@ function TipoCard({
         </div>
 
         {/* Status do Funil */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-base text-gray-800 mb-2">Status do Funil</h4>
+        <div className="space-y-4">
+          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Status do Funil</h4>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Status Personalizados
             </label>
             <textarea
@@ -418,21 +460,21 @@ function TipoCard({
                 ...editData,
                 status_personalizados: e.target.value.split('\n').filter(s => s.trim())
               })}
-              rows={6}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              rows={8}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1.5">
               Ex: novo_lead, qualificacao, convertido
             </p>
           </div>
         </div>
 
         {/* Configuração de Métricas */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-base text-gray-800 mb-2">Métricas</h4>
+        <div className="space-y-4">
+          <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Métricas</h4>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Campos de Receita
             </label>
             <textarea
@@ -445,13 +487,13 @@ function TipoCard({
                   campos_receita: e.target.value.split('\n').filter(s => s.trim())
                 }
               })}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Campos de Conversão
             </label>
             <textarea
@@ -464,13 +506,13 @@ function TipoCard({
                   campos_conversao: e.target.value.split('\n').filter(s => s.trim())
                 }
               })}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Métricas Principais
             </label>
             <textarea
@@ -483,27 +525,27 @@ function TipoCard({
                   metricas_principais: e.target.value.split('\n').filter(s => s.trim())
                 }
               })}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-300">
+      <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center transition-colors"
+          className="px-5 py-2.5 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center transition-colors font-medium"
         >
           <X className="h-4 w-4 mr-2" />
           Cancelar
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
+          className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors font-medium shadow-sm"
         >
           <Save className="h-4 w-4 mr-2" />
-          Salvar
+          Salvar Tipo
         </button>
       </div>
     </div>
