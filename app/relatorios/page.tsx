@@ -145,8 +145,10 @@ export default function RelatoriosPage() {
     // Timeline (leads por dia)
     const timeline: Record<string, number> = {}
     filteredLeads.forEach(lead => {
-      const date = new Date(lead.created_at).toLocaleDateString('pt-BR')
-      timeline[date] = (timeline[date] || 0) + 1
+      if (lead.created_at) {
+        const date = new Date(lead.created_at).toLocaleDateString('pt-BR')
+        timeline[date] = (timeline[date] || 0) + 1
+      }
     })
 
     return {
@@ -168,10 +170,10 @@ export default function RelatoriosPage() {
 
     const headers = ['Nome', 'Telefone', 'CPF/CNPJ', 'Status', 'Campanha', 'Origem', 'Valor', 'WhatsApp', 'Data']
     const rows = filteredLeads.map(lead => [
-      lead.nome_lead,
-      lead.telefone,
-      lead.cpf || lead.cpf_cnpj,
-      lead.status_generico,
+      lead.nome_cliente || '',
+      lead.telefone || '',
+      lead.cpf || lead.cpf_cnpj || '',
+      lead.status_generico || '',
       lead.nome_campanha || '',
       lead.origem || '',
       lead.valor_contrato || '0',
