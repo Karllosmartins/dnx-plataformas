@@ -158,32 +158,22 @@ export default function ConsultaPage() {
 
   return (
     <PlanProtection feature="consulta">
-      <div className="space-y-8 px-4 sm:px-6 lg:px-8">
+      <div className="space-y-6 p-6">
         {/* Cabeçalho */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Search className="h-8 w-8 mr-3 text-green-600" />
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <Search className="h-8 w-8 mr-3 text-blue-600" />
             Consulta Individual
           </h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-gray-600">
             Realize consultas individuais de CPF ou CNPJ usando a API DataCode
           </p>
         </div>
 
         <div className="space-y-6">
           {/* Formulário de Consulta */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <Search className="h-5 w-5 mr-2 text-green-600" />
-                Nova Consulta
-              </h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Preencha os campos para realizar uma consulta individual
-              </p>
-            </div>
-
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Nova Consulta</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Coluna Esquerda */}
                 <div className="space-y-4">
@@ -196,7 +186,7 @@ export default function ConsultaPage() {
                     <select
                       value={consultaForm.tipoPessoa}
                       onChange={(e) => setConsultaForm({...consultaForm, tipoPessoa: e.target.value as 'PF' | 'PJ'})}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     >
                       <option value="PF">Pessoa Física (CPF)</option>
@@ -215,7 +205,7 @@ export default function ConsultaPage() {
                       value={consultaForm.document}
                       onChange={(e) => setConsultaForm({...consultaForm, document: e.target.value})}
                       placeholder={consultaForm.tipoPessoa === 'PF' ? '123.456.789-00' : '12.345.678/0001-99'}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                       required
                     />
@@ -231,7 +221,7 @@ export default function ConsultaPage() {
                       value={consultaForm.nomeRazao}
                       onChange={(e) => setConsultaForm({...consultaForm, nomeRazao: e.target.value})}
                       placeholder={consultaForm.tipoPessoa === 'PF' ? 'João da Silva' : 'Empresa Ltda'}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -247,7 +237,7 @@ export default function ConsultaPage() {
                       value={consultaForm.cidade}
                       onChange={(e) => setConsultaForm({...consultaForm, cidade: e.target.value})}
                       placeholder="São Paulo"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -263,7 +253,7 @@ export default function ConsultaPage() {
                       onChange={(e) => setConsultaForm({...consultaForm, uf: e.target.value})}
                       placeholder="SP"
                       maxLength={2}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -278,7 +268,7 @@ export default function ConsultaPage() {
                       value={consultaForm.cep}
                       onChange={(e) => setConsultaForm({...consultaForm, cep: e.target.value})}
                       placeholder="01001-000"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -296,7 +286,7 @@ export default function ConsultaPage() {
                       value={consultaForm.numeroEndereco}
                       onChange={(e) => setConsultaForm({...consultaForm, numeroEndereco: e.target.value})}
                       placeholder="100"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -312,7 +302,7 @@ export default function ConsultaPage() {
                       value={consultaForm.numeroTelefone}
                       onChange={(e) => setConsultaForm({...consultaForm, numeroTelefone: e.target.value})}
                       placeholder="11999999999"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -328,7 +318,7 @@ export default function ConsultaPage() {
                       value={consultaForm.email}
                       onChange={(e) => setConsultaForm({...consultaForm, email: e.target.value})}
                       placeholder="exemplo@email.com"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -342,7 +332,7 @@ export default function ConsultaPage() {
                       type="date"
                       value={consultaForm.dataNascimentoAbertura}
                       onChange={(e) => setConsultaForm({...consultaForm, dataNascimentoAbertura: e.target.value})}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -357,7 +347,7 @@ export default function ConsultaPage() {
                       value={consultaForm.placaVeiculo}
                       onChange={(e) => setConsultaForm({...consultaForm, placaVeiculo: e.target.value})}
                       placeholder="ABC1D23"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
                     />
                   </div>
@@ -389,7 +379,7 @@ export default function ConsultaPage() {
                 <button
                   onClick={realizarConsulta}
                   disabled={consultando || !consultaForm.document}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
                 >
                   {consultando ? (
                     <>
@@ -406,25 +396,20 @@ export default function ConsultaPage() {
                 <button
                   onClick={limparConsulta}
                   disabled={consultando}
-                  className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
                 >
                   Limpar
                 </button>
               </div>
-            </div>
           </div>
 
           {/* Resultados da Consulta */}
           {consultaResult && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                  Resultados da Consulta
-                </h3>
-              </div>
-
-              <div className="p-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                Resultados da Consulta
+              </h3>
                 {Array.isArray(consultaResult) && consultaResult.length > 0 ? (
                   consultaResult.map((resultado, index) => (
                     <div key={index} className="space-y-6">
@@ -726,7 +711,6 @@ export default function ConsultaPage() {
                     <p className="text-gray-500">Nenhum resultado encontrado</p>
                   </div>
                 )}
-              </div>
             </div>
           )}
         </div>
