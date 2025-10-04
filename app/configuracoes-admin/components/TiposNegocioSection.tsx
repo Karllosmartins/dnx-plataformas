@@ -533,28 +533,138 @@ function TipoCard({
 
             {/* Campos Personalizados */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Campos Personalizados</h4>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                  Configuração (JSON)
-                </label>
-                <textarea
-                  placeholder='[{"nome": "campo", "tipo": "select", "label": "Label", "opcoes": ["op1"], "obrigatorio": false}]'
-                  value={typeof editData.campos_personalizados === 'string' ? editData.campos_personalizados : JSON.stringify(editData.campos_personalizados || [], null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value)
-                      setEditData({ ...editData, campos_personalizados: parsed })
-                    } catch {
-                      setEditData({ ...editData, campos_personalizados: e.target.value as any })
-                    }
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Campos Personalizados</h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const novosCampos = [...(editData.campos_personalizados || []), {
+                      nome: '',
+                      label: '',
+                      tipo: 'text' as const,
+                      obrigatorio: false
+                    }]
+                    setEditData({ ...editData, campos_personalizados: novosCampos })
                   }}
-                  rows={12}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-                <p className="text-xs text-gray-500 mt-1.5">
-                  Tipos: text, number, select, multiselect, boolean, date, textarea
-                </p>
+                  className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 flex items-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Adicionar Campo
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {(editData.campos_personalizados || []).map((campo, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-700">Campo #{index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const novosCampos = editData.campos_personalizados?.filter((_, i) => i !== index) || []
+                          setEditData({ ...editData, campos_personalizados: novosCampos })
+                        }}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Campo</label>
+                      <input
+                        type="text"
+                        placeholder="ex: tipo_imovel"
+                        value={campo.nome}
+                        onChange={(e) => {
+                          const novosCampos = [...(editData.campos_personalizados || [])]
+                          novosCampos[index] = { ...novosCampos[index], nome: e.target.value }
+                          setEditData({ ...editData, campos_personalizados: novosCampos })
+                        }}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Label</label>
+                      <input
+                        type="text"
+                        placeholder="ex: Tipo do Imóvel"
+                        value={campo.label}
+                        onChange={(e) => {
+                          const novosCampos = [...(editData.campos_personalizados || [])]
+                          novosCampos[index] = { ...novosCampos[index], label: e.target.value }
+                          setEditData({ ...editData, campos_personalizados: novosCampos })
+                        }}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                      <select
+                        value={campo.tipo}
+                        onChange={(e) => {
+                          const novosCampos = [...(editData.campos_personalizados || [])]
+                          novosCampos[index] = { ...novosCampos[index], tipo: e.target.value as any }
+                          setEditData({ ...editData, campos_personalizados: novosCampos })
+                        }}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="text">Texto</option>
+                        <option value="number">Número</option>
+                        <option value="select">Select</option>
+                        <option value="multiselect">Multi Select</option>
+                        <option value="boolean">Booleano</option>
+                        <option value="date">Data</option>
+                        <option value="textarea">Texto Longo</option>
+                      </select>
+                    </div>
+
+                    {(campo.tipo === 'select' || campo.tipo === 'multiselect') && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Opções (uma por linha)</label>
+                        <textarea
+                          placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
+                          value={campo.opcoes?.join('\n') || ''}
+                          onChange={(e) => {
+                            const novosCampos = [...(editData.campos_personalizados || [])]
+                            novosCampos[index] = {
+                              ...novosCampos[index],
+                              opcoes: e.target.value.split('\n').filter(o => o.trim())
+                            }
+                            setEditData({ ...editData, campos_personalizados: novosCampos })
+                          }}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`obrigatorio-${index}`}
+                        checked={campo.obrigatorio}
+                        onChange={(e) => {
+                          const novosCampos = [...(editData.campos_personalizados || [])]
+                          novosCampos[index] = { ...novosCampos[index], obrigatorio: e.target.checked }
+                          setEditData({ ...editData, campos_personalizados: novosCampos })
+                        }}
+                        className="h-3 w-3 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor={`obrigatorio-${index}`} className="ml-2 text-xs text-gray-700">
+                        Campo obrigatório
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                {(!editData.campos_personalizados || editData.campos_personalizados.length === 0) && (
+                  <div className="text-center py-8 text-gray-400 text-xs">
+                    Nenhum campo personalizado adicionado
+                  </div>
+                )}
               </div>
             </div>
         </div>
