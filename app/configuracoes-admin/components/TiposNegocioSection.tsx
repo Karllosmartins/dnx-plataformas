@@ -333,6 +333,7 @@ function TipoCard({
     )
   }
 
+  // Editing/Creating view
   return (
     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 col-span-full">
       <div className="space-y-4">
@@ -442,10 +443,11 @@ function TipoCard({
                 <option value="false">Inativo</option>
               </select>
             </div>
-            </div>
+          </div>
+        </div>
 
-            {/* Status do Funil */}
-            <div className="space-y-4">
+        {/* Status do Funil */}
+        <div className="space-y-4">
               <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Status do Funil</h4>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
