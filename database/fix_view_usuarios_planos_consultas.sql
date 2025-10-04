@@ -1,7 +1,16 @@
--- Migration: Adicionar consultas_realizadas e leads_consumidos na view_usuarios_planos
+-- Migration: Adicionar consultas_realizadas e leads_consumidos
 -- Data: 2025-10-04
--- Descrição: Corrigir view para incluir campos de consumo de recursos
+-- Descrição: Adicionar campos de consumo na tabela users e atualizar view
 
+-- 1. Adicionar colunas na tabela users se não existirem
+ALTER TABLE users ADD COLUMN IF NOT EXISTS leads_consumidos INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS consultas_realizadas INTEGER DEFAULT 0;
+
+-- 2. Adicionar índices para otimizar consultas
+CREATE INDEX IF NOT EXISTS idx_users_leads_consumidos ON users (leads_consumidos);
+CREATE INDEX IF NOT EXISTS idx_users_consultas_realizadas ON users (consultas_realizadas);
+
+-- 3. Recriar a view com os novos campos
 DROP VIEW IF EXISTS view_usuarios_planos;
 
 CREATE VIEW view_usuarios_planos AS
@@ -19,37 +28,9 @@ SELECT
     u.consultas_realizadas,
     u.plano_id,
     u.plano,
-    -- Configurações operacionais
-    u.delay_entre_mensagens,
-    u.delay_apos_intervencao,
-    u.inicio_expediente,
-    u.fim_expediente,
     u.numero_instancias,
-    -- Tipos de negócio
-    u.tipos_negocio,
-    -- Integração CRM
-    u.crm_url,
-    u.crm_usuario,
-    u.crm_senha,
-    u.crm_token,
-    -- Google Drive
-    u.pasta_drive,
-    u.id_pasta_rag,
-    -- Informações do cliente
-    u.nome_cliente_empresa,
-    u.structured_output_schema,
-    -- APIs de IA
-    u.openai_api_token,
-    u.gemini_api_key,
-    u.modelo_ia,
-    u.tipo_tool_supabase,
-    u.reasoning_effort,
-    u.api_key_dados,
-    -- ElevenLabs
-    u.elevenlabs_api_key,
-    u.elevenlabs_voice_id,
-    -- FireCrawl
-    u.firecrawl_api_key,
+    u.plano_customizado,
+    u.ultimo_reset_contagem,
     -- Dados do plano
     p.nome as plano_nome,
     p.descricao as plano_descricao,
