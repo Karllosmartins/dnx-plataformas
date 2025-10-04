@@ -343,9 +343,7 @@ function TipoCard({
           </h3>
         </div>
 
-        <div className="space-y-6">
-          {/* Linha 1: Informações Básicas */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="space-y-4">
               <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Informações Básicas</h4>
 
@@ -530,35 +528,33 @@ function TipoCard({
             />
               </div>
             </div>
-          </div>
 
-          {/* Linha 2: Campos Personalizados */}
-          <div>
-            <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200 mb-4">Campos Personalizados</h4>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Configuração dos Campos (JSON)
-              </label>
-              <textarea
-                placeholder='Ex: [{"nome": "tempo_negativado", "tipo": "select", "label": "Há quanto tempo está negativado?", "opcoes": ["menos_1_ano", "1_2_anos"], "obrigatorio": false}]'
-                value={typeof editData.campos_personalizados === 'string' ? editData.campos_personalizados : JSON.stringify(editData.campos_personalizados || [], null, 2)}
-                onChange={(e) => {
-                  try {
-                    const parsed = JSON.parse(e.target.value)
-                    setEditData({ ...editData, campos_personalizados: parsed })
-                  } catch {
-                    // Se não for JSON válido, guarda como string temporariamente
-                    setEditData({ ...editData, campos_personalizados: e.target.value as any })
-                  }
-                }}
-                rows={10}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Formato: Array de objetos com: nome, tipo (text|number|select|multiselect|boolean|date|textarea), label, opcoes (array), obrigatorio (boolean)
-              </p>
+            {/* Campos Personalizados */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-200">Campos Personalizados</h4>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  Configuração (JSON)
+                </label>
+                <textarea
+                  placeholder='[{"nome": "campo", "tipo": "select", "label": "Label", "opcoes": ["op1"], "obrigatorio": false}]'
+                  value={typeof editData.campos_personalizados === 'string' ? editData.campos_personalizados : JSON.stringify(editData.campos_personalizados || [], null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value)
+                      setEditData({ ...editData, campos_personalizados: parsed })
+                    } catch {
+                      setEditData({ ...editData, campos_personalizados: e.target.value as any })
+                    }
+                  }}
+                  rows={12}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Tipos: text, number, select, multiselect, boolean, date, textarea
+                </p>
+              </div>
             </div>
-          </div>
         </div>
 
         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
