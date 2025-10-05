@@ -235,6 +235,7 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
                 '🔍 Extração': plano.acesso_extracao_leads,
                 '✨ Enriquecimento': plano.acesso_enriquecimento,
                 '🔎 Consulta': plano.acesso_consulta,
+                '🔌 Integrações': plano.acesso_integracoes,
                 '⚙️ Usuários': plano.acesso_usuarios,
               }).map(([feature, hasAccess]) => (
                 <div
@@ -348,6 +349,7 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
               { key: 'acesso_extracao_leads', label: 'Extração de Leads', icon: '🔍' },
               { key: 'acesso_enriquecimento', label: 'Enriquecimento', icon: '✨' },
               { key: 'acesso_consulta', label: 'Consulta', icon: '🔎' },
+              { key: 'acesso_integracoes', label: 'Integrações', icon: '🔌' },
               { key: 'acesso_usuarios', label: 'Gerenciar Usuários', icon: '⚙️' },
             ].map(({ key, label, icon }) => (
               <label

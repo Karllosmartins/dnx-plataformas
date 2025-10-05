@@ -55,6 +55,7 @@ export interface Plano {
   acesso_enriquecimento: boolean
   acesso_usuarios: boolean
   acesso_consulta: boolean
+  acesso_integracoes: boolean
 
   // Limites
   limite_leads: number
