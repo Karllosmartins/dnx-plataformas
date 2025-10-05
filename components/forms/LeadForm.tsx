@@ -157,7 +157,7 @@ export default function LeadForm({ leadId, onSuccess, onCancel, initialData, use
         .select(`
           *,
           tipos_negocio (
-            id, nome, nome_exibicao, cor, 
+            id, nome, nome_exibicao, cor,
             campos_personalizados, status_personalizados
           )
         `)
@@ -165,14 +165,36 @@ export default function LeadForm({ leadId, onSuccess, onCancel, initialData, use
         .single();
 
       if (error) throw error;
-      
+
+      // Parse dados_personalizados se vier como string
+      let dadosPersonalizados = data.dados_personalizados || {};
+      if (typeof dadosPersonalizados === 'string') {
+        try {
+          dadosPersonalizados = JSON.parse(dadosPersonalizados);
+        } catch (e) {
+          console.error('Erro ao parsear dados_personalizados:', e);
+          dadosPersonalizados = {};
+        }
+      }
+
       setFormData({
         ...data,
-        dados_personalizados: data.dados_personalizados || {}
+        dados_personalizados: dadosPersonalizados
       });
-      
+
+      // Parse e configurar tipo de negócio
       if (data.tipos_negocio) {
-        setTipoSelecionado(data.tipos_negocio);
+        const tipo = data.tipos_negocio as any;
+        const tipoProcessado: TipoNegocio = {
+          ...tipo,
+          campos_personalizados: typeof tipo.campos_personalizados === 'string'
+            ? JSON.parse(tipo.campos_personalizados)
+            : tipo.campos_personalizados || [],
+          status_personalizados: typeof tipo.status_personalizados === 'string'
+            ? JSON.parse(tipo.status_personalizados)
+            : tipo.status_personalizados || []
+        };
+        setTipoSelecionado(tipoProcessado);
       }
     } catch (error) {
       console.error('Erro ao carregar lead:', error);
