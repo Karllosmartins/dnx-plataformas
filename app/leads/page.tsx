@@ -3822,6 +3822,178 @@ export default function LeadsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Campos Personalizados */}
+                  {userTipoNegocio?.campos_personalizados && userTipoNegocio.campos_personalizados.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Campos Personalizados
+                      </h4>
+                      <div className="space-y-3">
+                        {userTipoNegocio.campos_personalizados.map((campo: any, index: number) => {
+                          const dadosPersonalizados = typeof editLeadData.dados_personalizados === 'string'
+                            ? JSON.parse(editLeadData.dados_personalizados || '{}')
+                            : editLeadData.dados_personalizados || {}
+
+                          const valorAtual = dadosPersonalizados[campo.nome] || ''
+
+                          return (
+                            <div key={index}>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                {campo.label}
+                                {campo.obrigatorio && <span className="text-red-500 ml-1">*</span>}
+                              </label>
+
+                              {campo.tipo === 'text' && (
+                                <input
+                                  type="text"
+                                  value={valorAtual}
+                                  onChange={(e) => {
+                                    const novoDados = {
+                                      ...dadosPersonalizados,
+                                      [campo.nome]: e.target.value
+                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      dados_personalizados: novoDados
+                                    }))
+                                  }}
+                                  placeholder={campo.ajuda}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              )}
+
+                              {campo.tipo === 'number' && (
+                                <input
+                                  type="number"
+                                  value={valorAtual}
+                                  onChange={(e) => {
+                                    const novoDados = {
+                                      ...dadosPersonalizados,
+                                      [campo.nome]: parseFloat(e.target.value) || 0
+                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      dados_personalizados: novoDados
+                                    }))
+                                  }}
+                                  placeholder={campo.ajuda}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              )}
+
+                              {campo.tipo === 'select' && (
+                                <select
+                                  value={valorAtual}
+                                  onChange={(e) => {
+                                    const novoDados = {
+                                      ...dadosPersonalizados,
+                                      [campo.nome]: e.target.value
+                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      dados_personalizados: novoDados
+                                    }))
+                                  }}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="">Selecione...</option>
+                                  {campo.opcoes?.map((opcao: string) => (
+                                    <option key={opcao} value={opcao}>
+                                      {opcao.charAt(0).toUpperCase() + opcao.slice(1).replace('_', ' ')}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+
+                              {campo.tipo === 'textarea' && (
+                                <textarea
+                                  value={valorAtual}
+                                  onChange={(e) => {
+                                    const novoDados = {
+                                      ...dadosPersonalizados,
+                                      [campo.nome]: e.target.value
+                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      dados_personalizados: novoDados
+                                    }))
+                                  }}
+                                  placeholder={campo.ajuda}
+                                  rows={3}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              )}
+
+                              {campo.tipo === 'boolean' && (
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="radio"
+                                      name={`${campo.nome}_${index}`}
+                                      checked={valorAtual === true}
+                                      onChange={() => {
+                                        const novoDados = {
+                                          ...dadosPersonalizados,
+                                          [campo.nome]: true
+                                        }
+                                        setEditLeadData((prev: any) => ({
+                                          ...prev,
+                                          dados_personalizados: novoDados
+                                        }))
+                                      }}
+                                    />
+                                    Sim
+                                  </label>
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="radio"
+                                      name={`${campo.nome}_${index}`}
+                                      checked={valorAtual === false}
+                                      onChange={() => {
+                                        const novoDados = {
+                                          ...dadosPersonalizados,
+                                          [campo.nome]: false
+                                        }
+                                        setEditLeadData((prev: any) => ({
+                                          ...prev,
+                                          dados_personalizados: novoDados
+                                        }))
+                                      }}
+                                    />
+                                    Não
+                                  </label>
+                                </div>
+                              )}
+
+                              {campo.tipo === 'date' && (
+                                <input
+                                  type="date"
+                                  value={valorAtual}
+                                  onChange={(e) => {
+                                    const novoDados = {
+                                      ...dadosPersonalizados,
+                                      [campo.nome]: e.target.value
+                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      dados_personalizados: novoDados
+                                    }))
+                                  }}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              )}
+
+                              {campo.ajuda && (
+                                <p className="text-xs text-gray-500 mt-1">{campo.ajuda}</p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
