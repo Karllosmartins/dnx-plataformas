@@ -57,3 +57,9 @@ docker-compose.portainer.local.yml
 Captura*.png
 screenshot*.png
 *.backup
+
+# Arquivos com dados sensíveis e credenciais
+o quequero.md
+*credenciais*.md
+*tokens*.md
+*secrets*.md
