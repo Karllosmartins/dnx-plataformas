@@ -110,6 +110,7 @@ export function hasFeatureAccess(
       enriquecimentoAPI: 'acesso_enriquecimento',
       consulta: 'acesso_consulta',
       usuarios: 'acesso_usuarios',
+      integracoes: 'acesso_integracoes',
     }
 
     const fieldName = featureMap[feature]
