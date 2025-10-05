@@ -312,7 +312,6 @@ export default function AgentesIAPage() {
           <button
             onClick={() => setEditingAgent({
               id: 0,
-              agente_id: '',
               nome: '',
               funcao: '',
               prompt: '',
@@ -369,7 +368,7 @@ export default function AgentesIAPage() {
                       </div>
 
                       <div className="mt-4 text-xs text-gray-500">
-                        ID: {agente.agente_id} • Criado em {new Date(agente.created_at).toLocaleDateString('pt-BR')}
+                        ID: {agente.id} • Criado em {new Date(agente.created_at).toLocaleDateString('pt-BR')}
                       </div>
 
                       {/* Vector Store Manager */}
@@ -520,7 +519,6 @@ export default function AgentesIAPage() {
               <button
                 onClick={() => setEditingAgent({
                   id: 0,
-                  agente_id: '',
                   nome: '',
                   funcao: '',
                   prompt: '',
@@ -563,7 +561,6 @@ function AgentModal({
   onClose: () => void
 }) {
   const [formData, setFormData] = useState({
-    agente_id: agent.agente_id || '',
     nome: agent.nome || '',
     funcao: agent.funcao || '',
     prompt: agent.prompt || '',
@@ -589,35 +586,19 @@ function AgentModal({
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ID do Agente *
-              </label>
-              <input
-                type="text"
-                value={formData.agente_id}
-                onChange={(e) => setFormData({...formData, agente_id: e.target.value})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="agent_vendas_001"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Identificador único para este agente</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nome do Agente *
-              </label>
-              <input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Agente de Vendas"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nome do Agente *
+            </label>
+            <input
+              type="text"
+              value={formData.nome}
+              onChange={(e) => setFormData({...formData, nome: e.target.value})}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Agente de Vendas"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">O ID do agente será gerado automaticamente ao criar</p>
           </div>
 
           <div>

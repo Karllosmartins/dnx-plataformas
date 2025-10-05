@@ -205,7 +205,6 @@ export interface InstanciaWhatsapp {
 export interface AgenteIA {
   id: number
   created_at: string
-  agente_id: string
   nome: string
   funcao: string
   prompt: string

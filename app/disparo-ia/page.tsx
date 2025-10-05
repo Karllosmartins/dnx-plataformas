@@ -679,7 +679,7 @@ export default function DisparoIAPage() {
                     <option value="">Sem agente específico</option>
                     {agentes.length > 0 ? (
                       agentes.map((agente) => (
-                        <option key={agente.id} value={agente.agente_id}>
+                        <option key={agente.id} value={agente.id}>
                           {agente.nome} - {agente.funcao}
                         </option>
                       ))
@@ -857,7 +857,7 @@ export default function DisparoIAPage() {
                     <option value="">Sem agente específico</option>
                     {agentes.length > 0 ? (
                       agentes.map((agente) => (
-                        <option key={agente.id} value={agente.agente_id}>
+                        <option key={agente.id} value={agente.id}>
                           {agente.nome} - {agente.funcao}
                         </option>
                       ))
