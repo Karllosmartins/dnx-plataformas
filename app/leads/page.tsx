@@ -630,6 +630,7 @@ export default function LeadsPage() {
   // Estados para dropdowns dinâmicos
   const [campanhas, setCampanhas] = useState<string[]>([])
   const [origens, setOrigens] = useState<string[]>([])
+  const [agentes, setAgentes] = useState<any[]>([])
 
   // Estados para métricas de disparo
   const [disparoMetrics, setDisparoMetrics] = useState({
@@ -647,6 +648,7 @@ export default function LeadsPage() {
       fetchUserPlanInfo()
       fetchCampanhas()
       fetchOrigens()
+      fetchAgentes()
     }
   }, [user])
 
@@ -869,6 +871,32 @@ export default function LeadsPage() {
     } catch (error) {
       console.error('Erro ao carregar origens:', error)
     }
+  }
+
+  const fetchAgentes = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('agentes_ia')
+        .select('id, nome, funcao')
+        .eq('user_id', parseInt(user.id || '0'))
+        .eq('estagio', 'ativo')
+        .order('nome')
+
+      if (error) throw error
+
+      setAgentes(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar agentes:', error)
+    }
+  }
+
+  // Função helper para obter nome do agente
+  const getAgenteNome = (agenteId: string | null) => {
+    if (!agenteId) return '-'
+    const agente = agentes.find(a => a.id.toString() === agenteId)
+    return agente ? agente.nome : `Agente #${agenteId}`
   }
 
   const calculateDisparoMetrics = () => {
@@ -2099,7 +2127,7 @@ export default function LeadsPage() {
                         {lead.Agente_ID && (
                           <div className="flex items-center justify-between">
                             <span>Agente:</span>
-                            <span className="text-blue-600 font-medium">{lead.Agente_ID}</span>
+                            <span className="text-blue-600 font-medium">{getAgenteNome(lead.Agente_ID)}</span>
                           </div>
                         )}
                       </div>
@@ -3215,7 +3243,7 @@ export default function LeadsPage() {
                                 )}
                                 <div><span className="text-gray-500">Telefone:</span> <span className="ml-2 text-gray-900">{selectedLead.telefone || '-'}</span></div>
                                 <div><span className="text-gray-500">Origem:</span> <span className="ml-2 text-gray-900">{selectedLead.origem || '-'}</span></div>
-                                {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente ID:</span> <span className="ml-2 text-gray-900">{selectedLead.Agente_ID}</span></div>}
+                                {selectedLead.Agente_ID && <div><span className="text-gray-500">Agente:</span> <span className="ml-2 text-gray-900">{getAgenteNome(selectedLead.Agente_ID)}</span></div>}
                                 {selectedLead.nome_campanha && <div><span className="text-gray-500">Campanha:</span> <span className="ml-2 text-gray-900">{selectedLead.nome_campanha}</span></div>}
                                 <div><span className="text-gray-500">WhatsApp:</span> <span className="ml-2 text-gray-900">{selectedLead.existe_whatsapp ? 'Sim' : 'Não'}</span></div>
                               </div>
@@ -3292,13 +3320,19 @@ export default function LeadsPage() {
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">Agente ID</label>
-                                  <input
-                                    type="text"
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Agente</label>
+                                  <select
                                     value={editLeadData.Agente_ID || ''}
                                     onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, Agente_ID: e.target.value }))}
                                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  />
+                                  >
+                                    <option value="">Nenhum agente</option>
+                                    {agentes.map((agente) => (
+                                      <option key={agente.id} value={agente.id}>
+                                        {agente.nome}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 mb-1">Campanha</label>
@@ -3898,13 +3932,19 @@ export default function LeadsPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Agente ID</label>
-                        <input
-                          type="text"
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Agente</label>
+                        <select
                           value={editLeadData.Agente_ID || ''}
                           onChange={(e) => setEditLeadData((prev: any) => ({ ...prev, Agente_ID: e.target.value }))}
                           className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        >
+                          <option value="">Nenhum agente</option>
+                          {agentes.map((agente) => (
+                            <option key={agente.id} value={agente.id}>
+                              {agente.nome}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Campanha</label>
