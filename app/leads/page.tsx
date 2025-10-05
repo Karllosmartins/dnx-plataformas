@@ -1852,7 +1852,8 @@ export default function LeadsPage() {
       return (
         <div className="space-y-3">
           {Object.entries(leadData).map(([key, value]) => {
-            if (!value) return null
+            // Não mostrar valores null ou undefined, mas mostrar strings vazias e false
+            if (value === null || value === undefined) return null
 
             const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 
@@ -1860,11 +1861,13 @@ export default function LeadsPage() {
               <div key={key} className="flex justify-between">
                 <span className="text-gray-600 font-medium">{label}:</span>
                 <span className="text-gray-900">
-                  {typeof value === 'number' && key.includes('valor')
+                  {typeof value === 'boolean'
+                    ? (value ? 'Sim' : 'Não')
+                    : typeof value === 'number' && key.includes('valor')
                     ? `R$ ${value.toLocaleString('pt-BR')}`
                     : Array.isArray(value)
-                    ? value.join(', ')
-                    : String(value)}
+                    ? value.join(', ') || '-'
+                    : value || '-'}
                 </span>
               </div>
             )
@@ -3343,7 +3346,7 @@ export default function LeadsPage() {
                           </div>
 
                           {/* Informações B2B */}
-                          {(selectedLead.nome_empresa || selectedLead.responsavel_encontrado !== null || selectedLead.falando_com_responsavel !== null || userTipoNegocio?.nome === 'b2b') && (
+                          {userTipoNegocio?.nome === 'b2b' && (
                             <div>
                               <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <User className="h-4 w-4 mr-2" />
