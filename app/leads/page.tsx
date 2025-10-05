@@ -1820,50 +1820,29 @@ export default function LeadsPage() {
 
   // Função para renderizar campos personalizados
   const renderCustomFields = (lead: Lead) => {
-    if (!lead.dados_personalizados) {
-      return <div className="text-gray-500 text-sm">Nenhum campo personalizado</div>
+    // Se não tem tipo de negócio configurado, não mostra nada
+    if (!userTipoNegocio?.campos_personalizados || userTipoNegocio.campos_personalizados.length === 0) {
+      return <div className="text-gray-500 text-sm">Nenhum campo personalizado configurado</div>
     }
 
     try {
+      // Parse dos dados personalizados do lead
       const leadData = typeof lead.dados_personalizados === 'string'
-        ? JSON.parse(lead.dados_personalizados)
-        : lead.dados_personalizados
-
-      // Se não há dados, mostrar mensagem
-      if (!leadData || Object.keys(leadData).length === 0) {
-        return <div className="text-gray-500 text-sm">Nenhum campo personalizado</div>
-      }
-
-      // Mapeamento de labels bonitos para os campos
-      const fieldLabels: Record<string, string> = {
-        'tipo_servico': 'Tipo de Serviço',
-        'tipo_acidente': 'Tipo de Acidente',
-        'situacao_atual': 'Situação Atual',
-        'valor_estimado_caso': 'Valor Estimado do Caso',
-        'segmento_empresa': 'Segmento da Empresa',
-        'porte_empresa': 'Porte da Empresa',
-        'budget_disponivel': 'Budget Disponível',
-        'contrato_assinado': 'Contrato Assinado',
-        'beneficios_interesse': 'Benefícios de Interesse',
-        'tempo_negativado': 'Tempo Negativado',
-        'orgaos_negativados': 'Órgãos Negativados'
-      }
+        ? JSON.parse(lead.dados_personalizados || '{}')
+        : lead.dados_personalizados || {}
 
       return (
         <div className="space-y-3">
-          {Object.entries(leadData).map(([key, value]) => {
-            // Não mostrar valores null ou undefined, mas mostrar strings vazias e false
-            if (value === null || value === undefined) return null
-
-            const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+          {userTipoNegocio.campos_personalizados.map((campo: any, index: number) => {
+            const value = leadData[campo.nome]
 
             return (
-              <div key={key} className="flex justify-between">
-                <span className="text-gray-600 font-medium">{label}:</span>
+              <div key={index} className="flex justify-between">
+                <span className="text-gray-600 font-medium">{campo.label}:</span>
                 <span className="text-gray-900">
                   {typeof value === 'boolean'
                     ? (value ? 'Sim' : 'Não')
-                    : typeof value === 'number' && key.includes('valor')
+                    : typeof value === 'number' && campo.nome.includes('valor')
                     ? `R$ ${value.toLocaleString('pt-BR')}`
                     : Array.isArray(value)
                     ? value.join(', ') || '-'
