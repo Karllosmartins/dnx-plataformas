@@ -18,6 +18,8 @@ interface Credentials {
   google_calendar: {
     email: string
     refresh_token: string
+    client_id?: string
+    client_secret?: string
   }
   asaas: {
     access_token: string
@@ -41,9 +43,38 @@ export default function IntegracoesPage() {
   const [zapSignForm, setZapSignForm] = useState({ token: '', modelos: '' })
   const [successMessage, setSuccessMessage] = useState('')
 
+  // Credenciais OAuth2 do Google (variáveis de ambiente)
+  const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
+  const GOOGLE_CLIENT_SECRET = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET || ''
+
   useEffect(() => {
     if (user) {
       fetchCredentials()
+    }
+
+    // Verificar parâmetros de sucesso/erro na URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const success = urlParams.get('success')
+    const error = urlParams.get('error')
+
+    if (success === 'google_calendar_connected') {
+      setSuccessMessage('Google Calendar conectado com sucesso!')
+      setTimeout(() => setSuccessMessage(''), 5000)
+      // Limpar parâmetros da URL
+      window.history.replaceState({}, '', '/integracoes')
+    }
+
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        'token_exchange_failed': 'Erro ao trocar código por token. Verifique suas credenciais.',
+        'no_refresh_token': 'Não foi possível obter refresh token. Tente novamente.',
+        'missing_params': 'Parâmetros obrigatórios ausentes.',
+        'server_error': 'Erro no servidor. Tente novamente mais tarde.',
+        'access_denied': 'Acesso negado pelo usuário.'
+      }
+      alert(errorMessages[error] || 'Erro ao conectar com Google Calendar')
+      // Limpar parâmetros da URL
+      window.history.replaceState({}, '', '/integracoes')
     }
   }, [user])
 
@@ -145,6 +176,67 @@ export default function IntegracoesPage() {
 
   const isZapSignConfigured = () => {
     return credentials.zapsign.token && credentials.zapsign.modelos
+  }
+
+  const isGoogleCalendarConfigured = () => {
+    return credentials.google_calendar.email && credentials.google_calendar.refresh_token
+  }
+
+  const initiateGoogleOAuth = () => {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      alert('Credenciais do Google não configuradas. Entre em contato com o suporte.')
+      return
+    }
+
+    // Construir URL de autorização OAuth2
+    const redirectUri = `${window.location.origin}/api/oauth/google-calendar/callback`
+    const scope = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email'
+    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+
+    authUrl.searchParams.append('client_id', GOOGLE_CLIENT_ID)
+    authUrl.searchParams.append('redirect_uri', redirectUri)
+    authUrl.searchParams.append('response_type', 'code')
+    authUrl.searchParams.append('scope', scope)
+    authUrl.searchParams.append('access_type', 'offline')
+    authUrl.searchParams.append('prompt', 'consent')
+    authUrl.searchParams.append('state', JSON.stringify({
+      user_id: user?.id,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET
+    }))
+
+    // Redirecionar para página de autorização do Google
+    window.location.href = authUrl.toString()
+  }
+
+
+  const disconnectGoogleCalendar = async () => {
+    if (!confirm('Deseja realmente desconectar o Google Calendar?')) return
+
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('credencias_diversas')
+        .update({
+          google_calendar: { email: '', refresh_token: '' }
+        })
+        .eq('user_id', parseInt(user?.id || '0'))
+
+      if (error) throw error
+
+      setCredentials(prev => ({
+        ...prev,
+        google_calendar: { email: '', refresh_token: '' }
+      }))
+      setSuccessMessage('Google Calendar desconectado com sucesso!')
+
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Erro ao desconectar:', error)
+      alert('Erro ao desconectar Google Calendar')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -318,26 +410,75 @@ export default function IntegracoesPage() {
             </div>
           </div>
 
-          {/* Card Google Calendar (placeholder) */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden opacity-50">
+          {/* Card Google Calendar */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+            {/* Header do Card */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
-              <div className="flex items-center">
-                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
-                  <Calendar className="h-8 w-8 text-white" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
+                    <Calendar className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-bold text-white">Google Calendar</h3>
+                    <p className="text-blue-100 text-sm">Agendamentos</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-xl font-bold text-white">Google Calendar</h3>
-                  <p className="text-blue-100 text-sm">Agendamentos</p>
-                </div>
+                {isGoogleCalendarConfigured() ? (
+                  <CheckCircle className="h-6 w-6 text-green-300" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-red-300" />
+                )}
               </div>
             </div>
+
+            {/* Conteúdo do Card */}
             <div className="p-6">
               <p className="text-gray-600 text-sm mb-4">
-                Em breve: Sincronize agendamentos com Google Calendar
+                Conecte sua conta Google para sincronizar agendamentos automaticamente.
               </p>
-              <div className="bg-gray-100 rounded-lg p-4 text-center">
-                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <span className="text-sm text-gray-500">Em desenvolvimento</span>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  {isGoogleCalendarConfigured() ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Conectado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Não conectado
+                    </span>
+                  )}
+                </div>
+
+                {isGoogleCalendarConfigured() && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Email:</span>
+                    <span className="text-sm text-gray-900">
+                      {credentials.google_calendar.email}
+                    </span>
+                  </div>
+                )}
+
+                {isGoogleCalendarConfigured() ? (
+                  <button
+                    onClick={disconnectGoogleCalendar}
+                    disabled={saving}
+                    className="w-full mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    Desconectar
+                  </button>
+                ) : (
+                  <button
+                    onClick={initiateGoogleOAuth}
+                    disabled={!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET}
+                    className="w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Conectar com Google
+                  </button>
+                )}
               </div>
             </div>
           </div>

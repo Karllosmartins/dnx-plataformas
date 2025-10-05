@@ -152,7 +152,17 @@ function SidebarContent({
             ...user,
             ...data,
             // Garantir que as propriedades de plano existam
-            acesso_consulta: data.acesso_consulta || false
+            acesso_consulta: data.acesso_consulta || false,
+            acesso_integracoes: data.acesso_integracoes || false,
+            acesso_dashboard: data.acesso_dashboard || false,
+            acesso_crm: data.acesso_crm || false,
+            acesso_whatsapp: data.acesso_whatsapp || false,
+            acesso_disparo_simples: data.acesso_disparo_simples || false,
+            acesso_disparo_ia: data.acesso_disparo_ia || false,
+            acesso_agentes_ia: data.acesso_agentes_ia || false,
+            acesso_extracao_leads: data.acesso_extracao_leads || false,
+            acesso_enriquecimento: data.acesso_enriquecimento || false,
+            acesso_usuarios: data.acesso_usuarios || false
           }
           setUserWithPlan(userWithPlanData)
         } else {
