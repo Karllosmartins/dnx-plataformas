@@ -14,6 +14,7 @@ export type FeatureType =
   | 'enriquecimentoAPI'
   | 'consulta'
   | 'usuarios'
+  | 'integracoes'
 
 // Configuração padrão dos planos (fallback)
 export const PLANOS_DEFAULT = {
@@ -29,6 +30,7 @@ export const PLANOS_DEFAULT = {
     enriquecimentoAPI: false,
     consulta: false,
     usuarios: false,
+    integracoes: true,
   },
   premium1: {
     dashboard: true,
@@ -42,6 +44,7 @@ export const PLANOS_DEFAULT = {
     enriquecimentoAPI: false,
     consulta: false,
     usuarios: false,
+    integracoes: true,
   },
   premium2: {
     dashboard: true,
@@ -55,6 +58,7 @@ export const PLANOS_DEFAULT = {
     enriquecimentoAPI: false,
     consulta: false,
     usuarios: false,
+    integracoes: true,
   },
   enterprise: {
     dashboard: true,
@@ -68,6 +72,7 @@ export const PLANOS_DEFAULT = {
     enriquecimentoAPI: true,
     consulta: true,
     usuarios: true,
+    integracoes: true,
   }
 }
 

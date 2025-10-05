@@ -23,7 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
-  Search
+  Search,
+  Plug
 } from 'lucide-react'
 
 const navigation = [
@@ -37,6 +38,7 @@ const navigation = [
   { name: 'Enriquecimento API', href: '/enriquecimento-api', icon: Database, feature: 'enriquecimentoAPI' as const },
   { name: 'Consulta', href: '/consulta', icon: Search, feature: 'consulta' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
+  { name: 'Integrações', href: '/integracoes', icon: Plug, feature: 'integracoes' as const },
   { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]
 
