@@ -26,7 +26,14 @@ export async function GET(request: NextRequest) {
     const { user_id, client_id, client_secret } = stateData
 
     // Trocar código de autorização por access_token e refresh_token
-    const redirectUri = `${new URL(request.url).origin}/api/oauth/google-calendar/callback`
+    // Usar o host do header para construir a redirect_uri correta
+    const host = request.headers.get('host') || new URL(request.url).host
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const redirectUri = `${protocol}://${host}/api/oauth/google-calendar/callback`
+
+    console.log('🔍 Callback - Host detectado:', host)
+    console.log('🔍 Callback - Protocol:', protocol)
+    console.log('🔍 Callback - Redirect URI:', redirectUri)
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
