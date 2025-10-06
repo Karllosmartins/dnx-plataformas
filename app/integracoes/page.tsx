@@ -41,6 +41,8 @@ export default function IntegracoesPage() {
   })
   const [editingZapSign, setEditingZapSign] = useState(false)
   const [zapSignForm, setZapSignForm] = useState({ token: '', modelos: '' })
+  const [editingAsaas, setEditingAsaas] = useState(false)
+  const [asaasForm, setAsaasForm] = useState({ access_token: '' })
   const [successMessage, setSuccessMessage] = useState('')
 
   // Credenciais OAuth2 do Google (variáveis de ambiente)
@@ -124,6 +126,14 @@ export default function IntegracoesPage() {
           token: zapsignData.token || '',
           modelos: zapsignData.modelos || ''
         })
+
+        // Inicializar formulário do Asaas
+        const asaasData = typeof data.asaas === 'string'
+          ? JSON.parse(data.asaas)
+          : data.asaas
+        setAsaasForm({
+          access_token: asaasData.access_token || ''
+        })
       }
     } catch (error) {
       console.error('Erro ao buscar credenciais:', error)
@@ -188,8 +198,67 @@ export default function IntegracoesPage() {
     }
   }
 
+  const saveAsaasCredentials = async () => {
+    setSaving(true)
+    setSuccessMessage('')
+
+    try {
+      const { data: existing } = await supabase
+        .from('credencias_diversas')
+        .select('id')
+        .eq('user_id', parseInt(user?.id || '0'))
+        .single()
+
+      const asaasData = {
+        access_token: asaasForm.access_token
+      }
+
+      if (existing) {
+        // Atualizar registro existente
+        const { error } = await supabase
+          .from('credencias_diversas')
+          .update({
+            asaas: asaasData
+          })
+          .eq('user_id', parseInt(user?.id || '0'))
+
+        if (error) throw error
+      } else {
+        // Criar novo registro
+        const { error } = await supabase
+          .from('credencias_diversas')
+          .insert([{
+            user_id: parseInt(user?.id || '0'),
+            asaas: asaasData,
+            zapsign: { token: '', modelos: '' },
+            google_calendar: { email: '', refresh_token: '' }
+          }])
+
+        if (error) throw error
+      }
+
+      setCredentials(prev => ({
+        ...prev,
+        asaas: asaasData
+      }))
+      setEditingAsaas(false)
+      setSuccessMessage('Credenciais do Asaas salvas com sucesso!')
+
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Erro ao salvar credenciais:', error)
+      alert('Erro ao salvar credenciais do Asaas')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const isZapSignConfigured = () => {
     return credentials.zapsign.token && credentials.zapsign.modelos
+  }
+
+  const isAsaasConfigured = () => {
+    return credentials.asaas.access_token && credentials.asaas.access_token.length > 0
   }
 
   const isGoogleCalendarConfigured = () => {
@@ -497,27 +566,117 @@ export default function IntegracoesPage() {
             </div>
           </div>
 
-          {/* Card Asaas (placeholder) */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden opacity-50">
+          {/* Card Asaas */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+            {/* Header do Card */}
             <div className="bg-gradient-to-r from-green-600 to-green-700 p-6">
-              <div className="flex items-center">
-                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
-                  <CreditCard className="h-8 w-8 text-white" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
+                    <CreditCard className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-bold text-white">Asaas</h3>
+                    <p className="text-green-100 text-sm">Pagamentos</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-xl font-bold text-white">Asaas</h3>
-                  <p className="text-green-100 text-sm">Pagamentos</p>
-                </div>
+                {isAsaasConfigured() ? (
+                  <CheckCircle className="h-6 w-6 text-green-300" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-red-300" />
+                )}
               </div>
             </div>
+
+            {/* Conteúdo do Card */}
             <div className="p-6">
               <p className="text-gray-600 text-sm mb-4">
-                Em breve: Integração com Asaas para gestão de cobranças
+                Integre com o Asaas para gerenciar cobranças e pagamentos automaticamente.
               </p>
-              <div className="bg-gray-100 rounded-lg p-4 text-center">
-                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <span className="text-sm text-gray-500">Em desenvolvimento</span>
-              </div>
+
+              {!editingAsaas ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Status:</span>
+                    {isAsaasConfigured() ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Configurado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Não configurado
+                      </span>
+                    )}
+                  </div>
+
+                  {isAsaasConfigured() && (
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Token:</span>
+                      <span className="text-sm text-gray-900 font-mono">
+                        {credentials.asaas.access_token.substring(0, 20)}...
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setEditingAsaas(true)}
+                    className="w-full mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                  >
+                    {isAsaasConfigured() ? 'Editar Configuração' : 'Configurar Asaas'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Access Token *
+                    </label>
+                    <input
+                      type="text"
+                      value={asaasForm.access_token}
+                      onChange={(e) => setAsaasForm({ access_token: e.target.value })}
+                      placeholder="$aact_prod_..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Encontre seu token nas configurações da sua conta Asaas
+                    </p>
+                  </div>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      onClick={() => {
+                        setEditingAsaas(false)
+                        // Resetar para valores salvos
+                        setAsaasForm({
+                          access_token: credentials.asaas.access_token || ''
+                        })
+                      }}
+                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                      disabled={saving}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={saveAsaasCredentials}
+                      disabled={saving || !asaasForm.access_token}
+                      className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Salvar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
