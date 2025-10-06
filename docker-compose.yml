@@ -49,6 +49,9 @@ services:
       # Datecode Configuration - Use environment variables from .env file
       - DATECODE_USERNAME=${DATECODE_USERNAME}
       - DATECODE_PASSWORD=${DATECODE_PASSWORD}
+      # Google OAuth2 Configuration - Use environment variables from .env file
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_SECRET=${NEXT_PUBLIC_GOOGLE_CLIENT_SECRET}
 
     deploy:
       mode: replicated
