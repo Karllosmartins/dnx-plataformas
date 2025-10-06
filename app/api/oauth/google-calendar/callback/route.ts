@@ -8,16 +8,21 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
     const error = searchParams.get('error')
 
+    // Detectar host e protocolo corretos
+    const host = request.headers.get('host') || new URL(request.url).host
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+
     // Se usuário negou permissão
     if (error) {
       return NextResponse.redirect(
-        new URL(`/integracoes?error=${encodeURIComponent(error)}`, request.url)
+        `${baseUrl}/integracoes?error=${encodeURIComponent(error)}`
       )
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('/integracoes?error=missing_params', request.url)
+        `${baseUrl}/integracoes?error=missing_params`
       )
     }
 
@@ -26,10 +31,7 @@ export async function GET(request: NextRequest) {
     const { user_id, client_id, client_secret } = stateData
 
     // Trocar código de autorização por access_token e refresh_token
-    // Usar o host do header para construir a redirect_uri correta
-    const host = request.headers.get('host') || new URL(request.url).host
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const redirectUri = `${protocol}://${host}/api/oauth/google-calendar/callback`
+    const redirectUri = `${baseUrl}/api/oauth/google-calendar/callback`
 
     console.log('🔍 Callback - Host detectado:', host)
     console.log('🔍 Callback - Protocol:', protocol)
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
 
       // Redirecionar com mais informações
       return NextResponse.redirect(
-        new URL(`/integracoes?error=token_exchange_failed&details=${encodeURIComponent(JSON.stringify(errorData))}`, request.url)
+        `${baseUrl}/integracoes?error=token_exchange_failed&details=${encodeURIComponent(JSON.stringify(errorData))}`
       )
     }
 
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     if (!refresh_token) {
       return NextResponse.redirect(
-        new URL('/integracoes?error=no_refresh_token', request.url)
+        `${baseUrl}/integracoes?error=no_refresh_token`
       )
     }
 
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
     if (!userInfoResponse.ok) {
       console.error('Erro ao obter informações do usuário')
       return NextResponse.redirect(
-        new URL('/integracoes?error=user_info_failed', request.url)
+        `${baseUrl}/integracoes?error=user_info_failed`
       )
     }
 
@@ -135,13 +137,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirecionar de volta para a página de integrações com sucesso
-    return NextResponse.redirect(
-      new URL('/integracoes?success=google_calendar_connected', request.url)
-    )
+    const successUrl = `${baseUrl}/integracoes?success=google_calendar_connected`
+    console.log('✅ Redirecionando para:', successUrl)
+    return NextResponse.redirect(successUrl)
   } catch (error) {
     console.error('Erro no callback OAuth:', error)
-    return NextResponse.redirect(
-      new URL('/integracoes?error=server_error', request.url)
-    )
+    const host = request.headers.get('host') || new URL(request.url).host
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const errorUrl = `${protocol}://${host}/integracoes?error=server_error`
+    return NextResponse.redirect(errorUrl)
   }
 }
