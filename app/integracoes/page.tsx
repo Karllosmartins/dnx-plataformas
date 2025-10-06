@@ -65,6 +65,7 @@ export default function IntegracoesPage() {
     }
 
     if (error) {
+      const details = urlParams.get('details')
       const errorMessages: Record<string, string> = {
         'token_exchange_failed': 'Erro ao trocar código por token. Verifique suas credenciais.',
         'no_refresh_token': 'Não foi possível obter refresh token. Tente novamente.',
@@ -72,7 +73,20 @@ export default function IntegracoesPage() {
         'server_error': 'Erro no servidor. Tente novamente mais tarde.',
         'access_denied': 'Acesso negado pelo usuário.'
       }
-      alert(errorMessages[error] || 'Erro ao conectar com Google Calendar')
+
+      // Mostrar detalhes do erro se disponível
+      let errorMessage = errorMessages[error] || 'Erro ao conectar com Google Calendar'
+      if (details) {
+        try {
+          const detailsObj = JSON.parse(details)
+          errorMessage += `\n\nDetalhes técnicos:\n${JSON.stringify(detailsObj, null, 2)}`
+          console.error('Detalhes do erro OAuth:', detailsObj)
+        } catch (e) {
+          // Ignorar erro de parse
+        }
+      }
+
+      alert(errorMessage)
       // Limpar parâmetros da URL
       window.history.replaceState({}, '', '/integracoes')
     }

@@ -44,9 +44,15 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json()
-      console.error('Erro ao trocar código por token:', errorData)
+      console.error('❌ Erro ao trocar código por token:', errorData)
+      console.error('📋 Detalhes da requisição:')
+      console.error('- Client ID:', client_id)
+      console.error('- Redirect URI:', redirectUri)
+      console.error('- Code:', code?.substring(0, 20) + '...')
+
+      // Redirecionar com mais informações
       return NextResponse.redirect(
-        new URL('/integracoes?error=token_exchange_failed', request.url)
+        new URL(`/integracoes?error=token_exchange_failed&details=${encodeURIComponent(JSON.stringify(errorData))}`, request.url)
       )
     }
 
