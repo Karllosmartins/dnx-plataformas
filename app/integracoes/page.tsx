@@ -11,8 +11,16 @@ import {
   CheckCircle,
   XCircle,
   Save,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Trash2
 } from 'lucide-react'
+
+interface ZapSignModelo {
+  id: string
+  nome: string
+  descricao: string
+}
 
 interface Credentials {
   google_calendar: {
@@ -26,7 +34,7 @@ interface Credentials {
   }
   zapsign: {
     token: string
-    modelos: string
+    modelos: ZapSignModelo[]
   }
 }
 
@@ -37,10 +45,10 @@ export default function IntegracoesPage() {
   const [credentials, setCredentials] = useState<Credentials>({
     google_calendar: { email: '', refresh_token: '' },
     asaas: { access_token: '' },
-    zapsign: { token: '', modelos: '' }
+    zapsign: { token: '', modelos: [] }
   })
   const [editingZapSign, setEditingZapSign] = useState(false)
-  const [zapSignForm, setZapSignForm] = useState({ token: '', modelos: '' })
+  const [zapSignForm, setZapSignForm] = useState({ token: '', modelos: [] as ZapSignModelo[] })
   const [editingAsaas, setEditingAsaas] = useState(false)
   const [asaasForm, setAsaasForm] = useState({ access_token: '' })
   const [successMessage, setSuccessMessage] = useState('')
@@ -94,6 +102,27 @@ export default function IntegracoesPage() {
     }
   }, [user])
 
+  // Função para migrar formato antigo de modelos (string) para novo formato (array)
+  const migrateZapSignModelos = (zapsignData: any): ZapSignModelo[] => {
+    if (!zapsignData.modelos) return []
+
+    // Se já é array, retorna como está
+    if (Array.isArray(zapsignData.modelos)) {
+      return zapsignData.modelos
+    }
+
+    // Se é string (formato antigo), converte para array com um único modelo
+    if (typeof zapsignData.modelos === 'string' && zapsignData.modelos.trim() !== '') {
+      return [{
+        id: zapsignData.modelos,
+        nome: 'Modelo Padrão',
+        descricao: 'Modelo de documento'
+      }]
+    }
+
+    return []
+  }
+
   const fetchCredentials = async () => {
     try {
       const { data, error } = await supabase
@@ -106,6 +135,12 @@ export default function IntegracoesPage() {
 
       if (data) {
         // Parse dos JSONBs
+        const zapsignData = typeof data.zapsign === 'string'
+          ? JSON.parse(data.zapsign)
+          : data.zapsign
+
+        const modelosMigrados = migrateZapSignModelos(zapsignData)
+
         setCredentials({
           google_calendar: typeof data.google_calendar === 'string'
             ? JSON.parse(data.google_calendar)
@@ -113,18 +148,16 @@ export default function IntegracoesPage() {
           asaas: typeof data.asaas === 'string'
             ? JSON.parse(data.asaas)
             : data.asaas,
-          zapsign: typeof data.zapsign === 'string'
-            ? JSON.parse(data.zapsign)
-            : data.zapsign
+          zapsign: {
+            token: zapsignData.token || '',
+            modelos: modelosMigrados
+          }
         })
 
         // Inicializar formulário do ZapSign
-        const zapsignData = typeof data.zapsign === 'string'
-          ? JSON.parse(data.zapsign)
-          : data.zapsign
         setZapSignForm({
           token: zapsignData.token || '',
-          modelos: zapsignData.modelos || ''
+          modelos: modelosMigrados
         })
 
         // Inicializar formulário do Asaas
@@ -230,7 +263,7 @@ export default function IntegracoesPage() {
           .insert([{
             user_id: parseInt(user?.id || '0'),
             asaas: asaasData,
-            zapsign: { token: '', modelos: '' },
+            zapsign: { token: '', modelos: [] },
             google_calendar: { email: '', refresh_token: '' }
           }])
 
@@ -254,11 +287,35 @@ export default function IntegracoesPage() {
   }
 
   const isZapSignConfigured = () => {
-    return credentials.zapsign.token && credentials.zapsign.modelos
+    return credentials.zapsign.token && credentials.zapsign.modelos.length > 0
   }
 
   const isAsaasConfigured = () => {
     return credentials.asaas.access_token && credentials.asaas.access_token.length > 0
+  }
+
+  // Funções para gerenciar modelos do ZapSign
+  const addZapSignModelo = () => {
+    setZapSignForm({
+      ...zapSignForm,
+      modelos: [...zapSignForm.modelos, { id: '', nome: '', descricao: '' }]
+    })
+  }
+
+  const removeZapSignModelo = (index: number) => {
+    setZapSignForm({
+      ...zapSignForm,
+      modelos: zapSignForm.modelos.filter((_, i) => i !== index)
+    })
+  }
+
+  const updateZapSignModelo = (index: number, field: keyof ZapSignModelo, value: string) => {
+    const novosModelos = [...zapSignForm.modelos]
+    novosModelos[index] = { ...novosModelos[index], [field]: value }
+    setZapSignForm({
+      ...zapSignForm,
+      modelos: novosModelos
+    })
   }
 
   const isGoogleCalendarConfigured = () => {
@@ -406,9 +463,9 @@ export default function IntegracoesPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-gray-600">Modelo:</span>
-                        <span className="text-sm text-gray-900 font-mono">
-                          {credentials.zapsign.modelos.substring(0, 8)}...
+                        <span className="text-sm text-gray-600">Modelos:</span>
+                        <span className="text-sm text-gray-900 font-semibold">
+                          {credentials.zapsign.modelos.length} {credentials.zapsign.modelos.length === 1 ? 'modelo' : 'modelos'}
                         </span>
                       </div>
                     </>
@@ -440,19 +497,74 @@ export default function IntegracoesPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ID do Modelo *
-                    </label>
-                    <input
-                      type="text"
-                      value={zapSignForm.modelos}
-                      onChange={(e) => setZapSignForm({ ...zapSignForm, modelos: e.target.value })}
-                      placeholder="Digite o ID do modelo de documento"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      ID do template que será usado para gerar documentos
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Modelos de Documentos *
+                      </label>
+                      <button
+                        onClick={addZapSignModelo}
+                        className="flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Adicionar Modelo
+                      </button>
+                    </div>
+
+                    {zapSignForm.modelos.length === 0 ? (
+                      <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">Nenhum modelo configurado</p>
+                        <button
+                          onClick={addZapSignModelo}
+                          className="mt-2 text-sm text-purple-600 hover:text-purple-700"
+                        >
+                          Adicionar primeiro modelo
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {zapSignForm.modelos.map((modelo, index) => (
+                          <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-semibold text-gray-600">Modelo {index + 1}</span>
+                              <button
+                                onClick={() => removeZapSignModelo(index)}
+                                className="text-red-600 hover:text-red-700 p-1"
+                                title="Remover modelo"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={modelo.nome}
+                                onChange={(e) => updateZapSignModelo(index, 'nome', e.target.value)}
+                                placeholder="Nome do modelo (ex: Contrato de Prestação)"
+                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+
+                              <input
+                                type="text"
+                                value={modelo.id}
+                                onChange={(e) => updateZapSignModelo(index, 'id', e.target.value)}
+                                placeholder="ID do modelo no ZapSign"
+                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+
+                              <textarea
+                                value={modelo.descricao}
+                                onChange={(e) => updateZapSignModelo(index, 'descricao', e.target.value)}
+                                placeholder="Descrição do modelo (ex: Usado para contratos de serviços recorrentes)"
+                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                rows={2}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex space-x-2 pt-2">
@@ -462,7 +574,7 @@ export default function IntegracoesPage() {
                         // Resetar para valores salvos
                         setZapSignForm({
                           token: credentials.zapsign.token || '',
-                          modelos: credentials.zapsign.modelos || ''
+                          modelos: credentials.zapsign.modelos || []
                         })
                       }}
                       className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
@@ -472,7 +584,7 @@ export default function IntegracoesPage() {
                     </button>
                     <button
                       onClick={saveZapSignCredentials}
-                      disabled={saving || !zapSignForm.token || !zapSignForm.modelos}
+                      disabled={saving || !zapSignForm.token || zapSignForm.modelos.length === 0 || zapSignForm.modelos.some(m => !m.id || !m.nome || !m.descricao)}
                       className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saving ? (
