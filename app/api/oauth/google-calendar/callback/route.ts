@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../../../lib/supabase'
 
+// Marca esta rota como dinâmica
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -128,7 +131,7 @@ export async function GET(request: NextRequest) {
           {
             user_id: parseInt(user_id),
             google_calendar: googleCalendarData,
-            zapsign: { token: '', modelos: '' },
+            zapsign: { token: '', modelos: [] },
             asaas: { access_token: '' },
           },
         ])
