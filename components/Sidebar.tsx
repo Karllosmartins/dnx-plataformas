@@ -24,7 +24,8 @@ import {
   ChevronRight,
   Database,
   Search,
-  Plug
+  Plug,
+  FileText
 } from 'lucide-react'
 
 const navigation = [
@@ -39,6 +40,7 @@ const navigation = [
   { name: 'Consulta', href: '/consulta', icon: Search, feature: 'consulta' as const },
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Integrações', href: '/integracoes', icon: Plug, feature: 'integracoes' as const },
+  { name: 'Arquivos', href: '/arquivos', icon: FileText, feature: 'arquivos' as const },
   { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]
 
@@ -162,7 +164,8 @@ function SidebarContent({
             acesso_agentes_ia: data.acesso_agentes_ia || false,
             acesso_extracao_leads: data.acesso_extracao_leads || false,
             acesso_enriquecimento: data.acesso_enriquecimento || false,
-            acesso_usuarios: data.acesso_usuarios || false
+            acesso_usuarios: data.acesso_usuarios || false,
+            acesso_arquivos: data.acesso_arquivos || false
           }
           setUserWithPlan(userWithPlanData)
         } else {

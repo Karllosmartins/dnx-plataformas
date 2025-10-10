@@ -15,6 +15,7 @@ export type FeatureType =
   | 'consulta'
   | 'usuarios'
   | 'integracoes'
+  | 'arquivos'
 
 // Configuração padrão dos planos (fallback)
 export const PLANOS_DEFAULT = {
@@ -31,6 +32,7 @@ export const PLANOS_DEFAULT = {
     consulta: false,
     usuarios: false,
     integracoes: true,
+    arquivos: false,
   },
   premium1: {
     dashboard: true,
@@ -45,6 +47,7 @@ export const PLANOS_DEFAULT = {
     consulta: false,
     usuarios: false,
     integracoes: true,
+    arquivos: false,
   },
   premium2: {
     dashboard: true,
@@ -59,6 +62,7 @@ export const PLANOS_DEFAULT = {
     consulta: false,
     usuarios: false,
     integracoes: true,
+    arquivos: false,
   },
   enterprise: {
     dashboard: true,
@@ -73,6 +77,7 @@ export const PLANOS_DEFAULT = {
     consulta: true,
     usuarios: true,
     integracoes: true,
+    arquivos: true,
   }
 }
 
@@ -111,6 +116,7 @@ export function hasFeatureAccess(
       consulta: 'acesso_consulta',
       usuarios: 'acesso_usuarios',
       integracoes: 'acesso_integracoes',
+      arquivos: 'acesso_arquivos',
     }
 
     const fieldName = featureMap[feature]
@@ -157,7 +163,7 @@ export function getAvailableFeatures(user: User | UsuarioComPlano): FeatureType[
   const allFeatures: FeatureType[] = [
     'dashboard', 'crm', 'whatsapp', 'disparoSimples',
     'disparoIA', 'agentesIA', 'extracaoLeads',
-    'enriquecimento', 'enriquecimentoAPI', 'consulta', 'usuarios'
+    'enriquecimento', 'enriquecimentoAPI', 'consulta', 'usuarios', 'arquivos'
   ]
 
   for (const feature of allFeatures) {

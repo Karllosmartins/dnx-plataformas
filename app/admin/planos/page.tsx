@@ -293,6 +293,7 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
             'Extração': plano.acesso_extracao_leads,
             'Enriquecimento': plano.acesso_enriquecimento,
             'Usuários': plano.acesso_usuarios,
+            'Arquivos': plano.acesso_arquivos,
           }).map(([feature, hasAccess]) => (
             <div key={feature} className="flex items-center">
               {hasAccess ? (
@@ -342,6 +343,7 @@ function PlanoCard({ plano, isEditing, isNew, onEdit, onSave, onCancel, onDelete
             { key: 'acesso_extracao_leads', label: 'Extração' },
             { key: 'acesso_enriquecimento', label: 'Enriquecimento' },
             { key: 'acesso_usuarios', label: 'Usuários' },
+            { key: 'acesso_arquivos', label: 'Arquivos' },
           ].map(({ key, label }) => (
             <label key={key} className="flex items-center">
               <input

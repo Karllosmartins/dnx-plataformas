@@ -56,6 +56,7 @@ export interface Plano {
   acesso_usuarios: boolean
   acesso_consulta: boolean
   acesso_integracoes: boolean
+  acesso_arquivos: boolean
 
   // Limites
   limite_leads: number
@@ -108,6 +109,7 @@ export interface UsuarioComPlano extends User {
   acesso_usuarios?: boolean
   acesso_consulta?: boolean
   acesso_integracoes?: boolean
+  acesso_arquivos?: boolean
 }
 
 export interface ConfiguracaoCredenciais {
