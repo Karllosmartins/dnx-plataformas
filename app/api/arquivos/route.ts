@@ -1,38 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../lib/supabase'
-import { cookies } from 'next/headers'
-import { jwtVerify } from 'jose'
-
-async function getUserFromToken() {
-  try {
-    const cookieStore = cookies()
-    const token = cookieStore.get('auth-token')?.value
-
-    if (!token) {
-      return null
-    }
-
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret')
-    const { payload } = await jwtVerify(token, secret)
-
-    return {
-      userId: payload.userId as string,
-      role: payload.role as string,
-    }
-  } catch (error) {
-    console.error('Erro ao verificar token:', error)
-    return null
-  }
-}
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    const role = searchParams.get('role')
 
-    if (!user) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
+        { error: 'userId é obrigatório' },
+        { status: 400 }
       )
     }
 
@@ -43,8 +21,9 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('id', { ascending: false })
 
-    if (user.role !== 'admin') {
-      query = query.eq('user_id', parseInt(user.userId))
+    // Se não for admin, filtrar por user_id
+    if (role !== 'admin') {
+      query = query.eq('user_id', parseInt(userId))
     }
 
     const { data, error } = await query
@@ -69,17 +48,10 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getUserFromToken()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const userId = searchParams.get('userId')
+    const role = searchParams.get('role')
 
     if (!id) {
       return NextResponse.json(
@@ -88,16 +60,24 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId é obrigatório' },
+        { status: 400 }
+      )
+    }
+
     const supabase = getSupabaseAdmin()
 
-    if (user.role !== 'admin') {
+    // Se não for admin, verificar se o arquivo pertence ao usuário
+    if (role !== 'admin') {
       const { data: arquivo } = await supabase
         .from('arquivos')
         .select('user_id')
         .eq('id', id)
         .single()
 
-      if (!arquivo || arquivo.user_id !== parseInt(user.userId)) {
+      if (!arquivo || arquivo.user_id !== parseInt(userId)) {
         return NextResponse.json(
           { error: 'Não autorizado a deletar este arquivo' },
           { status: 403 }

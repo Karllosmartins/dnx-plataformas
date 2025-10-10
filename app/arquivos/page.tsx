@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Upload, FileText, Image as ImageIcon, Video, Trash2, Loader2 } from 'lucide-react'
+import { useAuth } from '../../components/AuthWrapper'
 
 interface Arquivo {
   id: number
@@ -15,21 +16,25 @@ interface Arquivo {
 }
 
 export default function ArquivosPage() {
+  const { user } = useAuth()
   const [arquivos, setArquivos] = useState<Arquivo[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [nomeProduto, setNomeProduto] = useState('')
-  const [nomeFoto, setNomeFoto] = useState('')
   const [descricao, setDescricao] = useState('')
 
   useEffect(() => {
-    fetchArquivos()
-  }, [])
+    if (user?.id) {
+      fetchArquivos()
+    }
+  }, [user])
 
   const fetchArquivos = async () => {
+    if (!user?.id) return
+
     try {
-      const response = await fetch('/api/arquivos')
+      const response = await fetch(`/api/arquivos?userId=${user.id}&role=${user.role}`)
       const data = await response.json()
       setArquivos(data.data || [])
     } catch (error) {
@@ -40,19 +45,15 @@ export default function ArquivosPage() {
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setSelectedFile(file)
-      if (!nomeFoto) {
-        setNomeFoto(file.name.split('.')[0])
-      }
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFiles(e.target.files)
     }
   }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedFile || !nomeProduto || !nomeFoto) {
+    if (!selectedFiles || selectedFiles.length === 0 || !nomeProduto || !user?.id) {
       alert('Por favor, preencha todos os campos obrigatórios')
       return
     }
@@ -61,12 +62,16 @@ export default function ArquivosPage() {
 
     try {
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      formData.append('userId', user.id.toString())
       formData.append('nomeProduto', nomeProduto)
-      formData.append('nomeFoto', nomeFoto)
       if (descricao) {
         formData.append('descricao', descricao)
       }
+
+      // Adicionar todos os arquivos selecionados
+      Array.from(selectedFiles).forEach((file, index) => {
+        formData.append(`files[${index}]`, file)
+      })
 
       const response = await fetch('/api/arquivos/upload', {
         method: 'POST',
@@ -76,10 +81,9 @@ export default function ArquivosPage() {
       const data = await response.json()
 
       if (data.success) {
-        alert('Arquivo enviado com sucesso!')
-        setSelectedFile(null)
+        alert(`Upload de ${data.count} arquivo(s) realizado com sucesso!`)
+        setSelectedFiles(null)
         setNomeProduto('')
-        setNomeFoto('')
         setDescricao('')
         const fileInput = document.getElementById('file-upload') as HTMLInputElement
         if (fileInput) fileInput.value = ''
@@ -96,12 +100,12 @@ export default function ArquivosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja deletar este arquivo?')) {
+    if (!confirm('Tem certeza que deseja deletar este arquivo?') || !user?.id) {
       return
     }
 
     try {
-      const response = await fetch(`/api/arquivos?id=${id}`, {
+      const response = await fetch(`/api/arquivos?id=${id}&userId=${user.id}&role=${user.role}`, {
         method: 'DELETE',
       })
 
@@ -130,6 +134,15 @@ export default function ArquivosPage() {
     }
   }
 
+  const getTotalSize = () => {
+    if (!selectedFiles) return ''
+    let total = 0
+    Array.from(selectedFiles).forEach(file => {
+      total += file.size
+    })
+    return ` (${(total / 1024 / 1024).toFixed(2)} MB)`
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -143,16 +156,16 @@ export default function ArquivosPage() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Arquivos</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Gerencie seus arquivos e faça upload de novos
+          Gerencie seus arquivos e faça upload de novos (múltiplos arquivos permitidos)
         </p>
       </div>
 
       {/* Formulário de Upload */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Enviar Novo Arquivo</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Enviar Novos Arquivos</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Faça upload de imagens, vídeos ou documentos
+            Faça upload de uma ou várias imagens, vídeos ou documentos
           </p>
         </div>
         <div className="p-6">
@@ -160,19 +173,20 @@ export default function ArquivosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">
-                  Arquivo <span className="text-red-500">*</span>
+                  Arquivo(s) <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="file-upload"
                   type="file"
                   onChange={handleFileSelect}
                   accept="image/*,video/*,application/pdf"
+                  multiple
                   required
                   className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
                 />
-                {selectedFile && (
+                {selectedFiles && selectedFiles.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    {selectedFiles.length} arquivo(s) selecionado(s){getTotalSize()}
                   </p>
                 )}
               </div>
@@ -192,28 +206,13 @@ export default function ArquivosPage() {
                 />
               </div>
 
-              <div>
-                <label htmlFor="nomeFoto" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome da Foto <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="nomeFoto"
-                  type="text"
-                  placeholder="Ex: demonstracao"
-                  value={nomeFoto}
-                  onChange={(e) => setNomeFoto(e.target.value)}
-                  required
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
               <div className="md:col-span-2">
                 <label htmlFor="descricao" className="block text-sm font-medium text-gray-700 mb-1">
                   Descrição (opcional)
                 </label>
                 <textarea
                   id="descricao"
-                  placeholder="Descreva o conteúdo do arquivo..."
+                  placeholder="Descreva o conteúdo dos arquivos..."
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   rows={3}
@@ -235,7 +234,7 @@ export default function ArquivosPage() {
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Enviar Arquivo
+                  Enviar Arquivo(s)
                 </>
               )}
             </button>

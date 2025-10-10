@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSupabaseAdmin } from '../../../../lib/supabase'
-import { cookies } from 'next/headers'
-import { jwtVerify } from 'jose'
 
 const s3Client = new S3Client({
   endpoint: process.env.B2_ENDPOINT,
@@ -13,106 +11,113 @@ const s3Client = new S3Client({
   },
 })
 
-async function getUserFromToken() {
-  try {
-    const cookieStore = cookies()
-    const token = cookieStore.get('auth-token')?.value
-
-    if (!token) {
-      return null
-    }
-
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret')
-    const { payload } = await jwtVerify(token, secret)
-
-    return payload.userId as string
-  } catch (error) {
-    console.error('Erro ao verificar token:', error)
-    return null
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserFromToken()
+    const formData = await request.formData()
+    const userId = formData.get('userId') as string
+    const nomeProduto = formData.get('nomeProduto') as string
+    const descricao = formData.get('descricao') as string | null
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      )
-    }
-
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const nomeProduto = formData.get('nomeProduto') as string
-    const nomeFoto = formData.get('nomeFoto') as string
-    const descricao = formData.get('descricao') as string | null
-
-    if (!file || !nomeProduto || !nomeFoto) {
-      return NextResponse.json(
-        { error: 'Arquivo, nome do produto e nome da foto são obrigatórios' },
+        { error: 'userId é obrigatório' },
         { status: 400 }
       )
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    if (!nomeProduto) {
+      return NextResponse.json(
+        { error: 'Nome do produto é obrigatório' },
+        { status: 400 }
+      )
+    }
 
-    const timestamp = Date.now()
-    const sanitizedFileName = nomeFoto.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const sanitizedProduto = nomeProduto.replace(/[^a-zA-Z0-9_-]/g, '_')
-    const key = `${sanitizedProduto}/${sanitizedFileName}_${timestamp}`
-
-    const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.B2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type,
+    // Obter todos os arquivos do FormData
+    const files: File[] = []
+    formData.forEach((value, key) => {
+      if (key.startsWith('files[') && value instanceof File) {
+        files.push(value)
+      }
     })
 
-    await s3Client.send(uploadCommand)
-
-    const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${key}`
-
-    const mediaType = file.type.startsWith('image/')
-      ? 'image'
-      : file.type.startsWith('video/')
-      ? 'video'
-      : 'file'
+    if (files.length === 0) {
+      return NextResponse.json(
+        { error: 'Pelo menos um arquivo é obrigatório' },
+        { status: 400 }
+      )
+    }
 
     const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase
-      .from('arquivos')
-      .insert({
-        nome: nomeFoto,
-        mimetype: file.type,
-        mediatype: mediaType,
-        arquivo: fileUrl,
-        descricao: descricao || null,
-        produto: nomeProduto,
-        user_id: parseInt(userId),
-      })
-      .select()
-      .single()
+    const uploadedFiles: any[] = []
 
-    if (error) {
-      console.error('Erro ao salvar no banco:', error)
+    // Upload de cada arquivo
+    for (const file of files) {
+      const bytes = await file.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+
+      const timestamp = Date.now()
+      const randomSuffix = Math.random().toString(36).substring(7)
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const sanitizedProduto = nomeProduto.replace(/[^a-zA-Z0-9_-]/g, '_')
+      const key = `${sanitizedProduto}/${sanitizedFileName}_${timestamp}_${randomSuffix}`
+
+      const uploadCommand = new PutObjectCommand({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type,
+      })
+
+      await s3Client.send(uploadCommand)
+
+      const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${key}`
+
+      const mediaType = file.type.startsWith('image/')
+        ? 'image'
+        : file.type.startsWith('video/')
+        ? 'video'
+        : 'file'
+
+      // Salvar no banco
+      const { data, error } = await supabase
+        .from('arquivos')
+        .insert({
+          nome: file.name,
+          mimetype: file.type,
+          mediatype: mediaType,
+          arquivo: fileUrl,
+          descricao: descricao || null,
+          produto: nomeProduto,
+          user_id: parseInt(userId),
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Erro ao salvar arquivo no banco:', error)
+        continue // Continua com os próximos arquivos
+      }
+
+      uploadedFiles.push({
+        id: data.id,
+        nome: data.nome,
+        arquivo: data.arquivo,
+        produto: data.produto,
+        mediatype: data.mediatype,
+      })
+    }
+
+    if (uploadedFiles.length === 0) {
       return NextResponse.json(
-        { error: 'Erro ao salvar arquivo no banco de dados' },
+        { error: 'Erro ao fazer upload dos arquivos' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      data: {
-        id: data.id,
-        nome: data.nome,
-        arquivo: data.arquivo,
-        produto: data.produto,
-        mediatype: data.mediatype,
-      },
+      data: uploadedFiles,
+      count: uploadedFiles.length,
     })
   } catch (error) {
     console.error('Erro ao fazer upload:', error)
