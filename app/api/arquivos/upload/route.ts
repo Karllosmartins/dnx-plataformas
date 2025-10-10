@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Obter todos os arquivos do FormData
-    const files: File[] = []
+    const files: any[] = []
     formData.forEach((value, key) => {
-      if (key.startsWith('files[') && value instanceof File) {
+      // Verificar se é um arquivo checando se tem as propriedades necessárias
+      if (key.startsWith('files[') && typeof value === 'object' && value !== null && 'name' in value && 'type' in value) {
         files.push(value)
       }
     })

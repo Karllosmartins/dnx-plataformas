@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const role = searchParams.get('role')
 
+    console.log('[GET /api/arquivos] userId:', userId, 'role:', role)
+
     if (!userId) {
       return NextResponse.json(
         { error: 'userId é obrigatório' },
@@ -21,12 +23,18 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('id', { ascending: false })
 
-    // Se não for admin, filtrar por user_id
+    // Apenas admin vê todos os arquivos
+    // Qualquer outro role ou undefined filtra por user_id
     if (role !== 'admin') {
+      console.log('[GET /api/arquivos] Filtrando por user_id:', userId)
       query = query.eq('user_id', parseInt(userId))
+    } else {
+      console.log('[GET /api/arquivos] Admin - mostrando todos os arquivos')
     }
 
     const { data, error } = await query
+
+    console.log('[GET /api/arquivos] Retornando', data?.length || 0, 'arquivos')
 
     if (error) {
       console.error('Erro ao buscar arquivos:', error)
