@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '../../../lib/supabase'
 import { cookies } from 'next/headers'
 import { jwtVerify } from 'jose'
 
