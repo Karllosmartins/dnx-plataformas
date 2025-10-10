@@ -1,28 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSupabaseAdmin } from '../../../../lib/supabase'
+import axios from 'axios'
+import crypto from 'crypto'
 
-const s3Client = new S3Client({
-  endpoint: process.env.B2_ENDPOINT,
-  region: process.env.B2_REGION,
-  credentials: {
-    accessKeyId: process.env.B2_KEY_ID!,
-    secretAccessKey: process.env.B2_APPLICATION_KEY!,
-  },
-  forcePathStyle: true,
-  // Desabilitar checksums que podem causar problemas com B2
-  requestChecksumCalculation: 'WHEN_REQUIRED' as const,
-})
+// Cache do token de autorização B2
+let b2AuthCache: {
+  token: string
+  apiUrl: string
+  expiresAt: number
+} | null = null
+
+// Função para autorizar com B2 e obter token
+async function getB2Authorization() {
+  // Verificar se temos token válido em cache
+  if (b2AuthCache && b2AuthCache.expiresAt > Date.now()) {
+    return b2AuthCache
+  }
+
+  const authString = Buffer.from(
+    `${process.env.B2_KEY_ID}:${process.env.B2_APPLICATION_KEY}`
+  ).toString('base64')
+
+  const response = await axios.get('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+    headers: {
+      Authorization: `Basic ${authString}`,
+    },
+  })
+
+  // Cache por 23 horas (token válido por 24h)
+  b2AuthCache = {
+    token: response.data.authorizationToken,
+    apiUrl: response.data.apiUrl,
+    expiresAt: Date.now() + 23 * 60 * 60 * 1000,
+  }
+
+  return b2AuthCache
+}
+
+// Função para obter URL de upload
+async function getB2UploadUrl(bucketId: string, auth: { token: string; apiUrl: string }) {
+  const response = await axios.post(
+    `${auth.apiUrl}/b2api/v2/b2_get_upload_url`,
+    { bucketId },
+    {
+      headers: {
+        Authorization: auth.token,
+      },
+    }
+  )
+
+  return {
+    uploadUrl: response.data.uploadUrl,
+    authorizationToken: response.data.authorizationToken,
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Upload] Configuração B2:', {
-      endpoint: process.env.B2_ENDPOINT,
-      region: process.env.B2_REGION,
-      bucket: process.env.B2_BUCKET_NAME,
-      hasKeyId: !!process.env.B2_KEY_ID,
-      hasAppKey: !!process.env.B2_APPLICATION_KEY,
-    })
+    console.log('[Upload] Usando API nativa do Backblaze B2')
 
     const formData = await request.formData()
     const userId = formData.get('userId') as string
@@ -42,6 +77,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Obter autorização B2
+    const auth = await getB2Authorization()
+    console.log('[Upload] Autorização B2 obtida com sucesso')
 
     // Obter todos os arquivos do FormData
     const files: any[] = []
@@ -64,46 +103,56 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin()
     const uploadedFiles: any[] = []
 
+    // Obter URL de upload
+    const uploadAuth = await getB2UploadUrl(process.env.B2_BUCKET_ID!, auth)
+    console.log('[Upload] URL de upload obtida')
+
     // Upload de cada arquivo
     for (const file of files) {
       console.log('[Upload] Processando arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size)
 
-      // Converter arquivo para Buffer - a forma mais compatível com S3
+      // Converter arquivo para Buffer
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
-      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes', 'Original size:', file.size)
+      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes')
 
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
       const sanitizedProduto = nomeProduto.replace(/[^a-zA-Z0-9_-]/g, '_')
-      const key = `${sanitizedProduto}/${sanitizedFileName}_${timestamp}_${randomSuffix}`
+      const fileName = `${sanitizedProduto}/${sanitizedFileName}_${timestamp}_${randomSuffix}`
 
-      const uploadCommand = new PutObjectCommand({
-        Bucket: process.env.B2_BUCKET_NAME,
-        Key: key,
-        Body: buffer,
-        ContentType: file.type,
-        ContentLength: buffer.length,
-      })
+      // Calcular SHA1 do arquivo (obrigatório para B2)
+      const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
 
-      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', buffer.length, 'bytes')
+      console.log('[Upload] Enviando para B2 - Nome:', fileName, 'SHA1:', sha1)
 
       try {
-        const uploadResult = await s3Client.send(uploadCommand)
-        console.log('[Upload] Upload para B2 concluído com sucesso:', uploadResult)
+        // Upload usando API nativa do B2
+        const uploadResponse = await axios.post(uploadAuth.uploadUrl, buffer, {
+          headers: {
+            'Authorization': uploadAuth.authorizationToken,
+            'X-Bz-File-Name': encodeURIComponent(fileName),
+            'Content-Type': file.type || 'application/octet-stream',
+            'Content-Length': buffer.length.toString(),
+            'X-Bz-Content-Sha1': sha1,
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        })
+
+        console.log('[Upload] Upload para B2 concluído com sucesso:', uploadResponse.data.fileName)
       } catch (uploadError: any) {
-        console.error('[Upload] Erro detalhado ao enviar para B2:', {
+        console.error('[Upload] Erro ao enviar para B2:', {
           message: uploadError.message,
-          code: uploadError.Code || uploadError.code,
-          statusCode: uploadError.$metadata?.httpStatusCode,
-          requestId: uploadError.$metadata?.requestId,
+          response: uploadError.response?.data,
+          status: uploadError.response?.status,
         })
         throw uploadError
       }
 
-      const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${key}`
+      const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`
 
       const mediaType = file.type.startsWith('image/')
         ? 'image'
