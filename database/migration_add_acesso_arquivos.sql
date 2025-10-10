@@ -2,13 +2,16 @@
 ALTER TABLE public.planos
 ADD COLUMN IF NOT EXISTS acesso_arquivos BOOLEAN DEFAULT FALSE;
 
--- Atualizar planos existentes (Enterprise tem acesso)
+-- Atualizar plano DNX Business (id=4) para ter acesso
 UPDATE public.planos
 SET acesso_arquivos = TRUE
-WHERE nome = 'enterprise';
+WHERE id = 4;
 
--- Atualizar a view view_usuarios_planos
-CREATE OR REPLACE VIEW public.view_usuarios_planos AS
+-- Dropar a view existente antes de recriar
+DROP VIEW IF EXISTS public.view_usuarios_planos;
+
+-- Recriar a view com a nova coluna
+CREATE VIEW public.view_usuarios_planos AS
 SELECT
   u.id,
   u.name,
