@@ -15,7 +15,7 @@ Starting application...
    ▲ Next.js 14.0.0
    - Local:        http://localhost:3000
  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
- ✓ Ready in 736ms
+ ✓ Ready in 756ms
 ⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
 [GET /api/arquivos] userId: 24 role: admin
 [GET /api/arquivos] Retornando 6 arquivos do usuário 24
@@ -23,8 +23,8 @@ Starting application...
 (Use `node --trace-warnings ...` to show where the warning was created)
 [Upload] Total de arquivos encontrados: 1
 [Upload] Processando arquivo: Imagem do WhatsApp de 2025-10-09 à(s) 16.15.36_d36522d3.jpg Tipo: image/jpeg Tamanho: 174913
-[Upload] Buffer criado - Tamanho: 174913 bytes
-[Upload] Enviando para B2 - Key: asdfg/Imagem_do_WhatsApp_de_2025-10-09___s__16.15.36_d36522d3.jpg_1760119148075_55ufdy ContentLength: 174913
+[Upload] Uint8Array criado - Tamanho: 174913 bytes
+[Upload] Enviando para B2 - Key: mmmmm/Imagem_do_WhatsApp_de_2025-10-09___s__16.15.36_d36522d3.jpg_1760120636310_mrzsxu ContentLength: 174913
 Erro ao fazer upload: IncompleteBody: The request body was too small
     at throwDefaultError (/app/node_modules/@smithy/smithy-client/dist-cjs/index.js:287:22)
     at /app/node_modules/@smithy/smithy-client/dist-cjs/index.js:296:9
@@ -42,12 +42,12 @@ Erro ao fazer upload: IncompleteBody: The request body was too small
     reason: '',
     headers: {
       server: 'nginx',
-      date: 'Fri, 10 Oct 2025 17:59:08 GMT',
+      date: 'Fri, 10 Oct 2025 18:23:57 GMT',
       'content-type': 'application/xml',
       'content-length': '159',
       connection: 'keep-alive',
-      'x-amz-request-id': '94bb14ebe7b92287',
-      'x-amz-id-2': 'aYRFk/2TMZZtiXWNaN7JjVmMFNYY12DMc',
+      'x-amz-request-id': 'a4d93baa1e5b6bde',
+      'x-amz-id-2': 'aYeBkFWRPZR1iTGP8N0hjr2PUNSI1dTPj',
       'cache-control': 'max-age=0, no-cache, no-store',
       'strict-transport-security': 'max-age=63072000'
     },
@@ -84,8 +84,8 @@ Erro ao fazer upload: IncompleteBody: The request body was too small
   '$retryable': undefined,
   '$metadata': {
     httpStatusCode: 400,
-    requestId: '94bb14ebe7b92287',
-    extendedRequestId: 'aYRFk/2TMZZtiXWNaN7JjVmMFNYY12DMc',
+    requestId: 'a4d93baa1e5b6bde',
+    extendedRequestId: 'aYeBkFWRPZR1iTGP8N0hjr2PUNSI1dTPj',
     cfId: undefined,
     attempts: 1,
     totalRetryDelay: 0

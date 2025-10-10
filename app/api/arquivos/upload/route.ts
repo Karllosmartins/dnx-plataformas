@@ -9,10 +9,19 @@ const s3Client = new S3Client({
     accessKeyId: process.env.B2_KEY_ID!,
     secretAccessKey: process.env.B2_APPLICATION_KEY!,
   },
+  forcePathStyle: true, // Necessário para alguns serviços S3-compatible
 })
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Upload] Configuração B2:', {
+      endpoint: process.env.B2_ENDPOINT,
+      region: process.env.B2_REGION,
+      bucket: process.env.B2_BUCKET_NAME,
+      hasKeyId: !!process.env.B2_KEY_ID,
+      hasAppKey: !!process.env.B2_APPLICATION_KEY,
+    })
+
     const formData = await request.formData()
     const userId = formData.get('userId') as string
     const nomeProduto = formData.get('nomeProduto') as string
@@ -74,12 +83,23 @@ export async function POST(request: NextRequest) {
         Key: key,
         Body: uint8Array,
         ContentType: file.type,
-        ContentLength: uint8Array.length,
+        // Não definir ContentLength - deixar SDK calcular automaticamente
       })
 
-      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', uint8Array.length)
-      await s3Client.send(uploadCommand)
-      console.log('[Upload] Upload para B2 concluído com sucesso')
+      console.log('[Upload] Enviando para B2 - Key:', key, 'Body size:', uint8Array.length)
+
+      try {
+        const uploadResult = await s3Client.send(uploadCommand)
+        console.log('[Upload] Upload para B2 concluído com sucesso:', uploadResult)
+      } catch (uploadError: any) {
+        console.error('[Upload] Erro detalhado ao enviar para B2:', {
+          message: uploadError.message,
+          code: uploadError.Code || uploadError.code,
+          statusCode: uploadError.$metadata?.httpStatusCode,
+          requestId: uploadError.$metadata?.requestId,
+        })
+        throw uploadError
+      }
 
       const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${key}`
 
