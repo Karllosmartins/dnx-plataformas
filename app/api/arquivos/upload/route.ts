@@ -9,7 +9,9 @@ const s3Client = new S3Client({
     accessKeyId: process.env.B2_KEY_ID!,
     secretAccessKey: process.env.B2_APPLICATION_KEY!,
   },
-  forcePathStyle: true, // Necessário para alguns serviços S3-compatible
+  forcePathStyle: true,
+  // Desabilitar checksums que podem causar problemas com B2
+  requestChecksumCalculation: 'WHEN_REQUIRED' as const,
 })
 
 export async function POST(request: NextRequest) {
@@ -66,11 +68,11 @@ export async function POST(request: NextRequest) {
     for (const file of files) {
       console.log('[Upload] Processando arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size)
 
-      // Usar Uint8Array em vez de Buffer para melhor compatibilidade com AWS SDK
+      // Converter arquivo para Buffer - a forma mais compatível com S3
       const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
+      const buffer = Buffer.from(arrayBuffer)
 
-      console.log('[Upload] Uint8Array criado - Tamanho:', uint8Array.length, 'bytes')
+      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes', 'Original size:', file.size)
 
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
@@ -81,12 +83,12 @@ export async function POST(request: NextRequest) {
       const uploadCommand = new PutObjectCommand({
         Bucket: process.env.B2_BUCKET_NAME,
         Key: key,
-        Body: uint8Array,
+        Body: buffer,
         ContentType: file.type,
-        // Não definir ContentLength - deixar SDK calcular automaticamente
+        ContentLength: buffer.length,
       })
 
-      console.log('[Upload] Enviando para B2 - Key:', key, 'Body size:', uint8Array.length)
+      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', buffer.length, 'bytes')
 
       try {
         const uploadResult = await s3Client.send(uploadCommand)
