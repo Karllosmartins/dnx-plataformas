@@ -57,10 +57,11 @@ export async function POST(request: NextRequest) {
     for (const file of files) {
       console.log('[Upload] Processando arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size)
 
-      const bytes = await file.arrayBuffer()
-      const buffer = Buffer.from(bytes)
+      // Usar Uint8Array em vez de Buffer para melhor compatibilidade com AWS SDK
+      const arrayBuffer = await file.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
 
-      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes')
+      console.log('[Upload] Uint8Array criado - Tamanho:', uint8Array.length, 'bytes')
 
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
@@ -71,12 +72,12 @@ export async function POST(request: NextRequest) {
       const uploadCommand = new PutObjectCommand({
         Bucket: process.env.B2_BUCKET_NAME,
         Key: key,
-        Body: buffer,
+        Body: uint8Array,
         ContentType: file.type,
-        ContentLength: buffer.length,
+        ContentLength: uint8Array.length,
       })
 
-      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', buffer.length)
+      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', uint8Array.length)
       await s3Client.send(uploadCommand)
       console.log('[Upload] Upload para B2 concluído com sucesso')
 
