@@ -34,8 +34,10 @@ export default function ArquivosPage() {
     if (!user?.id) return
 
     try {
+      console.log('[Frontend] Buscando arquivos - userId:', user.id, 'role:', user.role)
       const response = await fetch(`/api/arquivos?userId=${user.id}&role=${user.role}`)
       const data = await response.json()
+      console.log('[Frontend] Arquivos recebidos:', data.data?.length || 0)
       setArquivos(data.data || [])
     } catch (error) {
       console.error('Erro ao carregar arquivos:', error)

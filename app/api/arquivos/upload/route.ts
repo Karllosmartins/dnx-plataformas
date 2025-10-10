@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('[Upload] Total de arquivos encontrados:', files.length)
+
     if (files.length === 0) {
       return NextResponse.json(
         { error: 'Pelo menos um arquivo é obrigatório' },
@@ -53,8 +55,12 @@ export async function POST(request: NextRequest) {
 
     // Upload de cada arquivo
     for (const file of files) {
+      console.log('[Upload] Processando arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size)
+
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
+
+      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes')
 
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
@@ -67,9 +73,12 @@ export async function POST(request: NextRequest) {
         Key: key,
         Body: buffer,
         ContentType: file.type,
+        ContentLength: buffer.length,
       })
 
+      console.log('[Upload] Enviando para B2 - Key:', key, 'ContentLength:', buffer.length)
       await s3Client.send(uploadCommand)
+      console.log('[Upload] Upload para B2 concluído com sucesso')
 
       const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${key}`
 

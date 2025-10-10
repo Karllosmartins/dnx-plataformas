@@ -1,105 +1,94 @@
-npm error Missing: @smithy/eventstream-serde-node@4.2.0 from lock file
-npm error Missing: @smithy/fetch-http-handler@5.3.1 from lock file
-npm error Missing: @smithy/hash-blob-browser@4.2.1 from lock file
-npm error Missing: @smithy/hash-node@4.2.0 from lock file
-npm error Missing: @smithy/hash-stream-node@4.2.0 from lock file
-npm error Missing: @smithy/invalid-dependency@4.2.0 from lock file
-npm error Missing: @smithy/md5-js@4.2.0 from lock file
-npm error Missing: @smithy/middleware-content-length@4.2.0 from lock file
-npm error Missing: @smithy/middleware-endpoint@4.3.1 from lock file
-npm error Missing: @smithy/middleware-retry@4.4.1 from lock file
-npm error Missing: @smithy/middleware-serde@4.2.0 from lock file
-npm error Missing: @smithy/middleware-stack@4.2.0 from lock file
-npm error Missing: @smithy/node-config-provider@4.3.0 from lock file
-npm error Missing: @smithy/node-http-handler@4.3.0 from lock file
-npm error Missing: @smithy/protocol-http@5.3.0 from lock file
-npm error Missing: @smithy/smithy-client@4.7.1 from lock file
-npm error Missing: @smithy/types@4.6.0 from lock file
-npm error Missing: @smithy/url-parser@4.2.0 from lock file
-npm error Missing: @smithy/util-base64@4.3.0 from lock file
-npm error Missing: @smithy/util-body-length-browser@4.2.0 from lock file
-npm error Missing: @smithy/util-body-length-node@4.2.1 from lock file
-npm error Missing: @smithy/util-defaults-mode-browser@4.3.0 from lock file
-npm error Missing: @smithy/util-defaults-mode-node@4.2.1 from lock file
-npm error Missing: @smithy/util-endpoints@3.2.0 from lock file
-npm error Missing: @smithy/util-middleware@4.2.0 from lock file
-npm error Missing: @smithy/util-retry@4.2.0 from lock file
-npm error Missing: @smithy/util-stream@4.5.0 from lock file
-npm error Missing: @smithy/util-utf8@4.2.0 from lock file
-npm error Missing: @smithy/util-waiter@4.2.0 from lock file
-npm error Missing: @smithy/uuid@1.1.0 from lock file
-npm error Missing: @aws-crypto/supports-web-crypto@5.2.0 from lock file
-npm error Missing: @aws-crypto/util@5.2.0 from lock file
-npm error Missing: @aws-sdk/util-locate-window@3.893.0 from lock file
-npm error Missing: @smithy/util-utf8@2.3.0 from lock file
-npm error Missing: @smithy/util-utf8@2.3.0 from lock file
-npm error Missing: @smithy/util-utf8@2.3.0 from lock file
-npm error Missing: @smithy/property-provider@4.2.0 from lock file
-npm error Missing: @smithy/signature-v4@5.3.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-env@3.907.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-http@3.907.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-ini@3.907.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-process@3.907.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-sso@3.907.0 from lock file
-npm error Missing: @aws-sdk/credential-provider-web-identity@3.907.0 from lock file
-npm error Missing: @smithy/credential-provider-imds@4.2.0 from lock file
-npm error Missing: @smithy/shared-ini-file-loader@4.3.0 from lock file
-npm error Missing: @aws-sdk/nested-clients@3.907.0 from lock file
-npm error Missing: @aws-sdk/client-sso@3.907.0 from lock file
-npm error Missing: @aws-sdk/token-providers@3.907.0 from lock file
-npm error Missing: @aws-sdk/util-arn-parser@3.893.0 from lock file
-npm error Missing: @smithy/util-config-provider@4.2.0 from lock file
-npm error Missing: @aws-crypto/crc32@5.2.0 from lock file
-npm error Missing: @aws-crypto/crc32c@5.2.0 from lock file
-npm error Missing: @smithy/is-array-buffer@4.2.0 from lock file
-npm error Missing: @aws/lambda-invoke-store@0.0.1 from lock file
-npm error Missing: bowser@2.12.1 from lock file
-npm error Missing: fast-xml-parser@5.2.5 from lock file
-npm error Missing: @smithy/eventstream-serde-universal@4.2.0 from lock file
-npm error Missing: @smithy/eventstream-codec@4.2.0 from lock file
-npm error Missing: @smithy/util-hex-encoding@4.2.0 from lock file
-npm error Missing: @smithy/querystring-builder@4.2.0 from lock file
-npm error Missing: @smithy/chunked-blob-reader@5.2.0 from lock file
-npm error Missing: @smithy/chunked-blob-reader-native@4.2.1 from lock file
-npm error Missing: @smithy/util-buffer-from@4.2.0 from lock file
-npm error Missing: @smithy/service-error-classification@4.2.0 from lock file
-npm error Missing: @smithy/abort-controller@4.2.0 from lock file
-npm error Missing: @smithy/util-uri-escape@4.2.0 from lock file
-npm error Missing: @smithy/querystring-parser@4.2.0 from lock file
-npm error Missing: jose@4.15.9 from lock file
-npm error Missing: strnum@2.1.1 from lock file
-npm error Missing: @smithy/util-buffer-from@2.2.0 from lock file
-npm error Missing: @smithy/is-array-buffer@2.2.0 from lock file
-npm error Missing: @smithy/util-buffer-from@2.2.0 from lock file
-npm error Missing: @smithy/is-array-buffer@2.2.0 from lock file
-npm error Missing: @smithy/util-buffer-from@2.2.0 from lock file
-npm error Missing: @smithy/is-array-buffer@2.2.0 from lock file
-
-r
-npm error Clean install a project
-
-r
-npm error Usage:
-npm error npm ci
-
-r
-npm error Options:
-npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
-npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
-npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
-npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
-npm error [--no-bin-links] [--no-fund] [--dry-run]
-npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
-npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
-
-r
-npm error aliases: clean-install, ic, install-clean, isntall-clean
-
-r
-npm error Run "npm help ci" for more info
-npm notice
-npm notice New major version of npm available! 10.8.2 -> 11.6.2
-npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
-npm notice To update run: npm install -g npm@11.6.2
-npm notice
-npm error A complete log of this run can be found in: /root/.npm/_logs/2025-10-10T14_49_02_169Z-debug-0.log
+├ ○ /integracoes                         4.89 kB         154 kB
+├ ○ /leads                               15.7 kB         276 kB
+├ ○ /relatorios                          8.36 kB         269 kB
+├ ○ /usuarios                            7.32 kB         156 kB
+└ ○ /whatsapp                            6.29 kB         155 kB
++ First Load JS shared by all            87.9 kB
+  ├ chunks/472-ceed697e056bc12d.js       32.5 kB
+  ├ chunks/fd9d1056-053a427fed818d2b.js  53.3 kB
+  ├ chunks/main-app-703e8bd9ded479e2.js  235 B
+  └ chunks/webpack-1173247170c2c319.js   1.84 kB
+ƒ Middleware                             38.7 kB
+○  (Static)   prerendered as static HTML
+λ  (Dynamic)  server-rendered on demand using Node.js
+Starting application...
+> dnx-plataformas-crm@1.0.0 start
+
+> next start
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3000
+ ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+ ✓ Ready in 719ms
+⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+[GET /api/arquivos] userId: 24 role: admin
+[GET /api/arquivos] Admin - mostrando todos os arquivos
+[GET /api/arquivos] Retornando 14 arquivos
+(node:189) ExperimentalWarning: buffer.File is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Erro ao fazer upload: IncompleteBody: The request body was too small
+    at throwDefaultError (/app/node_modules/@smithy/smithy-client/dist-cjs/index.js:287:22)
+    at /app/node_modules/@smithy/smithy-client/dist-cjs/index.js:296:9
+    at de_CommandError (/app/node_modules/@aws-sdk/client-s3/dist-cjs/index.js:4868:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async /app/node_modules/@smithy/middleware-serde/dist-cjs/index.js:8:24
+    at async /app/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:386:20
+    at async /app/node_modules/@smithy/middleware-retry/dist-cjs/index.js:254:46
+    at async /app/node_modules/@aws-sdk/middleware-flexible-checksums/dist-cjs/index.js:247:20
+    at async /app/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:63:28
+    at async /app/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:90:20 {
+  '$fault': 'client',
+  '$response': HttpResponse {
+    statusCode: 400,
+    reason: '',
+    headers: {
+      server: 'nginx',
+      date: 'Fri, 10 Oct 2025 17:49:02 GMT',
+      'content-type': 'application/xml',
+      'content-length': '159',
+      connection: 'keep-alive',
+      'x-amz-request-id': '7f9f9b29030ddd81',
+      'x-amz-id-2': 'aYVFk3WTNZYxiymPrN0djJ2PiNX41lzNT',
+      'cache-control': 'max-age=0, no-cache, no-store',
+      'strict-transport-security': 'max-age=63072000'
+    },
+    body: IncomingMessage {
+      _readableState: [ReadableState],
+      _events: [Object: null prototype],
+      _eventsCount: 2,
+      _maxListeners: undefined,
+      socket: null,
+      httpVersionMajor: 1,
+      httpVersionMinor: 1,
+      httpVersion: '1.1',
+      complete: true,
+      rawHeaders: [Array],
+      rawTrailers: [],
+      joinDuplicateHeaders: undefined,
+      aborted: false,
+      upgrade: false,
+      url: '',
+      method: null,
+      statusCode: 400,
+      statusMessage: '',
+      client: [TLSSocket],
+      _consuming: false,
+      _dumped: false,
+      req: [ClientRequest],
+      [Symbol(kCapture)]: false,
+      [Symbol(kHeaders)]: [Object],
+      [Symbol(kHeadersCount)]: 18,
+      [Symbol(kTrailers)]: null,
+      [Symbol(kTrailersCount)]: 0
+    }
+  },
+  '$retryable': undefined,
+  '$metadata': {
+    httpStatusCode: 400,
+    requestId: '7f9f9b29030ddd81',
+    extendedRequestId: 'aYVFk3WTNZYxiymPrN0djJ2PiNX41lzNT',
+    cfId: undefined,
+    attempts: 1,
+    totalRetryDelay: 0
+  },
+  Code: 'IncompleteBody'
+}

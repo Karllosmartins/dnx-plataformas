@@ -18,23 +18,14 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin()
 
-    let query = supabase
+    // SEMPRE filtrar por user_id - cada usuário vê apenas seus próprios arquivos
+    const { data, error } = await supabase
       .from('arquivos')
       .select('*')
+      .eq('user_id', parseInt(userId))
       .order('id', { ascending: false })
 
-    // Apenas admin vê todos os arquivos
-    // Qualquer outro role ou undefined filtra por user_id
-    if (role !== 'admin') {
-      console.log('[GET /api/arquivos] Filtrando por user_id:', userId)
-      query = query.eq('user_id', parseInt(userId))
-    } else {
-      console.log('[GET /api/arquivos] Admin - mostrando todos os arquivos')
-    }
-
-    const { data, error } = await query
-
-    console.log('[GET /api/arquivos] Retornando', data?.length || 0, 'arquivos')
+    console.log('[GET /api/arquivos] Retornando', data?.length || 0, 'arquivos do usuário', userId)
 
     if (error) {
       console.error('Erro ao buscar arquivos:', error)
@@ -77,20 +68,18 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = getSupabaseAdmin()
 
-    // Se não for admin, verificar se o arquivo pertence ao usuário
-    if (role !== 'admin') {
-      const { data: arquivo } = await supabase
-        .from('arquivos')
-        .select('user_id')
-        .eq('id', id)
-        .single()
+    // Verificar se o arquivo pertence ao usuário
+    const { data: arquivo } = await supabase
+      .from('arquivos')
+      .select('user_id')
+      .eq('id', id)
+      .single()
 
-      if (!arquivo || arquivo.user_id !== parseInt(userId)) {
-        return NextResponse.json(
-          { error: 'Não autorizado a deletar este arquivo' },
-          { status: 403 }
-        )
-      }
+    if (!arquivo || arquivo.user_id !== parseInt(userId)) {
+      return NextResponse.json(
+        { error: 'Não autorizado a deletar este arquivo' },
+        { status: 403 }
+      )
     }
 
     const { error } = await supabase.from('arquivos').delete().eq('id', id)
