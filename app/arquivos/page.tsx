@@ -186,7 +186,7 @@ export default function ArquivosPage() {
           <form onSubmit={handleUpload} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Arquivo(s) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -196,11 +196,18 @@ export default function ArquivosPage() {
                   accept="image/*,video/*,application/pdf"
                   multiple
                   required
-                  className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+                  className="hidden"
                 />
+                <label
+                  htmlFor="file-upload"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent"
+                >
+                  <UploadCloud className="mr-2 h-5 w-5 text-gray-500" />
+                  Escolher Arquivos
+                </label>
                 {selectedFiles && selectedFiles.length > 0 && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    {selectedFiles.length} arquivo(s) selecionado(s){getTotalSize()}
+                  <p className="text-sm text-gray-600 mt-2 font-medium">
+                    ✓ {selectedFiles.length} arquivo(s) selecionado(s){getTotalSize()}
                   </p>
                 )}
               </div>
