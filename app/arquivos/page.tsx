@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, FileText, Image as ImageIcon, Video, Trash2, Loader2 } from 'lucide-react'
+import { UploadCloud, FileText, Image as ImageIcon, Video, Trash2, Loader2, FolderOpen } from 'lucide-react'
 import { useAuth } from '../../components/AuthWrapper'
 
 interface Arquivo {
@@ -145,6 +145,18 @@ export default function ArquivosPage() {
     return ` (${(total / 1024 / 1024).toFixed(2)} MB)`
   }
 
+  // Agrupar arquivos por produto
+  const groupByProduct = () => {
+    const grouped: { [key: string]: Arquivo[] } = {}
+    arquivos.forEach(arquivo => {
+      if (!grouped[arquivo.produto]) {
+        grouped[arquivo.produto] = []
+      }
+      grouped[arquivo.produto].push(arquivo)
+    })
+    return grouped
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -235,7 +247,7 @@ export default function ArquivosPage() {
                 </>
               ) : (
                 <>
-                  <Upload className="mr-2 h-4 w-4" />
+                  <UploadCloud className="mr-2 h-5 w-5" />
                   Enviar Arquivo(s)
                 </>
               )}
@@ -244,7 +256,7 @@ export default function ArquivosPage() {
         </div>
       </div>
 
-      {/* Lista de Arquivos */}
+      {/* Lista de Arquivos Agrupados por Produto */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Arquivos Enviados</h2>
@@ -258,56 +270,72 @@ export default function ArquivosPage() {
               Nenhum arquivo enviado ainda
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {arquivos.map((arquivo) => (
-                <div
-                  key={arquivo.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      {getFileIcon(arquivo.mediatype)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {arquivo.nome}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {arquivo.produto}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(arquivo.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded ml-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+            <div className="space-y-6">
+              {Object.entries(groupByProduct()).map(([produto, files]) => (
+                <div key={produto} className="space-y-3">
+                  {/* Header do Produto */}
+                  <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
+                    <FolderOpen className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">{produto}</h3>
+                    <span className="text-sm text-gray-500">
+                      ({files.length} arquivo{files.length !== 1 ? 's' : ''})
+                    </span>
                   </div>
 
-                  {arquivo.descricao && (
-                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                      {arquivo.descricao}
-                    </p>
-                  )}
+                  {/* Grid de Arquivos do Produto */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {files.map((arquivo) => (
+                      <div
+                        key={arquivo.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            {getFileIcon(arquivo.mediatype)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {arquivo.nome}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {arquivo.produto}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDelete(arquivo.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded ml-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
 
-                  {arquivo.mediatype === 'image' && (
-                    <div className="mb-2">
-                      <img
-                        src={arquivo.arquivo}
-                        alt={arquivo.nome}
-                        className="w-full h-32 object-cover rounded"
-                      />
-                    </div>
-                  )}
+                        {arquivo.descricao && (
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                            {arquivo.descricao}
+                          </p>
+                        )}
 
-                  <a
-                    href={arquivo.arquivo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-xs text-blue-600 hover:underline truncate"
-                  >
-                    Ver arquivo
-                  </a>
+                        {arquivo.mediatype === 'image' && (
+                          <div className="mb-2">
+                            <img
+                              src={arquivo.arquivo}
+                              alt={arquivo.nome}
+                              className="w-full h-32 object-cover rounded"
+                            />
+                          </div>
+                        )}
+
+                        <a
+                          href={arquivo.arquivo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs text-blue-600 hover:underline truncate"
+                        >
+                          Ver arquivo
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
