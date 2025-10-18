@@ -132,8 +132,15 @@ export default function ConsultaPage() {
         throw new Error(data.error || 'Erro na consulta')
       }
 
+      console.log('Resposta da API:', data)
+      console.log('Usage data:', data.usage)
+
       setConsultaResult(data.data)
-      setLimiteInfo(data.usage)
+
+      // Atualizar limiteInfo se vier na resposta
+      if (data.usage) {
+        setLimiteInfo(data.usage)
+      }
 
     } catch (error) {
       console.error('Erro na consulta:', error)
@@ -210,8 +217,15 @@ export default function ConsultaPage() {
         throw new Error(data.error || 'Erro na consulta')
       }
 
+      console.log('Resposta consultarDocumento:', data)
+      console.log('Usage data:', data.usage)
+
       setConsultaResult(data.data)
-      setLimiteInfo(data.usage)
+
+      // Atualizar limiteInfo se vier na resposta
+      if (data.usage) {
+        setLimiteInfo(data.usage)
+      }
 
       // Rolar para o topo dos resultados
       window.scrollTo({ top: 400, behavior: 'smooth' })
