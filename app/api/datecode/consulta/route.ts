@@ -114,12 +114,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Fazer requisição para API do Datecode
-    const requestBody: any = {}
+    const requestBody: any = {
+      tipoPessoa: tipoPessoa.toUpperCase() // tipoPessoa é SEMPRE obrigatório
+    }
 
-    // Adicionar documento e tipoPessoa apenas se fornecidos
-    if (documentoLimpo && tipoPessoa) {
+    // Adicionar documento se fornecido
+    if (documentoLimpo) {
       requestBody.document = documentoLimpo
-      requestBody.tipoPessoa = tipoPessoa.toUpperCase()
     }
 
     // Adicionar campos opcionais se fornecidos
