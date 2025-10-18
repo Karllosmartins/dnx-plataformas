@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../components/AuthWrapper'
 import PlanProtection from '../../components/PlanProtection'
+import ConsultaResultados from '../../components/ConsultaResultados'
 import {
   Search,
   User,
@@ -12,7 +13,16 @@ import {
   Mail,
   CheckCircle,
   AlertCircle,
-  Eye
+  Eye,
+  MapPin,
+  Car,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Shield,
+  Briefcase,
+  Home,
+  CreditCard
 } from 'lucide-react'
 
 export default function ConsultaPage() {
@@ -35,6 +45,7 @@ export default function ConsultaPage() {
   const [consultaResult, setConsultaResult] = useState<any>(null)
   const [consultando, setConsultando] = useState(false)
   const [limiteInfo, setLimiteInfo] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('geral')
 
   // Carregar informações de limite quando a página carrega
   useEffect(() => {
@@ -148,6 +159,28 @@ export default function ConsultaPage() {
     })
     setConsultaResult(null)
     setLimiteInfo(null)
+  }
+
+  // Detectar tipo de resultado
+  const detectarTipoResultado = (resultado: any) => {
+    if (Array.isArray(resultado)) {
+      // Se é array, pode ser pesquisa simples por telefone
+      if (resultado.length > 0 && resultado[0].cpfCnpj && !resultado[0].msg) {
+        return 'lista_simples'
+      }
+    }
+
+    // Se tem propriedade 'empresa', é consulta de CNPJ
+    if (resultado?.empresa || resultado?.[0]?.empresa) {
+      return 'pessoa_juridica'
+    }
+
+    // Se tem propriedade 'pessoa', é consulta de CPF
+    if (resultado?.pessoa || resultado?.[0]?.pessoa) {
+      return 'pessoa_fisica'
+    }
+
+    return 'desconhecido'
   }
 
   const consultarDocumento = async (documento: string, tipoPessoa: 'PF' | 'PJ') => {
@@ -449,327 +482,157 @@ export default function ConsultaPage() {
 
           {/* Resultados da Consulta */}
           {consultaResult && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                Resultados da Consulta
-              </h3>
-                {Array.isArray(consultaResult) && consultaResult.length > 0 ? (
+            <div className="bg-white rounded-lg shadow">
+              {/* Header dos Resultados */}
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                  Resultados da Consulta
+                </h3>
+              </div>
+
+              {/* Sistema de Abas */}
+              {detectarTipoResultado(consultaResult) !== 'lista_simples' && (
+                <div className="border-b border-gray-200">
+                  <nav className="flex space-x-4 px-6" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTab('geral')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'geral'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <User className="inline h-4 w-4 mr-1" />
+                      Dados Gerais
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('contatos')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'contatos'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Phone className="inline h-4 w-4 mr-1" />
+                      Contatos
+                    </button>
+                    {(consultaResult?.pessoa || consultaResult?.[0]?.pessoa) && (
+                      <>
+                        <button
+                          onClick={() => setActiveTab('perfil')}
+                          className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeTab === 'perfil'
+                              ? 'border-blue-500 text-blue-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <TrendingUp className="inline h-4 w-4 mr-1" />
+                          Perfil
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('participacoes')}
+                          className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeTab === 'participacoes'
+                              ? 'border-blue-500 text-blue-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <Briefcase className="inline h-4 w-4 mr-1" />
+                          Empresas
+                        </button>
+                      </>
+                    )}
+                    {(consultaResult?.empresa || consultaResult?.[0]?.empresa) && (
+                      <button
+                        onClick={() => setActiveTab('socios')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                          activeTab === 'socios'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <Users className="inline h-4 w-4 mr-1" />
+                        Sócios & Funcionários
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setActiveTab('veiculos')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'veiculos'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Car className="inline h-4 w-4 mr-1" />
+                      Veículos
+                    </button>
+                  </nav>
+                </div>
+              )}
+
+              {/* Conteúdo das Abas */}
+              <div className="p-6">
+                {/* Lista Simples (resultado de busca por telefone) */}
+                {detectarTipoResultado(consultaResult) === 'lista_simples' && Array.isArray(consultaResult) && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Encontrados {consultaResult.length} resultado(s)
+                    </p>
+                    {consultaResult.map((pessoa: any, idx: number) => (
+                      <div key={idx} className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-lg">{pessoa.nomeRazaoSocial}</h4>
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                              <div><span className="font-medium text-gray-700">CPF/CNPJ:</span> {pessoa.cpfCnpjFormatado}</div>
+                              {pessoa.idade && <div><span className="font-medium text-gray-700">Idade:</span> {pessoa.idade} anos</div>}
+                              {pessoa.bairro && <div><span className="font-medium text-gray-700">Bairro:</span> {pessoa.bairro}</div>}
+                              {pessoa.cidade && pessoa.uf && (
+                                <div><span className="font-medium text-gray-700">Localização:</span> {pessoa.cidade}/{pessoa.uf}</div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const documento = pessoa.cpfCnpj.replace(/\D/g, '')
+                              const tipo = documento.length === 11 ? 'PF' : 'PJ'
+                              consultarDocumento(documento, tipo)
+                            }}
+                            disabled={consultando}
+                            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+                            title="Ver detalhes completos"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Detalhes
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Resultados Detalhados (PF ou PJ) */}
+                {detectarTipoResultado(consultaResult) !== 'lista_simples' && Array.isArray(consultaResult) && consultaResult.length > 0 && (
                   consultaResult.map((resultado, index) => (
-                    <div key={index} className="space-y-6">
-                      {/* Mensagem de sucesso */}
-                      {resultado.msg && (
-                        <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                          <p className="text-green-800">{resultado.msg}</p>
-                        </div>
-                      )}
-
-                      {/* Dados da Empresa */}
-                      {resultado.empresa && (
-                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
-                          <h4 className="text-xl font-bold mb-4 flex items-center">
-                            <Building className="h-5 w-5 mr-2" />
-                            Dados da Empresa
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div className="bg-white/10 rounded p-2"><strong>Razão Social:</strong> {resultado.empresa.razaoSocial}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>CNPJ:</strong> {resultado.empresa.cnpjFormatado}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Nome Fantasia:</strong> {resultado.empresa.nomefantasia || 'N/A'}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Data de Abertura:</strong> {resultado.empresa.dataAbertura}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>CNAE:</strong> {resultado.empresa.cnae}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Porte:</strong> {resultado.empresa.porte}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Natureza Jurídica:</strong> {resultado.empresa.nJur}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Faturamento Anual:</strong> R$ {resultado.empresa.faturamentoPresumidoAnual ? Number(resultado.empresa.faturamentoPresumidoAnual).toLocaleString('pt-BR') : 'N/A'}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Score:</strong> {resultado.empresa.score}</div>
-                            <div className="bg-white/10 rounded p-2">
-                              <strong>Risco:</strong>
-                              <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
-                                resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-600 text-white' :
-                                resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-500 text-white' :
-                                'bg-green-600 text-white'
-                              }`}>
-                                {resultado.empresa.risco}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dados da Pessoa */}
-                      {resultado.pessoa && (
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-                          <h4 className="text-xl font-bold mb-4 flex items-center">
-                            <User className="h-5 w-5 mr-2" />
-                            Dados Pessoais
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div className="bg-white/10 rounded p-2"><strong>Nome:</strong> {resultado.pessoa.nome}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>CPF:</strong> {resultado.pessoa.cpfFormatado}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Sexo:</strong> {resultado.pessoa.sexo}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Data de Nascimento:</strong> {resultado.pessoa.dataNascimento}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Idade:</strong> {resultado.pessoa.idade} anos</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Signo:</strong> {resultado.pessoa.signo}</div>
-                            <div className="bg-white/10 rounded p-2"><strong>Nome da Mãe:</strong> {resultado.pessoa.nomeMae}</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Telefones */}
-                      {resultado.telefones && resultado.telefones.length > 0 && (
-                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <Phone className="h-5 w-5 mr-2 text-green-600" />
-                            Telefones ({resultado.telefones.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {resultado.telefones.map((telefone: any, idx: number) => (
-                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
-                                <span className="font-medium text-gray-900"><strong>{telefone.telefoneFormatado}</strong> - {telefone.tipoTelefone}</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
-                                  Q: {telefone.qualificacao}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Endereços */}
-                      {resultado.enderecos && resultado.enderecos.length > 0 && (
-                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <Building className="h-5 w-5 mr-2 text-orange-600" />
-                            Endereços ({resultado.enderecos.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {resultado.enderecos.map((endereco: any, idx: number) => (
-                              <div key={idx} className="bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
-                                <div className="text-sm font-medium text-gray-900">
-                                  <strong>{endereco.endereco}</strong>
-                                  {endereco.numero && `, ${endereco.numero}`}
-                                </div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  {endereco.bairro} - {endereco.cidade}/{endereco.uf} - {endereco.cepFormatado}
-                                </div>
-                                <span className="inline-block mt-2 text-xs bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-medium">
-                                  Qualificação: {endereco.qualificacao}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* E-mails */}
-                      {resultado.emails && resultado.emails.length > 0 && (
-                        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <Mail className="h-5 w-5 mr-2 text-blue-600" />
-                            E-mails ({resultado.emails.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {resultado.emails.map((email: any, idx: number) => (
-                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
-                                <span className="font-medium text-gray-900">{email.email}</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                                  Q: {email.qualificacao}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Perfil de Consumo */}
-                      {resultado.perfilConsumo && (
-                        <div className="bg-indigo-50 border border-indigo-200 rounded-md p-4">
-                          <h4 className="font-medium text-indigo-900 mb-3">
-                            📈 Perfil de Consumo
-                          </h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                            {Object.entries(resultado.perfilConsumo).map(([key, value]) => (
-                              <div key={key} className="bg-white rounded px-2 py-1">
-                                <strong>{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</strong> {String(value)}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Perfil Sociodemográfico */}
-                      {resultado.perfilSociodemografico && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                          <h4 className="font-medium text-yellow-900 mb-3">
-                            👥 Perfil Sociodemográfico
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>Classe:</strong> {resultado.perfilSociodemografico.classe}</div>
-                            <div><strong>Score de Risco:</strong> {resultado.perfilSociodemografico.scoreRisco}</div>
-                            <div><strong>Segmento:</strong> {resultado.perfilSociodemografico.segmento}</div>
-                            <div><strong>Estado Civil:</strong> {resultado.perfilSociodemografico.estadoCivil}</div>
-                            <div><strong>Escolaridade:</strong> {resultado.perfilSociodemografico.escolaridade}</div>
-                            <div><strong>Renda Presumida:</strong> R$ {resultado.perfilSociodemografico.rendaPresumida}</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Veículos */}
-                      {resultado.veiculos && resultado.veiculos.length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                          <h4 className="font-medium text-red-900 mb-3">
-                            🚗 Veículos ({resultado.veiculos.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {resultado.veiculos.map((veiculo: any, idx: number) => (
-                              <div key={idx} className="bg-white rounded px-3 py-2">
-                                <div className="text-sm">
-                                  <strong>{veiculo.marcaModelo}</strong> - {veiculo.anoFabricacao}/{veiculo.anoModelo}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  Placa: {veiculo.placa} | RENAVAM: {veiculo.renavam}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Receita Federal */}
-                      {resultado.receitaFederal && (
-                        <div className="bg-cyan-50 border border-cyan-200 rounded-md p-4">
-                          <h4 className="font-medium text-cyan-900 mb-3">
-                            🏛️ Dados da Receita Federal
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-                            <div><strong>Situação Cadastral:</strong> {resultado.receitaFederal.situacaoCadastral}</div>
-                            <div><strong>Capital Social:</strong> R$ {resultado.receitaFederal.capitalSocial ? Number(resultado.receitaFederal.capitalSocial).toLocaleString('pt-BR') : 'N/A'}</div>
-                            <div><strong>Descrição Matriz/Filial:</strong> {resultado.receitaFederal.descricaoMatriz}</div>
-                            <div><strong>Situação Especial:</strong> {resultado.receitaFederal.situacaoEspecial || 'N/A'}</div>
-                          </div>
-
-                          {/* CNAEs Secundários */}
-                          {resultado.receitaFederal.cnaesSecundarios && resultado.receitaFederal.cnaesSecundarios.length > 0 && (
-                            <div className="mt-4">
-                              <h5 className="font-medium text-cyan-900 mb-2">CNAEs Secundários:</h5>
-                              <div className="space-y-1 max-h-32 overflow-y-auto">
-                                {resultado.receitaFederal.cnaesSecundarios.map((cnae: any, idx: number) => (
-                                  <div key={idx} className="text-xs bg-white rounded px-2 py-1">
-                                    <strong>{cnae.cnaeCod}</strong> - {cnae.cnaeDesc}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Sócios */}
-                          {resultado.receitaFederal.socios && resultado.receitaFederal.socios.length > 0 && (
-                            <div className="mt-4">
-                              <h5 className="font-medium text-cyan-900 mb-2">Sócios ({resultado.receitaFederal.socios.length}):</h5>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {resultado.receitaFederal.socios.map((socio: any, idx: number) => (
-                                  <div key={idx} className="bg-white rounded px-3 py-2 flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="text-sm">
-                                        <strong>{socio.nomeRazaoSocial}</strong>
-                                        {socio.participacao > 0 && ` - ${socio.participacao}%`}
-                                      </div>
-                                      <div className="text-xs text-gray-600">
-                                        Doc: {socio.cpfCnpj} | {socio.qualificacaoDesc}
-                                        {socio.dataNascimentoAbertura && ` | Nascimento: ${socio.dataNascimentoAbertura}`}
-                                      </div>
-                                      {socio.representanteLegal && (
-                                        <div className="text-xs text-blue-600 mt-1">
-                                          Rep. Legal: {socio.representanteLegal.nome}
-                                        </div>
-                                      )}
-                                    </div>
-                                    {socio.cpfCnpj && (
-                                      <button
-                                        onClick={() => {
-                                          const documento = socio.cpfCnpj.replace(/\D/g, '')
-                                          const tipo = documento.length === 11 ? 'PF' : 'PJ'
-                                          consultarDocumento(documento, tipo)
-                                        }}
-                                        disabled={consultando}
-                                        className="ml-3 p-2 text-cyan-600 hover:text-cyan-800 hover:bg-cyan-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        title="Consultar este sócio"
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Funcionários */}
-                      {resultado.funcionarios && resultado.funcionarios.length > 0 && (
-                        <div className="bg-violet-50 border border-violet-200 rounded-md p-4">
-                          <h4 className="font-medium text-violet-900 mb-3">
-                            👥 Funcionários ({resultado.funcionarios.length})
-                          </h4>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {resultado.funcionarios.map((funcionario: any, idx: number) => (
-                              <div key={idx} className="bg-white rounded px-3 py-2">
-                                <div className="text-sm">
-                                  <strong>{funcionario.nome}</strong>
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  Cargo: {funcionario.cargo} | Salário: R$ {funcionario.salario}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Participação Empresarial */}
-                      {resultado.participacaoEmpresarial && resultado.participacaoEmpresarial.length > 0 && (
-                        <div className="bg-teal-50 border border-teal-200 rounded-md p-4">
-                          <h4 className="font-medium text-teal-900 mb-3">
-                            🏢 Participação Empresarial ({resultado.participacaoEmpresarial.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {resultado.participacaoEmpresarial.map((empresa: any, idx: number) => (
-                              <div key={idx} className="bg-white rounded px-3 py-2 flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="text-sm">
-                                    <strong>{empresa.razaoSocial}</strong>
-                                    {empresa.nomeFantasia && ` (${empresa.nomeFantasia})`}
-                                  </div>
-                                  <div className="text-xs text-gray-600">
-                                    CNPJ: {empresa.cnpjFormatado} | Participação: {empresa.participacao}%
-                                  </div>
-                                </div>
-                                {empresa.cnpjFormatado && (
-                                  <button
-                                    onClick={() => {
-                                      const cnpj = empresa.cnpjFormatado.replace(/\D/g, '')
-                                      consultarDocumento(cnpj, 'PJ')
-                                    }}
-                                    disabled={consultando}
-                                    className="ml-3 p-2 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Consultar esta empresa"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <ConsultaResultados
+                      key={index}
+                      resultado={resultado}
+                      activeTab={activeTab}
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
                   ))
-                ) : (
-                  <div className="text-center py-8">
-                    <AlertCircle className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
+                )}
+
+                {/* Mensagem quando não encontra resultados */}
+                {(!consultaResult || (Array.isArray(consultaResult) && consultaResult.length === 0)) && (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500">Nenhum resultado encontrado</p>
                   </div>
                 )}
+              </div>
             </div>
           )}
         </div>
