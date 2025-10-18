@@ -35,49 +35,49 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
         <div className="space-y-6">
           {/* Dados da Empresa (PJ) */}
           {resultado.empresa && (
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
-              <h4 className="text-xl font-bold mb-4 flex items-center">
-                <Building className="h-5 w-5 mr-2" />
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+              <h4 className="text-xl font-bold mb-4 flex items-center text-gray-900">
+                <Building className="h-5 w-5 mr-2 text-gray-700" />
                 Dados da Empresa
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Razão Social</p>
-                  <p className="font-semibold">{resultado.empresa.razaoSocial}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Razão Social</p>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.razaoSocial}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">CNPJ</p>
-                  <p className="font-semibold">{resultado.empresa.cnpjFormatado}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">CNPJ</p>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.cnpjFormatado}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Nome Fantasia</p>
-                  <p className="font-semibold">{resultado.empresa.nomefantasia || 'N/A'}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Nome Fantasia</p>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.nomefantasia || 'N/A'}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Data de Abertura</p>
-                  <p className="font-semibold">{resultado.empresa.dataAbertura}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Data de Abertura</p>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.dataAbertura}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Porte</p>
-                  <p className="font-semibold">{resultado.empresa.porte}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Porte</p>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.porte}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Risco</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Risco</p>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-600' :
-                    resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-500' :
-                    'bg-green-600'
+                    resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-100 text-red-800' :
+                    resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
                   }`}>
                     {resultado.empresa.risco} (Score: {resultado.empresa.score})
                   </span>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3 col-span-1 md:col-span-2">
-                  <p className="text-white/70 text-xs mb-1">CNAE</p>
-                  <p className="font-semibold text-xs">{resultado.empresa.cnae}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 col-span-1 md:col-span-2">
+                  <p className="text-gray-600 text-xs mb-1">CNAE</p>
+                  <p className="font-semibold text-gray-900 text-xs">{resultado.empresa.cnae}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Faturamento Anual</p>
-                  <p className="font-semibold">
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Faturamento Anual</p>
+                  <p className="font-semibold text-gray-900">
                     R$ {resultado.empresa.faturamentoPresumidoAnual ? Number(resultado.empresa.faturamentoPresumidoAnual).toLocaleString('pt-BR') : 'N/A'}
                   </p>
                 </div>
@@ -85,31 +85,31 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
 
               {/* Situação Cadastral */}
               {resultado.receitaFederal && (
-                <div className="mt-4 bg-white/10 rounded-lg p-4">
-                  <h5 className="font-semibold text-white mb-3 flex items-center">
-                    <Shield className="h-4 w-4 mr-2" />
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Shield className="h-4 w-4 mr-2 text-gray-700" />
                     Situação Cadastral
                   </h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <span className="text-white/70">Status:</span>
-                      <span className="ml-2 px-2 py-1 bg-green-600 rounded text-white font-semibold">
+                      <span className="text-gray-600">Status:</span>
+                      <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded font-semibold">
                         {resultado.receitaFederal.situacaoCadastral}
                       </span>
                     </div>
                     <div>
-                      <span className="text-white/70">Capital Social:</span>
-                      <span className="ml-2 font-semibold">
+                      <span className="text-gray-600">Capital Social:</span>
+                      <span className="ml-2 font-semibold text-gray-900">
                         R$ {resultado.receitaFederal.capitalSocial ? Number(resultado.receitaFederal.capitalSocial).toLocaleString('pt-BR') : 'N/A'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-white/70">Natureza Jurídica:</span>
-                      <span className="ml-2 font-semibold">{resultado.receitaFederal.nJurDesc}</span>
+                      <span className="text-gray-600">Natureza Jurídica:</span>
+                      <span className="ml-2 font-semibold text-gray-900">{resultado.receitaFederal.nJurDesc}</span>
                     </div>
                     <div>
-                      <span className="text-white/70">Tipo:</span>
-                      <span className="ml-2 font-semibold">{resultado.receitaFederal.descricaoMatriz}</span>
+                      <span className="text-gray-600">Tipo:</span>
+                      <span className="ml-2 font-semibold text-gray-900">{resultado.receitaFederal.descricaoMatriz}</span>
                     </div>
                   </div>
                 </div>
@@ -119,58 +119,58 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
 
           {/* Dados da Pessoa (PF) */}
           {resultado.pessoa && (
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-              <h4 className="text-xl font-bold mb-4 flex items-center">
-                <User className="h-5 w-5 mr-2" />
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+              <h4 className="text-xl font-bold mb-4 flex items-center text-gray-900">
+                <User className="h-5 w-5 mr-2 text-gray-700" />
                 Dados Pessoais
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Nome</p>
-                  <p className="font-semibold">{resultado.pessoa.nome}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Nome</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.nome}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">CPF</p>
-                  <p className="font-semibold">{resultado.pessoa.cpfFormatado}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">CPF</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.cpfFormatado}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Sexo</p>
-                  <p className="font-semibold">{resultado.pessoa.sexo}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Sexo</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.sexo}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Data de Nascimento</p>
-                  <p className="font-semibold">{resultado.pessoa.dataNascimento}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Data de Nascimento</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.dataNascimento}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Idade</p>
-                  <p className="font-semibold">{resultado.pessoa.idade} anos</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Idade</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.idade} anos</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Signo</p>
-                  <p className="font-semibold">{resultado.pessoa.signo}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Signo</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.signo}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3 col-span-1 md:col-span-2 lg:col-span-3">
-                  <p className="text-white/70 text-xs mb-1">Nome da Mãe</p>
-                  <p className="font-semibold">{resultado.pessoa.nomeMae}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 col-span-1 md:col-span-2 lg:col-span-3">
+                  <p className="text-gray-600 text-xs mb-1">Nome da Mãe</p>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.nomeMae}</p>
                 </div>
               </div>
 
               {/* Restrições */}
               {resultado.restricoes && (
-                <div className="mt-4 bg-white/10 rounded-lg p-4">
-                  <h5 className="font-semibold text-white mb-3 flex items-center">
-                    <Shield className="h-4 w-4 mr-2" />
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Shield className="h-4 w-4 mr-2 text-gray-700" />
                     Restrições e Alertas
                   </h5>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
                     {Object.entries(resultado.restricoes).map(([key, value]) => (
-                      <div key={key} className="flex items-center space-x-2 bg-white/5 rounded px-2 py-1">
+                      <div key={key} className="flex items-center space-x-2 bg-white border border-gray-200 rounded px-2 py-1">
                         {value === true ? (
-                          <CheckCircle className="h-3 w-3 text-green-300" />
+                          <CheckCircle className="h-3 w-3 text-green-600" />
                         ) : (
                           <XCircle className="h-3 w-3 text-gray-400" />
                         )}
-                        <span className="capitalize">
+                        <span className="capitalize text-gray-700">
                           {key.replace(/^is|^has/, '').replace(/([A-Z])/g, ' $1').trim()}
                         </span>
                       </div>
@@ -181,16 +181,16 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
 
               {/* Situação Cadastral CPF */}
               {resultado.situacaoCadastral && (
-                <div className="mt-4 bg-white/10 rounded-lg p-4">
-                  <h5 className="font-semibold text-white mb-2 flex items-center">
-                    <Shield className="h-4 w-4 mr-2" />
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
+                    <Shield className="h-4 w-4 mr-2 text-gray-700" />
                     Situação Cadastral na Receita Federal
                   </h5>
                   <div className="flex items-center space-x-4 text-sm">
-                    <span className="px-3 py-1 bg-green-600 rounded font-semibold">
+                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded font-semibold">
                       {resultado.situacaoCadastral.situacaoCadastral}
                     </span>
-                    <span className="text-white/70">
+                    <span className="text-gray-600">
                       Consultado em: {resultado.situacaoCadastral.dataHora}
                     </span>
                   </div>
@@ -285,47 +285,47 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
         <div className="space-y-6">
           {/* Perfil Sociodemográfico */}
           {resultado.perfilSociodemografico && (
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-              <h4 className="text-xl font-bold mb-4 flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+              <h4 className="text-xl font-bold mb-4 flex items-center text-gray-900">
+                <BarChart3 className="h-5 w-5 mr-2 text-gray-700" />
                 Perfil Sociodemográfico
               </h4>
-              <div className="bg-white/10 rounded-lg p-4 mb-4">
-                <p className="text-2xl font-bold">{resultado.perfilSociodemografico.classe}</p>
-                <p className="text-white/80 text-sm mt-1">{resultado.perfilSociodemografico.segmento}</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <p className="text-2xl font-bold text-gray-900">{resultado.perfilSociodemografico.classe}</p>
+                <p className="text-gray-600 text-sm mt-1">{resultado.perfilSociodemografico.segmento}</p>
                 {resultado.perfilSociodemografico.descricao && (
-                  <p className="text-white/70 text-xs mt-2 italic">{resultado.perfilSociodemografico.descricao}</p>
+                  <p className="text-gray-500 text-xs mt-2 italic">{resultado.perfilSociodemografico.descricao}</p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Score de Risco</p>
-                  <p className="font-semibold">{resultado.perfilSociodemografico.scoreRisco}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Score de Risco</p>
+                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.scoreRisco}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Renda Presumida</p>
-                  <p className="font-semibold">R$ {resultado.perfilSociodemografico.rendaPresumida}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Renda Presumida</p>
+                  <p className="font-semibold text-gray-900">R$ {resultado.perfilSociodemografico.rendaPresumida}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Atividade Financeira</p>
-                  <p className="font-semibold">{resultado.perfilSociodemografico.atividadeFinanceira}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Atividade Financeira</p>
+                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.atividadeFinanceira}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Escolaridade</p>
-                  <p className="font-semibold">{resultado.perfilSociodemografico.escolaridade}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Escolaridade</p>
+                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.escolaridade}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Ocupação</p>
-                  <p className="font-semibold">{resultado.perfilSociodemografico.ocupacao}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Ocupação</p>
+                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.ocupacao}</p>
                 </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-white/70 text-xs mb-1">Região</p>
-                  <p className="font-semibold">{resultado.perfilSociodemografico.regiao}</p>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-gray-600 text-xs mb-1">Região</p>
+                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.regiao}</p>
                 </div>
                 {resultado.perfilSociodemografico.cboDesc && (
-                  <div className="bg-white/10 rounded-lg p-3 col-span-1 md:col-span-2 lg:col-span-3">
-                    <p className="text-white/70 text-xs mb-1">CBO (Classificação Brasileira de Ocupações)</p>
-                    <p className="font-semibold">{resultado.perfilSociodemografico.cboDesc}</p>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 col-span-1 md:col-span-2 lg:col-span-3">
+                    <p className="text-gray-600 text-xs mb-1">CBO (Classificação Brasileira de Ocupações)</p>
+                    <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.cboDesc}</p>
                   </div>
                 )}
               </div>

@@ -429,22 +429,22 @@ export default function ConsultaPage() {
                     />
                   </div>
 
-                  {/* Informações de limite - Cards com gradiente */}
+                  {/* Informações de limite - Cards limpos */}
                   {limiteInfo && (
-                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white">
-                        <p className="text-blue-100 text-xs font-medium uppercase">Realizadas</p>
-                        <p className="text-3xl font-bold mt-1">{limiteInfo.consultasRealizadas}</p>
+                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <p className="text-gray-600 text-xs font-medium uppercase mb-1">Realizadas</p>
+                        <p className="text-3xl font-bold text-gray-900">{limiteInfo.consultasRealizadas}</p>
                       </div>
 
-                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white">
-                        <p className="text-purple-100 text-xs font-medium uppercase">Limite Total</p>
-                        <p className="text-3xl font-bold mt-1">{limiteInfo.limiteConsultas}</p>
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <p className="text-gray-600 text-xs font-medium uppercase mb-1">Limite Total</p>
+                        <p className="text-3xl font-bold text-gray-900">{limiteInfo.limiteConsultas}</p>
                       </div>
 
-                      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white">
-                        <p className="text-green-100 text-xs font-medium uppercase">Restantes</p>
-                        <p className="text-3xl font-bold mt-1">{limiteInfo.consultasRestantes}</p>
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <p className="text-gray-600 text-xs font-medium uppercase mb-1">Restantes</p>
+                        <p className="text-3xl font-bold text-gray-900">{limiteInfo.consultasRestantes}</p>
                       </div>
                     </div>
                   )}
@@ -580,16 +580,16 @@ export default function ConsultaPage() {
                       Encontrados {consultaResult.length} resultado(s)
                     </p>
                     {consultaResult.map((pessoa: any, idx: number) => (
-                      <div key={idx} className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900 text-lg">{pessoa.nomeRazaoSocial}</h4>
                             <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium text-gray-700">CPF/CNPJ:</span> {pessoa.cpfCnpjFormatado}</div>
-                              {pessoa.idade && <div><span className="font-medium text-gray-700">Idade:</span> {pessoa.idade} anos</div>}
-                              {pessoa.bairro && <div><span className="font-medium text-gray-700">Bairro:</span> {pessoa.bairro}</div>}
+                              <div><span className="font-medium text-gray-600">CPF/CNPJ:</span> <span className="text-gray-900">{pessoa.cpfCnpjFormatado}</span></div>
+                              {pessoa.idade && <div><span className="font-medium text-gray-600">Idade:</span> <span className="text-gray-900">{pessoa.idade} anos</span></div>}
+                              {pessoa.bairro && <div><span className="font-medium text-gray-600">Bairro:</span> <span className="text-gray-900">{pessoa.bairro}</span></div>}
                               {pessoa.cidade && pessoa.uf && (
-                                <div><span className="font-medium text-gray-700">Localização:</span> {pessoa.cidade}/{pessoa.uf}</div>
+                                <div><span className="font-medium text-gray-600">Localização:</span> <span className="text-gray-900">{pessoa.cidade}/{pessoa.uf}</span></div>
                               )}
                             </div>
                           </div>
@@ -600,7 +600,7 @@ export default function ConsultaPage() {
                               consultarDocumento(documento, tipo)
                             }}
                             disabled={consultando}
-                            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+                            className="ml-4 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
                             title="Ver detalhes completos"
                           >
                             <Eye className="h-4 w-4 mr-1" />
