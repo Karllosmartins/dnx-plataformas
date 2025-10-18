@@ -87,15 +87,32 @@ export default function ConsultaPage() {
     setConsultaResult(null)
 
     try {
+      // Preparar body da requisição - incluir tipoPessoa apenas se documento foi fornecido
+      const requestBody: any = {
+        userId: user.id,
+        nomeRazao: consultaForm.nomeRazao,
+        cidade: consultaForm.cidade,
+        uf: consultaForm.uf,
+        cep: consultaForm.cep,
+        numeroEndereco: consultaForm.numeroEndereco,
+        numeroTelefone: consultaForm.numeroTelefone,
+        email: consultaForm.email,
+        dataNascimentoAbertura: consultaForm.dataNascimentoAbertura,
+        placaVeiculo: consultaForm.placaVeiculo
+      }
+
+      // Adicionar document e tipoPessoa apenas se documento foi fornecido
+      if (consultaForm.document && consultaForm.document.trim() !== '') {
+        requestBody.document = consultaForm.document
+        requestBody.tipoPessoa = consultaForm.tipoPessoa
+      }
+
       const response = await fetch('/api/datecode/consulta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...consultaForm,
-          userId: user.id
-        })
+        body: JSON.stringify(requestBody)
       })
 
       const data = await response.json()
