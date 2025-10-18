@@ -213,13 +213,8 @@ export default function ConsultaPage() {
             {/* Aviso sobre critérios de busca */}
             <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                <strong>💡 Dica:</strong> Você pode consultar usando <strong>qualquer</strong> dos critérios abaixo:
-                CPF/CNPJ, telefone, email, placa de veículo, ou nome completo + localização (cidade/UF/CEP).
+                <strong>💡 Dica:</strong> Preencha qualquer critério de busca: CPF/CNPJ, telefone, email, placa de veículo ou nome + localização.
                 Quanto mais informações fornecer, mais preciso será o resultado.
-              </p>
-              <p className="text-sm text-red-700 mt-2">
-                <strong>⚠️ Importante:</strong> O campo <strong>"Tipo de Pessoa" (PF/PJ) é sempre obrigatório</strong>, mesmo que você não informe o CPF/CNPJ.
-                Selecione PF para pessoas físicas ou PJ para empresas.
               </p>
             </div>
 
@@ -231,7 +226,6 @@ export default function ConsultaPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <User className="inline h-4 w-4 mr-1" />
                       Tipo de Pessoa *
-                      <span className="text-xs text-red-600 ml-1">(sempre obrigatório)</span>
                     </label>
                     <select
                       value={consultaForm.tipoPessoa}
