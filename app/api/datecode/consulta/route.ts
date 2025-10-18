@@ -203,21 +203,29 @@ export async function POST(request: NextRequest) {
       // Não interromper o fluxo por erro de logging
     }
 
-    // Buscar dados atualizados do usuário para retornar o saldo
-    const { data: updatedUser, error: updateError } = await getSupabaseAdmin()
-      .from('view_usuarios_planos')
-      .select('*')
+    // Buscar dados atualizados do usuário DIRETAMENTE da tabela users (não da view para evitar cache)
+    const { data: updatedUserData, error: updateError } = await getSupabaseAdmin()
+      .from('users')
+      .select('consultas_realizadas, limite_consultas')
       .eq('id', userId)
       .single()
 
-    const consultasRestantes = updatedUser ? getConsultasBalance(updatedUser) : 0
+    const consultasRealizadas = updatedUserData?.consultas_realizadas || 0
+    const limiteConsultas = updatedUserData?.limite_consultas || userPlan.limite_consultas
+    const consultasRestantes = limiteConsultas - consultasRealizadas
+
+    console.log('[API Consulta] Dados atualizados:', {
+      consultasRealizadas,
+      limiteConsultas,
+      consultasRestantes
+    })
 
     return NextResponse.json({
       success: true,
       data: data,
       usage: {
-        consultasRealizadas: (updatedUser?.consultas_realizadas || 0),
-        limiteConsultas: userPlan.limite_consultas,
+        consultasRealizadas: consultasRealizadas,
+        limiteConsultas: limiteConsultas,
         consultasRestantes: consultasRestantes
       }
     })

@@ -106,19 +106,22 @@ export async function POST(request: NextRequest) {
         // Não interromper o fluxo por erro de consumo
       }
 
-      // Buscar dados atualizados do usuário
-      const { data: updatedUser } = await getSupabaseAdmin()
-        .from('view_usuarios_planos')
-        .select('*')
+      // Buscar dados atualizados DIRETAMENTE da tabela users (não da view para evitar cache)
+      const { data: updatedUserData } = await getSupabaseAdmin()
+        .from('users')
+        .select('consultas_realizadas, limite_consultas')
         .eq('id', userId)
         .single()
 
-      const consultasRestantes = updatedUser ? getConsultasBalance(updatedUser) : 0
+      const consultasRealizadas = updatedUserData?.consultas_realizadas || 0
+      const limiteConsultas = updatedUserData?.limite_consultas || 0
+      const consultasRestantes = limiteConsultas - consultasRealizadas
 
       return NextResponse.json({
         ...data,
         usage: {
-          consultasRealizadas: (updatedUser?.consultas_realizadas || 0),
+          consultasRealizadas: consultasRealizadas,
+          limiteConsultas: limiteConsultas,
           consultasRestantes: consultasRestantes
         }
       })
