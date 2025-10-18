@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Se documento foi fornecido, tipoPessoa é obrigatório
-    if (document && !tipoPessoa) {
+    // tipoPessoa é sempre obrigatório pela API Datecode
+    if (!tipoPessoa) {
       return NextResponse.json(
-        { error: 'tipoPessoa é obrigatório quando documento (CPF/CNPJ) é fornecido' },
+        { error: 'tipoPessoa (PF/PJ) é obrigatório' },
         { status: 400 }
       )
     }

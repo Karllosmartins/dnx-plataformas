@@ -77,9 +77,9 @@ export default function ConsultaPage() {
       return
     }
 
-    // Se documento foi fornecido, tipoPessoa é obrigatório
-    if (consultaForm.document && !consultaForm.tipoPessoa) {
-      alert('Tipo de Pessoa é obrigatório quando CPF/CNPJ é fornecido')
+    // tipoPessoa é sempre obrigatório pela API Datecode
+    if (!consultaForm.tipoPessoa) {
+      alert('Tipo de Pessoa (PF/PJ) é obrigatório')
       return
     }
 
@@ -87,9 +87,10 @@ export default function ConsultaPage() {
     setConsultaResult(null)
 
     try {
-      // Preparar body da requisição - incluir tipoPessoa apenas se documento foi fornecido
+      // Preparar body da requisição - tipoPessoa é sempre obrigatório pela API Datecode
       const requestBody: any = {
         userId: user.id,
+        tipoPessoa: consultaForm.tipoPessoa, // Sempre enviar tipoPessoa
         nomeRazao: consultaForm.nomeRazao,
         cidade: consultaForm.cidade,
         uf: consultaForm.uf,
@@ -101,10 +102,9 @@ export default function ConsultaPage() {
         placaVeiculo: consultaForm.placaVeiculo
       }
 
-      // Adicionar document e tipoPessoa apenas se documento foi fornecido
+      // Adicionar document apenas se foi fornecido
       if (consultaForm.document && consultaForm.document.trim() !== '') {
         requestBody.document = consultaForm.document
-        requestBody.tipoPessoa = consultaForm.tipoPessoa
       }
 
       const response = await fetch('/api/datecode/consulta', {
@@ -217,6 +217,10 @@ export default function ConsultaPage() {
                 CPF/CNPJ, telefone, email, placa de veículo, ou nome completo + localização (cidade/UF/CEP).
                 Quanto mais informações fornecer, mais preciso será o resultado.
               </p>
+              <p className="text-sm text-red-700 mt-2">
+                <strong>⚠️ Importante:</strong> O campo <strong>"Tipo de Pessoa" (PF/PJ) é sempre obrigatório</strong>, mesmo que você não informe o CPF/CNPJ.
+                Selecione PF para pessoas físicas ou PJ para empresas.
+              </p>
             </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -226,8 +230,8 @@ export default function ConsultaPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <User className="inline h-4 w-4 mr-1" />
-                      Tipo de Pessoa
-                      <span className="text-xs text-gray-500 ml-1">(obrigatório se informar CPF/CNPJ)</span>
+                      Tipo de Pessoa *
+                      <span className="text-xs text-red-600 ml-1">(sempre obrigatório)</span>
                     </label>
                     <select
                       value={consultaForm.tipoPessoa}
