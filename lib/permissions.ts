@@ -226,10 +226,13 @@ export function hasAvailableConsultas(user: User | UsuarioComPlano, requiredCons
 /**
  * Consome leads do usuário (atualiza no banco)
  */
-export async function consumeLeads(userId: number, quantidade: number): Promise<{ success: boolean; error?: string }> {
+export async function consumeLeads(userId: number, quantidade: number, supabaseClient?: any): Promise<{ success: boolean; error?: string }> {
   try {
+    // Usar o cliente fornecido ou o padrão
+    const client = supabaseClient || supabase
+
     // Primeiro, buscar o valor atual
-    const { data: user, error: selectError } = await supabase
+    const { data: user, error: selectError } = await client
       .from('users')
       .select('leads_consumidos')
       .eq('id', userId)
@@ -242,7 +245,9 @@ export async function consumeLeads(userId: number, quantidade: number): Promise<
 
     const novoValor = (user?.leads_consumidos || 0) + quantidade
 
-    const { error } = await supabase
+    console.log(`[consumeLeads] userId: ${userId}, atual: ${user?.leads_consumidos || 0}, quantidade: ${quantidade}, novo: ${novoValor}`)
+
+    const { error } = await client
       .from('users')
       .update({
         leads_consumidos: novoValor
@@ -254,6 +259,8 @@ export async function consumeLeads(userId: number, quantidade: number): Promise<
       return { success: false, error: error.message }
     }
 
+    console.log(`[consumeLeads] Atualização bem-sucedida! Novo valor: ${novoValor}`)
+
     return { success: true }
   } catch (error) {
     console.error('Erro ao consumir leads:', error)
@@ -264,10 +271,13 @@ export async function consumeLeads(userId: number, quantidade: number): Promise<
 /**
  * Consome consultas do usuário (atualiza no banco)
  */
-export async function consumeConsultas(userId: number, quantidade: number): Promise<{ success: boolean; error?: string }> {
+export async function consumeConsultas(userId: number, quantidade: number, supabaseClient?: any): Promise<{ success: boolean; error?: string }> {
   try {
+    // Usar o cliente fornecido ou o padrão
+    const client = supabaseClient || supabase
+
     // Primeiro, buscar o valor atual
-    const { data: user, error: selectError } = await supabase
+    const { data: user, error: selectError } = await client
       .from('users')
       .select('consultas_realizadas')
       .eq('id', userId)
@@ -280,7 +290,9 @@ export async function consumeConsultas(userId: number, quantidade: number): Prom
 
     const novoValor = (user?.consultas_realizadas || 0) + quantidade
 
-    const { error } = await supabase
+    console.log(`[consumeConsultas] userId: ${userId}, atual: ${user?.consultas_realizadas || 0}, quantidade: ${quantidade}, novo: ${novoValor}`)
+
+    const { error } = await client
       .from('users')
       .update({
         consultas_realizadas: novoValor
@@ -291,6 +303,8 @@ export async function consumeConsultas(userId: number, quantidade: number): Prom
       console.error('Erro ao consumir consultas:', error)
       return { success: false, error: error.message }
     }
+
+    console.log(`[consumeConsultas] Atualização bem-sucedida! Novo valor: ${novoValor}`)
 
     return { success: true }
   } catch (error) {

@@ -158,8 +158,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Consumir uma consulta do usuário
-    const consumeResult = await consumeConsultas(userId, 1)
+    // Consumir uma consulta do usuário (usando admin client para ter permissão de UPDATE)
+    const supabaseAdmin = getSupabaseAdmin()
+    const consumeResult = await consumeConsultas(userId, 1, supabaseAdmin)
     if (!consumeResult.success) {
       console.error('Erro ao consumir consulta:', consumeResult.error)
       return NextResponse.json(

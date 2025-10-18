@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
 
     // Se userId foi fornecido, consumir uma consulta
     if (userId) {
-      const consumeResult = await consumeConsultas(userId, 1)
+      const supabaseAdmin = getSupabaseAdmin()
+      const consumeResult = await consumeConsultas(userId, 1, supabaseAdmin)
       if (!consumeResult.success) {
         console.error('Erro ao consumir consulta:', consumeResult.error)
         // Não interromper o fluxo por erro de consumo

@@ -238,8 +238,9 @@ export async function POST(request: NextRequest) {
       throw new Error(`API Profile: ${resultadoExtracao.msg}`)
     }
 
-    // Consumir os leads do usuário
-    const consumeResult = await consumeLeads(userId, quantidadeReal)
+    // Consumir os leads do usuário (usando admin client para ter permissão de UPDATE)
+    const supabaseAdmin = getSupabaseAdmin()
+    const consumeResult = await consumeLeads(userId, quantidadeReal, supabaseAdmin)
     if (!consumeResult.success) {
       console.error('Erro ao consumir leads:', consumeResult.error)
       return NextResponse.json(
