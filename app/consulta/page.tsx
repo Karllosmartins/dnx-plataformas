@@ -60,8 +60,26 @@ export default function ConsultaPage() {
   }
 
   const realizarConsulta = async () => {
-    if (!consultaForm.document || !user?.id) {
-      alert('CPF/CNPJ é obrigatório')
+    if (!user?.id) {
+      alert('Usuário não autenticado')
+      return
+    }
+
+    // Validar se pelo menos um critério de busca foi fornecido
+    const hasSearchCriteria = consultaForm.document ||
+                               consultaForm.numeroTelefone ||
+                               consultaForm.email ||
+                               consultaForm.placaVeiculo ||
+                               (consultaForm.nomeRazao && (consultaForm.cidade || consultaForm.uf || consultaForm.cep))
+
+    if (!hasSearchCriteria) {
+      alert('Forneça pelo menos um critério de busca: CPF/CNPJ, telefone, email, placa de veículo, ou nome completo com localização (cidade/UF/CEP)')
+      return
+    }
+
+    // Se documento foi fornecido, tipoPessoa é obrigatório
+    if (consultaForm.document && !consultaForm.tipoPessoa) {
+      alert('Tipo de Pessoa é obrigatório quando CPF/CNPJ é fornecido')
       return
     }
 
@@ -166,14 +184,24 @@ export default function ConsultaPage() {
             Consulta Individual
           </h1>
           <p className="mt-2 text-gray-600">
-            Realize consultas individuais de CPF ou CNPJ usando a API DataCode
+            Realize consultas por CPF, CNPJ, telefone, email, placa de veículo ou nome + localização
           </p>
         </div>
 
         <div className="space-y-6">
           {/* Formulário de Consulta */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Nova Consulta</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nova Consulta</h3>
+
+            {/* Aviso sobre critérios de busca */}
+            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Dica:</strong> Você pode consultar usando <strong>qualquer</strong> dos critérios abaixo:
+                CPF/CNPJ, telefone, email, placa de veículo, ou nome completo + localização (cidade/UF/CEP).
+                Quanto mais informações fornecer, mais preciso será o resultado.
+              </p>
+            </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Coluna Esquerda */}
                 <div className="space-y-4">
@@ -181,7 +209,8 @@ export default function ConsultaPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <User className="inline h-4 w-4 mr-1" />
-                      Tipo de Pessoa *
+                      Tipo de Pessoa
+                      <span className="text-xs text-gray-500 ml-1">(obrigatório se informar CPF/CNPJ)</span>
                     </label>
                     <select
                       value={consultaForm.tipoPessoa}
@@ -198,7 +227,8 @@ export default function ConsultaPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <FileText className="inline h-4 w-4 mr-1" />
-                      {consultaForm.tipoPessoa === 'PF' ? 'CPF *' : 'CNPJ *'}
+                      {consultaForm.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}
+                      <span className="text-xs text-gray-500 ml-1">(opcional)</span>
                     </label>
                     <input
                       type="text"
@@ -207,7 +237,6 @@ export default function ConsultaPage() {
                       placeholder={consultaForm.tipoPessoa === 'PF' ? '123.456.789-00' : '12.345.678/0001-99'}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={consultando}
-                      required
                     />
                   </div>
 
@@ -378,7 +407,7 @@ export default function ConsultaPage() {
               <div className="mt-6 flex space-x-4">
                 <button
                   onClick={realizarConsulta}
-                  disabled={consultando || !consultaForm.document}
+                  disabled={consultando}
                   className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
                 >
                   {consultando ? (
