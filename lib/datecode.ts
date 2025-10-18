@@ -12,7 +12,7 @@ export interface DatecodeCredentials {
 
 /**
  * Busca credenciais Datecode do usuário na tabela credencias_diversas
- * Se não encontrar, tenta usar as variáveis de ambiente como fallback
+ * NÃO utiliza fallback para variáveis de ambiente
  *
  * @param userId - ID do usuário
  * @returns Credenciais Datecode ou null se não encontradas
@@ -28,8 +28,7 @@ export async function getDatecodeCredentials(userId: number): Promise<DatecodeCr
 
     if (error) {
       console.error('Erro ao buscar credenciais Datecode:', error)
-      // Em caso de erro, tentar fallback
-      return getDatecodeCredentialsFromEnv()
+      return null
     }
 
     // Se encontrou credenciais do usuário e estão válidas
@@ -43,34 +42,16 @@ export async function getDatecodeCredentials(userId: number): Promise<DatecodeCr
       }
     }
 
-    // Se não encontrou credenciais do usuário, usar fallback
-    console.log(`Credenciais Datecode não encontradas para usuário ${userId}, usando fallback do ambiente`)
-    return getDatecodeCredentialsFromEnv()
+    // Credenciais não encontradas ou vazias
+    console.error(`Credenciais Datecode não encontradas ou vazias para usuário ${userId}`)
+    return null
 
   } catch (error) {
     console.error('Erro ao obter credenciais Datecode:', error)
-    return getDatecodeCredentialsFromEnv()
+    return null
   }
 }
 
-/**
- * Obtém credenciais Datecode das variáveis de ambiente
- * Usado como fallback quando o usuário não tem credenciais próprias
- *
- * @returns Credenciais do ambiente ou null
- */
-function getDatecodeCredentialsFromEnv(): DatecodeCredentials | null {
-  const username = process.env.DATECODE_USERNAME
-  const password = process.env.DATECODE_PASSWORD
-
-  if (username && password) {
-    console.log('Usando credenciais Datecode do ambiente (.env)')
-    return { username, password }
-  }
-
-  console.error('Credenciais Datecode não encontradas nem no banco nem no ambiente')
-  return null
-}
 
 /**
  * Cria o header de autenticação Basic para API Datecode

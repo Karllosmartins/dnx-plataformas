@@ -48,29 +48,22 @@ export async function POST(request: NextRequest) {
     const cpfLimpo = cpf.replace(/[^\d]/g, '')
     console.log('API Datecode CPF: CPF limpo:', cpfLimpo)
 
-    // Obter credenciais Datecode
-    // Se userId foi fornecido, buscar credenciais do usuário, senão usar fallback do ambiente
-    let credentials = null
-    if (userId) {
-      credentials = await getDatecodeCredentials(userId)
-    } else {
-      // Fallback direto para variáveis de ambiente se userId não foi fornecido
-      const username = process.env.DATECODE_USERNAME
-      const password = process.env.DATECODE_PASSWORD
-      if (username && password) {
-        credentials = { username, password }
-      }
-    }
+    // Obter credenciais Datecode do usuário
+    const credentials = userId ? await getDatecodeCredentials(userId) : null
 
     console.log('API Datecode CPF: Credenciais disponíveis:', {
-      source: userId ? 'Database ou Environment' : 'Environment only',
+      userId: userId || 'não fornecido',
+      found: !!credentials,
       valid: validateDatecodeCredentials(credentials)
     })
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
-        { error: 'Credenciais do Datecode não configuradas' },
-        { status: 500 }
+        {
+          error: 'Credenciais Datecode não configuradas',
+          message: 'Você precisa cadastrar suas credenciais Datecode no menu Usuários antes de realizar consultas.'
+        },
+        { status: 403 }
       )
     }
 

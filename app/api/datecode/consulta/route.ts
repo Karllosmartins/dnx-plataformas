@@ -95,18 +95,21 @@ export async function POST(request: NextRequest) {
       console.log('API Datecode Consulta: Documento limpo:', documentoLimpo)
     }
 
-    // Obter credenciais Datecode do usuário (ou fallback do ambiente)
+    // Obter credenciais Datecode do usuário
     const credentials = await getDatecodeCredentials(userId)
 
     console.log('API Datecode Consulta: Credenciais disponíveis:', {
-      source: credentials ? 'Database ou Environment' : 'MISSING',
+      found: !!credentials,
       valid: validateDatecodeCredentials(credentials)
     })
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
-        { error: 'Credenciais do Datecode não configuradas. Configure suas credenciais no cadastro de usuário.' },
-        { status: 500 }
+        {
+          error: 'Credenciais Datecode não configuradas',
+          message: 'Você precisa cadastrar suas credenciais Datecode no menu Usuários antes de realizar consultas.'
+        },
+        { status: 403 }
       )
     }
 
