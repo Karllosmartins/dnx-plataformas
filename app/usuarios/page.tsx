@@ -39,19 +39,19 @@ interface ConfigCredentials {
   type_tool_supabase?: string
   reasoning_effort?: string
   apikeydados?: string
-  
+
   // ElevenLabs
   apikey_elevenlabs?: string
   id_voz_elevenlabs?: string
-  
+
   // FireCrawl
   firecrawl_apikey?: string
-  
+
   // WhatsApp Evolution API
   baseurl?: string
   instancia?: string
   apikey?: string
-  
+
   // Supabase Databases
   base_tools_supabase?: string
   base_leads_supabase?: string
@@ -59,30 +59,34 @@ interface ConfigCredentials {
   base_agentes_supabase?: string
   base_rag_supabase?: string
   base_ads_supabase?: string
-  
+
   // Configurações do Agente
   prompt_do_agente?: string
   vector_store_ids?: string
   structured_output?: string
-  
+
   // Configurações Operacionais
   delay_entre_mensagens_em_segundos?: number
   delay_apos_intervencao_humana_minutos?: number
   inicio_expediente?: number
   fim_expediente?: number
-  
+
   // CRM Integration
   url_crm?: string
   usuario_crm?: string
   senha_crm?: string
   token_crm?: string
-  
+
   // Drive Integration
   pasta_drive?: string
   id_pasta_drive_rag?: string
-  
+
   // Cliente
   cliente?: string
+
+  // Datecode (Consulta e Enriquecimento)
+  datecode_username?: string
+  datecode_password?: string
 }
 
 export default function UsuariosPage() {
@@ -229,8 +233,12 @@ export default function UsuariosPage() {
 
       // Salvar credenciais se fornecidas
       if (credentials && userId) {
+        // Separar credenciais Datecode das demais
+        const { datecode_username, datecode_password, ...otherCredentials } = credentials
+
+        // 1. Salvar credenciais gerais (configuracoes_credenciais)
         const credentialsToSave = Object.fromEntries(
-          Object.entries(credentials).filter(([_, value]) => 
+          Object.entries(otherCredentials).filter(([_, value]) =>
             value !== undefined && value !== null && value !== ''
           )
         )
@@ -265,6 +273,44 @@ export default function UsuariosPage() {
               }])
 
             if (credError) throw credError
+          }
+        }
+
+        // 2. Salvar credenciais Datecode na tabela credencias_diversas
+        if (datecode_username || datecode_password) {
+          const datecodeCredentials = {
+            username: datecode_username || '',
+            password: datecode_password || ''
+          }
+
+          const { data: existingDiversas } = await supabase
+            .from('credencias_diversas')
+            .select('id, datecode')
+            .eq('user_id', userId)
+            .maybeSingle()
+
+          if (existingDiversas) {
+            // Atualizar registro existente
+            const { error: datecodeError } = await supabase
+              .from('credencias_diversas')
+              .update({
+                datecode: datecodeCredentials,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', userId)
+
+            if (datecodeError) throw datecodeError
+          } else {
+            // Criar novo registro
+            const { error: datecodeError } = await supabase
+              .from('credencias_diversas')
+              .insert([{
+                user_id: userId,
+                datecode: datecodeCredentials,
+                created_at: new Date().toISOString()
+              }])
+
+            if (datecodeError) throw datecodeError
           }
         }
       }
@@ -1329,7 +1375,7 @@ function UserModal({
             </div>
 
             {/* Seção: Cliente */}
-            <div className="mb-6">
+            <div className="mb-8">
               <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🏢 Informações do Cliente</h5>
               <div className="grid grid-cols-1 gap-4">
                 <div>
@@ -1340,6 +1386,36 @@ function UserModal({
                     onChange={(e) => setCredentials({...credentials, cliente: e.target.value})}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Nome da empresa"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Datecode (Consulta e Enriquecimento) */}
+            <div className="mb-6">
+              <h5 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">🔍 Datecode (Consulta e Enriquecimento)</h5>
+              <p className="text-sm text-gray-600 mb-4">
+                Credenciais para consulta e enriquecimento de dados via Datecode API
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuário Datecode</label>
+                  <input
+                    type="text"
+                    value={credentials.datecode_username || ''}
+                    onChange={(e) => setCredentials({...credentials, datecode_username: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="seu_usuario_datecode"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha Datecode</label>
+                  <input
+                    type="password"
+                    value={credentials.datecode_password || ''}
+                    onChange={(e) => setCredentials({...credentials, datecode_password: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="••••••••"
                   />
                 </div>
               </div>

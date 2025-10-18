@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../lib/supabase'
 import { hasAvailableConsultas, consumeConsultas, getConsultasBalance } from '../../../lib/permissions'
+import { getDatecodeCredentials, createDatecodeAuthHeader, validateDatecodeCredentials } from '../../../lib/datecode'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,16 +48,26 @@ export async function POST(request: NextRequest) {
     const cnpjLimpo = cnpj.replace(/[^\d]/g, '')
     console.log('API Datecode: CNPJ limpo:', cnpjLimpo)
 
-    // Obter credenciais do ambiente
-    const username = process.env.DATECODE_USERNAME
-    const password = process.env.DATECODE_PASSWORD
+    // Obter credenciais Datecode
+    // Se userId foi fornecido, buscar credenciais do usuário, senão usar fallback do ambiente
+    let credentials = null
+    if (userId) {
+      credentials = await getDatecodeCredentials(userId)
+    } else {
+      // Fallback direto para variáveis de ambiente se userId não foi fornecido
+      const username = process.env.DATECODE_USERNAME
+      const password = process.env.DATECODE_PASSWORD
+      if (username && password) {
+        credentials = { username, password }
+      }
+    }
 
     console.log('API Datecode: Credenciais disponíveis:', {
-      username: username ? 'OK' : 'MISSING',
-      password: password ? 'OK' : 'MISSING'
+      source: userId ? 'Database ou Environment' : 'Environment only',
+      valid: validateDatecodeCredentials(credentials)
     })
 
-    if (!username || !password) {
+    if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
         { error: 'Credenciais do Datecode não configuradas' },
         { status: 500 }
@@ -75,7 +86,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+        'Authorization': createDatecodeAuthHeader(credentials!)
       },
       body: JSON.stringify(requestBody)
     })

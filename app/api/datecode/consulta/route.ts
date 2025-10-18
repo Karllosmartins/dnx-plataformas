@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../../lib/supabase'
 import { hasAvailableConsultas, consumeConsultas, getConsultasBalance } from '../../../../lib/permissions'
+import { getDatecodeCredentials, createDatecodeAuthHeader, validateDatecodeCredentials } from '../../../../lib/datecode'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +23,32 @@ export async function POST(request: NextRequest) {
 
     console.log('API Datecode Consulta: Dados recebidos:', body)
 
-    if (!document || !tipoPessoa || !userId) {
+    // Validar campos obrigatórios
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Documento, tipoPessoa e userId são obrigatórios' },
+        { error: 'userId é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    // Validar se pelo menos um campo de busca foi fornecido
+    const hasSearchCriteria = document || numeroTelefone || email || placaVeiculo ||
+                               (nomeRazao && (cidade || uf || cep))
+
+    if (!hasSearchCriteria) {
+      return NextResponse.json(
+        {
+          error: 'Pelo menos um campo de busca deve ser fornecido',
+          details: 'Forneça: documento (CPF/CNPJ), telefone, email, placa de veículo, ou nome completo com localização (cidade/UF/CEP)'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Se documento foi fornecido, tipoPessoa é obrigatório
+    if (document && !tipoPessoa) {
+      return NextResponse.json(
+        { error: 'tipoPessoa é obrigatório quando documento (CPF/CNPJ) é fornecido' },
         { status: 400 }
       )
     }
@@ -64,30 +88,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Remover caracteres especiais do documento
-    const documentoLimpo = document.replace(/[^\d]/g, '')
-    console.log('API Datecode Consulta: Documento limpo:', documentoLimpo)
+    // Remover caracteres especiais do documento (se fornecido)
+    let documentoLimpo = null
+    if (document) {
+      documentoLimpo = document.replace(/[^\d]/g, '')
+      console.log('API Datecode Consulta: Documento limpo:', documentoLimpo)
+    }
 
-    // Obter credenciais do ambiente
-    const username = process.env.DATECODE_USERNAME
-    const password = process.env.DATECODE_PASSWORD
+    // Obter credenciais Datecode do usuário (ou fallback do ambiente)
+    const credentials = await getDatecodeCredentials(userId)
 
     console.log('API Datecode Consulta: Credenciais disponíveis:', {
-      username: username ? 'OK' : 'MISSING',
-      password: password ? 'OK' : 'MISSING'
+      source: credentials ? 'Database ou Environment' : 'MISSING',
+      valid: validateDatecodeCredentials(credentials)
     })
 
-    if (!username || !password) {
+    if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
-        { error: 'Credenciais do Datecode não configuradas' },
+        { error: 'Credenciais do Datecode não configuradas. Configure suas credenciais no cadastro de usuário.' },
         { status: 500 }
       )
     }
 
     // Fazer requisição para API do Datecode
-    const requestBody: any = {
-      document: documentoLimpo,
-      tipoPessoa: tipoPessoa.toUpperCase()
+    const requestBody: any = {}
+
+    // Adicionar documento e tipoPessoa apenas se fornecidos
+    if (documentoLimpo && tipoPessoa) {
+      requestBody.document = documentoLimpo
+      requestBody.tipoPessoa = tipoPessoa.toUpperCase()
     }
 
     // Adicionar campos opcionais se fornecidos
@@ -107,7 +136,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+        'Authorization': createDatecodeAuthHeader(credentials!)
       },
       body: JSON.stringify(requestBody)
     })
@@ -137,15 +166,29 @@ export async function POST(request: NextRequest) {
 
     // Registrar consulta no banco para controle de limite (não salvar os dados, apenas contar)
     try {
+      // Determinar o tipo de consulta realizada
+      let tipoConsulta = 'Consulta Individual'
+      if (documentoLimpo) {
+        tipoConsulta = `Consulta ${tipoPessoa || 'documento'}`
+      } else if (numeroTelefone) {
+        tipoConsulta = 'Consulta por telefone'
+      } else if (email) {
+        tipoConsulta = 'Consulta por email'
+      } else if (placaVeiculo) {
+        tipoConsulta = 'Consulta por placa'
+      } else if (nomeRazao) {
+        tipoConsulta = 'Consulta por nome'
+      }
+
       await getSupabaseAdmin()
         .from('leads')
         .insert({
           user_id: userId,
           nome_cliente: nomeRazao || 'Consulta Individual',
-          cpf_cnpj: documentoLimpo,
+          cpf_cnpj: documentoLimpo || null,
           origem: 'Consulta Individual',
           status_limpa_nome: 'consulta_realizada',
-          observacoes_limpa_nome: `Consulta individual ${tipoPessoa} realizada`,
+          observacoes_limpa_nome: `${tipoConsulta} realizada`,
           created_at: new Date().toISOString()
         })
 
