@@ -2712,51 +2712,22 @@ export default function LeadsPage() {
                                   value={editLeadData.status_generico || editLeadData.status_limpa_nome || ''}
                                   onChange={(e) => {
                                     const newStatus = e.target.value
-                                    if (userTipoNegocio?.nome === 'b2b') {
-                                      setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
-                                    } else if (userTipoNegocio?.nome === 'previdenciario') {
-                                      setEditLeadData((prev: any) => ({ ...prev, status_generico: newStatus, status_limpa_nome: null }))
-                                    } else {
-                                      setEditLeadData((prev: any) => ({ ...prev, status_limpa_nome: newStatus, status_generico: null }))
-                                    }
+                                    setEditLeadData((prev: any) => ({
+                                      ...prev,
+                                      status_generico: newStatus,
+                                      status_limpa_nome: null
+                                    }))
                                   }}
                                   className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
-                                  {userTipoNegocio?.nome === 'b2b' && (
-                                    <>
-                                      <option value="novo_contato">Novo Contato</option>
-                                      <option value="qualificacao_inicial">Qualificação Inicial</option>
-                                      <option value="mapeando_decisor">Mapeando Decisor</option>
-                                      <option value="contato_decisor">Contato Decisor</option>
-                                      <option value="apresentacao_realizada">Apresentação Realizada</option>
-                                      <option value="proposta_enviada">Proposta Enviada</option>
-                                      <option value="negociacao">Negociação</option>
-                                      <option value="negocio_fechado">Negócio Fechado</option>
-                                    </>
-                                  )}
-                                  {userTipoNegocio?.nome === 'previdenciario' && (
-                                    <>
-                                      <option value="novo_caso">Novo Caso</option>
-                                      <option value="analise_viabilidade">Análise Viabilidade</option>
-                                      <option value="caso_viavel">Caso Viável</option>
-                                      <option value="caso_inviavel">Caso Inviável</option>
-                                      <option value="contrato_enviado">Contrato Enviado</option>
-                                      <option value="contrato_assinado">Contrato Assinado</option>
-                                      <option value="processo_iniciado">Processo Iniciado</option>
-                                      <option value="caso_finalizado">Caso Finalizado</option>
-                                    </>
-                                  )}
-                                  {(!userTipoNegocio?.nome || userTipoNegocio?.nome === 'limpa_nome') && (
-                                    <>
-                                      <option value="novo_lead">Novo Lead</option>
-                                      <option value="qualificacao">Qualificação</option>
-                                      <option value="desqualificado">Desqualificado</option>
-                                      <option value="pagamento_consulta">Pagamento Consulta</option>
-                                      <option value="nao_consta_divida">Não Consta Dívida</option>
-                                      <option value="consta_divida">Consta Dívida</option>
-                                      <option value="enviado_para_negociacao">Em Negociação</option>
-                                      <option value="cliente_fechado">Cliente Fechado</option>
-                                    </>
+                                  {userTipoNegocio?.status_personalizados && userTipoNegocio.status_personalizados.length > 0 ? (
+                                    userTipoNegocio.status_personalizados.map((status: string) => (
+                                      <option key={status} value={status}>
+                                        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      </option>
+                                    ))
+                                  ) : (
+                                    <option value="">Nenhum status configurado</option>
                                   )}
                                 </select>
                               </div>
