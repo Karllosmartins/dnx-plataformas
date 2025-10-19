@@ -6,7 +6,6 @@ import { supabase, Lead } from '../lib/supabase'
 import { useAuth } from '../components/AuthWrapper'
 import MetricCard from '../components/MetricCard'
 import {
-  Settings,
   Users,
   DollarSign,
   TrendingUp,
@@ -560,61 +559,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Ações Rápidas */}
-        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Ações Rápidas</h3>
-          </div>
-          <div className="p-6 space-y-3">
-            <Link href="/leads" className="group block">
-              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-semibold text-gray-900">
-                    Gerenciar Leads
-                  </h4>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Visualizar e editar leads do funil
-                  </p>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/configuracoes-admin" className="group block">
-              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Settings className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-semibold text-gray-900">
-                    Configurações
-                  </h4>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Gerenciar planos e tipos de negócio
-                  </p>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/relatorios" className="group block">
-              <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm transition-all">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <FileText className="h-5 w-5 text-purple-600" />
-                </div>
-                <div className="ml-4 flex-1">
-                  <h4 className="text-sm font-semibold text-gray-900">
-                    Relatórios
-                  </h4>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Análises e métricas detalhadas
-                  </p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   )
