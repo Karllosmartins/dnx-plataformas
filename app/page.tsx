@@ -146,7 +146,9 @@ export default function HomePage() {
         emAndamento: metricasConfig.label_em_andamento || 'Em Andamento',
         casosViaveis: metricasConfig.label_casos_viaveis || 'Casos Viáveis',
         fechados: metricasConfig.label_fechados || 'Fechados',
-        negociacao: metricasConfig.label_negociacao || 'Em Negociação'
+        negociacao: metricasConfig.label_negociacao || 'Em Negociação',
+        leadsPerdidos: metricasConfig.label_perdidos || 'Perdidos',
+        totalGeral: metricasConfig.label_total || 'Total Geral'
       }
     } else {
       // Fallback baseado no nome do tipo
@@ -159,7 +161,9 @@ export default function HomePage() {
           emAndamento: 'Pagou Consulta',
           casosViaveis: 'Dívidas Encontradas',
           fechados: 'Clientes Fechados',
-          negociacao: 'Em Negociação'
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Leads Perdidos',
+          totalGeral: 'Total Geral'
         }
       } else if (businessType.nome === 'previdenciario') {
         config.title = 'Dashboard Previdenciário'
@@ -170,7 +174,9 @@ export default function HomePage() {
           emAndamento: 'Contratos Enviados',
           casosViaveis: 'Casos Viáveis',
           fechados: 'Casos Finalizados',
-          negociacao: 'Processos Iniciados'
+          negociacao: 'Processos Iniciados',
+          leadsPerdidos: 'Casos Perdidos',
+          totalGeral: 'Total Geral'
         }
       } else if (businessType.nome === 'b2b') {
         config.title = 'Dashboard B2B'
@@ -181,7 +187,9 @@ export default function HomePage() {
           emAndamento: 'Apresentações',
           casosViaveis: 'Propostas Enviadas',
           fechados: 'Deals Fechados',
-          negociacao: 'Em Negociação'
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Contatos Perdidos',
+          totalGeral: 'Total Geral'
         }
       } else {
         // Fallback genérico
@@ -193,7 +201,9 @@ export default function HomePage() {
           emAndamento: 'Em Andamento',
           casosViaveis: 'Casos Viáveis',
           fechados: 'Fechados',
-          negociacao: 'Em Negociação'
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Leads Perdidos',
+          totalGeral: 'Total Geral'
         }
       }
     }
@@ -500,13 +510,13 @@ export default function HomePage() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-4 text-white text-center">
             <XCircle className="h-8 w-8 mx-auto mb-2 text-red-100" />
             <div className="text-2xl font-bold">{metrics.leadsPerdidos}</div>
-            <div className="text-xs text-red-100 mt-1">Leads Perdidos</div>
+            <div className="text-xs text-red-100 mt-1">{dashboardConfig?.metrics?.leadsPerdidos || 'Leads Perdidos'}</div>
           </div>
 
           <div className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg shadow-lg p-4 text-white text-center">
             <Target className="h-8 w-8 mx-auto mb-2 text-gray-100" />
             <div className="text-2xl font-bold">{leads.length}</div>
-            <div className="text-xs text-gray-100 mt-1">Total Geral</div>
+            <div className="text-xs text-gray-100 mt-1">{dashboardConfig?.metrics?.totalGeral || 'Total Geral'}</div>
           </div>
         </div>
       </div>
