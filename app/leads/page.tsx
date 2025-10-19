@@ -165,63 +165,89 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
   const fetchUserTipoNegocio = async () => {
     console.log('Modal: Buscando tipo de negócio para userId:', userId)
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('user_tipos_negocio')
         .select(`
           tipo_negocio_id,
           tipos_negocio!inner (
             id,
             nome,
-            descricao
+            nome_exibicao,
+            descricao,
+            campos_personalizados,
+            status_personalizados
           )
         `)
         .eq('user_id', userId)
+        .eq('ativo', true)
         .single()
 
       console.log('Modal: Resultado da busca:', data, 'Error:', error)
 
       if (error) throw error
-      setUserTipoNegocio(data?.tipos_negocio)
 
-      // Ajustar valor inicial baseado no tipo de negócio
       const tipoNegocio = Array.isArray(data?.tipos_negocio) ? data?.tipos_negocio[0] : data?.tipos_negocio
+
+      console.log('[Modal] Tipo de negócio carregado:', tipoNegocio?.nome, 'ID:', tipoNegocio?.id)
+      setUserTipoNegocio(tipoNegocio)
+
+      // Configuração dinâmica baseada no tipo
+      // Manter compatibilidade com tipos antigos hardcoded
       if (tipoNegocio?.nome === 'previdenciario') {
         console.log('Modal: Configurando para previdenciário')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
       } else if (tipoNegocio?.nome === 'b2b') {
         console.log('Modal: Configurando para B2B')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Prospecção', origem: 'LinkedIn' }))
-      } else {
+      } else if (tipoNegocio?.nome === 'limpa_nome') {
         console.log('Modal: Configurando para limpa nome')
         setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
+      } else {
+        // Tipo genérico/personalizado - usar configuração padrão
+        console.log('Modal: Configurando tipo genérico:', tipoNegocio?.nome)
+        setFormData(prev => ({
+          ...prev,
+          tipo_consulta_interesse: 'Consulta',
+          origem: 'WhatsApp'
+        }))
       }
     } catch (error) {
       console.error('Erro ao buscar tipo de negócio:', error)
-      // Fallback baseado no usuário
-      if (userId === '28') {
-        console.log('Modal: Configurando usuário 28 como previdenciário (fallback)')
-        setUserTipoNegocio({ id: 2, nome: 'previdenciario', descricao: 'Advogado Previdenciário' })
-        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
-      } else {
-        setUserTipoNegocio({ nome: 'limpa_nome' })
-        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
-      }
+      // Não forçar fallback para limpa_nome - mostrar erro
+      setUserTipoNegocio(null)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!userId) return
+    if (!userId || !userTipoNegocio) {
+      console.error('[Modal] Não é possível criar lead sem tipo de negócio')
+      return
+    }
 
     setLoading(true)
     try {
+      // Obter status_personalizados do tipo de negócio
+      const statusPersonalizados = Array.isArray(userTipoNegocio.status_personalizados)
+        ? userTipoNegocio.status_personalizados
+        : (typeof userTipoNegocio.status_personalizados === 'string'
+          ? JSON.parse(userTipoNegocio.status_personalizados)
+          : [])
+
+      // Usar primeiro status como inicial (padrão para novos leads)
+      const statusInicial = statusPersonalizados.length > 0
+        ? statusPersonalizados[0]
+        : 'novo_lead'
+
+      console.log('[Modal] Criando lead com tipo_negocio_id:', userTipoNegocio.id, 'status:', statusInicial)
+
       let leadData: any = {
         user_id: parseInt(userId || '0'),
         nome_cliente: formData.nome_cliente,
         telefone: formData.telefone,
         origem: formData.origem,
-        status_generico: userTipoNegocio?.nome === 'previdenciario' ? 'novo_caso' : (userTipoNegocio?.nome === 'b2b' ? 'novo_contato' : 'novo_lead'),
-        tipo_negocio_id: userTipoNegocio?.nome === 'previdenciario' ? 2 : (userTipoNegocio?.nome === 'b2b' ? 3 : 1)
+        status_generico: statusInicial,
+        tipo_negocio_id: userTipoNegocio.id // Usar ID real do banco
       }
 
       // Campos específicos baseados no tipo de negócio
@@ -248,8 +274,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
             situacao_atual: formData.tempo_negativado || null
           }
         }
-      } else {
-        // Limpa nome
+      } else if (userTipoNegocio?.nome === 'limpa_nome') {
         leadData = {
           ...leadData,
           cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
@@ -257,6 +282,16 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
             tipo_consulta_interesse: formData.tipo_consulta_interesse,
             valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
             tempo_negativado: formData.tempo_negativado || null
+          }
+        }
+      } else {
+        // Tipo genérico - usar campos padrão simples
+        leadData = {
+          ...leadData,
+          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
+          dados_personalizados: {
+            tipo_consulta_interesse: formData.tipo_consulta_interesse,
+            observacoes: formData.tempo_negativado || null
           }
         }
       }

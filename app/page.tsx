@@ -69,15 +69,7 @@ export default function HomePage() {
     if (!user) return
 
     try {
-      // Carregar leads do usuário
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', parseInt(user.id || '0'))
-
-      if (leadsError) throw leadsError
-      
-      // Carregar tipos de negócio do usuário
+      // Carregar tipos de negócio do usuário PRIMEIRO
       const { data: userTypesData, error: typesError } = await supabase
         .from('user_tipos_negocio')
         .select(`
@@ -96,8 +88,8 @@ export default function HomePage() {
         if (tipo) {
           return {
             ...tipo,
-            campos_personalizados: typeof tipo.campos_personalizados === 'string' 
-              ? JSON.parse(tipo.campos_personalizados) 
+            campos_personalizados: typeof tipo.campos_personalizados === 'string'
+              ? JSON.parse(tipo.campos_personalizados)
               : tipo.campos_personalizados || [],
             status_personalizados: typeof tipo.status_personalizados === 'string'
               ? JSON.parse(tipo.status_personalizados)
@@ -108,6 +100,25 @@ export default function HomePage() {
       }).filter(Boolean) || [];
 
       setUserBusinessTypes(businessTypes)
+
+      // Carregar leads FILTRADOS pelo tipo de negócio ativo do usuário
+      let leadsQuery = supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', parseInt(user.id || '0'))
+
+      // Se o usuário tem tipo de negócio definido, filtrar apenas leads desse tipo
+      if (businessTypes.length > 0 && businessTypes[0].id) {
+        leadsQuery = leadsQuery.eq('tipo_negocio_id', businessTypes[0].id)
+        console.log('[Dashboard] Filtrando leads por tipo_negocio_id:', businessTypes[0].id, businessTypes[0].nome)
+      }
+
+      const { data: leadsData, error: leadsError } = await leadsQuery
+
+      if (leadsError) throw leadsError
+
+      console.log('[Dashboard] Leads carregados:', leadsData?.length || 0)
+
       setLeads(leadsData || [])
       setFilteredLeads(leadsData || [])
 
