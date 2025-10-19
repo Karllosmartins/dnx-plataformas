@@ -1035,340 +1035,93 @@ export default function LeadsPage() {
 
   const createSampleLeads = async () => {
     if (!user) {
-      console.error('CreateSampleLeads: Usuário não encontrado')
+      console.error('[CreateSampleLeads] Usuário não encontrado')
       return
     }
 
-    console.log('CreateSampleLeads: Iniciando para usuário:', user.id)
+    console.log('[CreateSampleLeads] Iniciando para usuário:', user.id)
 
-    // Primeiro buscar o tipo de negócio do usuário
     try {
+      // Buscar tipo de negócio COMPLETO do usuário com campos_personalizados e status
       const { data: userTipoData, error: userTipoError } = await supabase
         .from('user_tipos_negocio')
-        .select('tipos_negocio!inner(nome)')
+        .select(`
+          tipo_negocio_id,
+          tipos_negocio!inner (
+            id, nome, status_personalizados
+          )
+        `)
         .eq('user_id', user.id)
+        .eq('ativo', true)
         .single()
 
-      console.log('CreateSampleLeads: Resultado da busca tipo:', userTipoData, 'Erro:', userTipoError)
-
-      let tipoNegocio = 'limpa_nome'
-
-      if (userTipoError) {
-        console.log('CreateSampleLeads: Erro ao buscar tipo, usando fallback')
-        // Fallback baseado no usuário
-        if (user.id === '28') {
-          tipoNegocio = 'previdenciario'
-          console.log('CreateSampleLeads: Usuário 28 detectado, usando previdenciário')
-        }
-      } else {
-        const tipoNegocioData = Array.isArray(userTipoData?.tipos_negocio) ? userTipoData?.tipos_negocio[0] : userTipoData?.tipos_negocio
-        tipoNegocio = tipoNegocioData?.nome || 'limpa_nome'
+      if (userTipoError || !userTipoData) {
+        console.error('[CreateSampleLeads] Erro ao buscar tipo de negócio:', userTipoError)
+        alert('Erro: Não foi possível identificar seu tipo de negócio.')
+        return
       }
 
-      console.log('CreateSampleLeads: Tipo detectado:', tipoNegocio)
-      
-      let sampleLeads: any[] = []
+      const tipoNegocio = Array.isArray(userTipoData.tipos_negocio)
+        ? userTipoData.tipos_negocio[0]
+        : userTipoData.tipos_negocio
 
-      if (tipoNegocio === 'previdenciario') {
-        sampleLeads = [
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Maria Santos Silva',
-            cpf: '12345678901',
-            telefone: '(11) 99999-9999',
-            origem: 'WhatsApp',
-            status_generico: 'novo_caso',
-            tipo_negocio_id: 2,
-            dados_personalizados: {
-              tipo_acidente: 'trabalho',
-              situacao_atual: 'Aposentada',
-              tipo_servico: 'Análise de Viabilidade',
-              valor_estimado_caso: 25000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'José Oliveira Costa',
-            cpf: '98765432100',
-            telefone: '(11) 88888-8888',
-            origem: 'Site',
-            status_generico: 'analise_viabilidade',
-            tipo_negocio_id: 2,
-            dados_personalizados: {
-              tipo_acidente: 'doenca_ocupacional',
-              situacao_atual: 'Trabalhando',
-              tipo_servico: 'Revisão de Benefício',
-              valor_estimado_caso: 18000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Ana Paula Ferreira',
-            cpf: '45678912345',
-            telefone: '(21) 77777-7777',
-            origem: 'Indicação',
-            status_generico: 'caso_viavel',
-            tipo_negocio_id: 2,
-            dados_personalizados: {
-              tipo_acidente: 'invalidez',
-              situacao_atual: 'Afastado',
-              tipo_servico: 'Recurso INSS',
-              valor_estimado_caso: 35000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Roberto Silva Machado',
-            cpf: '65432198700',
-            telefone: '(85) 55555-5555',
-            origem: 'Indicação',
-            status_generico: 'contrato_enviado',
-            tipo_negocio_id: 2,
-            dados_personalizados: {
-              tipo_acidente: 'transito',
-              situacao_atual: 'Trabalhando',
-              tipo_servico: 'Auxílio Doença',
-              valor_estimado_caso: 28000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Carlos Eduardo Lima',
-            cpf: '78912345678',
-            telefone: '(31) 66666-6666',
-            origem: 'WhatsApp',
-            status_generico: 'caso_finalizado',
-            tipo_negocio_id: 2,
-            dados_personalizados: {
-              tipo_acidente: 'trabalho',
-              situacao_atual: 'Aposentado',
-              tipo_servico: 'Aposentadoria',
-              valor_estimado_caso: 42000.00,
-              valor_contrato: 8500.00,
-              responsavel: 'Especialista Previdenciário'
-            }
-          }
-        ]
-      } else if (tipoNegocio === 'b2b') {
-        // Dados para B2B
-        sampleLeads = [
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'João Silva - TechCorp',
-            cpf_cnpj: '12345678000190',
-            telefone: '(11) 3333-3333',
-            origem: 'LinkedIn',
-            status_generico: 'novo_contato',
-            nome_empresa: 'TechCorp Solutions Ltda',
-            id_empresa: 'TECH001',
-            responsavel_encontrado: false,
-            falando_com_responsavel: false,
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'tecnologia',
-              porte_empresa: 'media',
-              budget_disponivel: 150000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Maria Santos - Ind. XYZ',
-            cpf_cnpj: '23456789000101',
-            telefone: '(11) 4444-4444',
-            origem: 'Site',
-            status_generico: 'qualificacao_inicial',
-            nome_empresa: 'Indústria XYZ Ltda',
-            id_empresa: 'IND001',
-            responsavel_encontrado: true,
-            falando_com_responsavel: false,
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'industria',
-              porte_empresa: 'grande',
-              budget_disponivel: 250000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Carlos Oliveira - HealthCare',
-            cpf_cnpj: '34567890000112',
-            telefone: '(21) 5555-5555',
-            origem: 'Evento',
-            status_generico: 'contato_decisor',
-            nome_empresa: 'Health Care Plus S.A.',
-            id_empresa: 'HEALTH001',
-            responsavel_encontrado: true,
-            falando_com_responsavel: true,
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'saude',
-              porte_empresa: 'media',
-              budget_disponivel: 80000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Ana Costa - EduTech',
-            cpf_cnpj: '45678901000123',
-            telefone: '(31) 6666-6666',
-            origem: 'Indicação',
-            status_generico: 'contato_decisor',
-            nome_empresa: 'EduTech Brasil Ltda',
-            id_empresa: 'EDU001',
-            responsavel_encontrado: true,
-            falando_com_responsavel: true,
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'educacao',
-              porte_empresa: 'pequena',
-              budget_disponivel: 60000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Roberto Lima - Comercial ABC',
-            cpf_cnpj: '56789012000134',
-            telefone: '(21) 7777-7777',
-            origem: 'Cold Calling',
-            status_generico: 'apresentacao_realizada',
-            nome_empresa: 'Comercial ABC S.A.',
-            id_empresa: 'COM001',
-            responsavel_encontrado: true,
-            falando_com_responsavel: false,
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'varejo',
-              porte_empresa: 'media',
-              budget_disponivel: 90000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Consultoria Premium',
-            telefone: '(85) 8888-8888',
-            origem: 'LinkedIn',
-            status_generico: 'proposta_enviada',
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'servicos',
-              porte_empresa: 'pequena',
-              budget_disponivel: 120000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'FinanceGroup Corp',
-            telefone: '(11) 9999-9999',
-            origem: 'Indicação',
-            status_generico: 'negociacao',
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'financeiro',
-              porte_empresa: 'grande',
-              budget_disponivel: 300000.00
-            }
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Grupo Empresarial Mega',
-            telefone: '(85) 1111-1111',
-            origem: 'Evento',
-            status_generico: 'negocio_fechado',
-            tipo_negocio_id: 3,
-            dados_personalizados: {
-              segmento_empresa: 'industria',
-              porte_empresa: 'multinacional',
-              budget_disponivel: 500000.00,
-              valor_contrato: 480000.00,
-              responsavel: 'Especialista B2B'
-            }
-          }
-        ]
-      } else {
-        // Dados para limpa nome
-        sampleLeads = [
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'João Silva Santos',
-            cpf: '12345678901',
-            telefone: '(11) 99999-9999',
-            origem: 'WhatsApp',
-            status_limpa_nome: 'qualificacao',
-            valor_estimado_divida: 15000.00,
-            tempo_negativado: '2 anos',
-            tipo_consulta_interesse: 'Consulta Rating',
-            tipo_negocio_id: 1,
-            dados_personalizados: {}
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Maria Oliveira',
-            cpf: '98765432100',
-            telefone: '(11) 88888-8888',
-            origem: 'Site',
-            status_limpa_nome: 'pagamento_consulta',
-            valor_estimado_divida: 8500.00,
-            tempo_negativado: '1 ano e 6 meses',
-            tipo_consulta_interesse: 'Consulta Completa',
-            valor_pago_consulta: 199.00,
-            tipo_negocio_id: 1,
-            dados_personalizados: {}
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Carlos Eduardo',
-            cpf: '45678912345',
-            telefone: '(21) 77777-7777',
-            origem: 'Indicação',
-            status_limpa_nome: 'consta_divida',
-            valor_estimado_divida: 12000.00,
-            valor_real_divida: 11547.85,
-            valor_pago_consulta: 199.00,
-            tempo_negativado: '3 anos',
-            tipo_consulta_interesse: 'Limpa Nome',
-            orgaos_negativados: ['SPC', 'SERASA', 'Banco do Brasil'],
-            tipo_negocio_id: 1,
-            dados_personalizados: {}
-          },
-          {
-            user_id: parseInt(user.id),
-            nome_cliente: 'Ana Paula Costa',
-            cpf: '78912345678',
-            telefone: '(31) 66666-6666',
-            origem: 'WhatsApp',
-            status_limpa_nome: 'cliente_fechado',
-            valor_estimado_divida: 20000.00,
-            valor_real_divida: 18750.00,
-            valor_pago_consulta: 199.00,
-            valor_contrato: 2500.00,
-            tempo_negativado: '4 anos',
-            tipo_consulta_interesse: 'Análise de Crédito',
-            vendedor_responsavel: 'Vendedor Principal',
-            tipo_negocio_id: 1,
-            dados_personalizados: {}
-          }
-        ]
-      }
+      // Parse status_personalizados
+      const statusPersonalizados = Array.isArray(tipoNegocio.status_personalizados)
+        ? tipoNegocio.status_personalizados
+        : (typeof tipoNegocio.status_personalizados === 'string'
+          ? JSON.parse(tipoNegocio.status_personalizados)
+          : [])
 
-      console.log('CreateSampleLeads: Inserindo leads:', sampleLeads.length, 'leads')
-      console.log('CreateSampleLeads: Dados a inserir:', JSON.stringify(sampleLeads, null, 2))
+      console.log('[CreateSampleLeads] Tipo:', tipoNegocio.nome, 'ID:', tipoNegocio.id)
+      console.log('[CreateSampleLeads] Status disponíveis:', statusPersonalizados.length)
+
+      // Criar leads genéricos baseados nos status do tipo de negócio
+      // Máximo 4 leads de exemplo, um para cada status (até 4)
+      const statusParaExemplos = statusPersonalizados.slice(0, Math.min(4, statusPersonalizados.length))
+
+      const nomeExemplos = [
+        'João Silva Santos',
+        'Maria Oliveira Costa',
+        'Carlos Eduardo Ferreira',
+        'Ana Paula Rodrigues'
+      ]
+
+      const telefoneExemplos = [
+        '(11) 99999-9999',
+        '(21) 88888-8888',
+        '(31) 77777-7777',
+        '(85) 66666-6666'
+      ]
+
+      const origenExemplos = ['WhatsApp', 'Site', 'Indicação', 'Telefone']
+
+      const sampleLeads: any[] = statusParaExemplos.map((status: string, index: number) => ({
+        user_id: parseInt(user.id),
+        nome_cliente: nomeExemplos[index],
+        telefone: telefoneExemplos[index],
+        origem: origenExemplos[index],
+        status_generico: status,
+        tipo_negocio_id: tipoNegocio.id, // ID real do banco
+        dados_personalizados: {} // Vazio para leads de exemplo
+      }))
+
+      console.log('[CreateSampleLeads] Criando', sampleLeads.length, 'leads genéricos')
+      console.log('[CreateSampleLeads] Dados a inserir:', JSON.stringify(sampleLeads, null, 2))
 
       const { data, error } = await supabase
         .from('leads')
         .insert(sampleLeads)
         .select()
 
-      console.log('CreateSampleLeads: Resultado da inserção:', { data, error })
-
       if (error) {
-        console.error('CreateSampleLeads: Erro na inserção:', error)
+        console.error('[CreateSampleLeads] Erro na inserção:', error)
         throw error
       }
-      
-      console.log('CreateSampleLeads: Leads criados com sucesso!')
+
+      console.log('[CreateSampleLeads] Leads criados com sucesso:', data?.length || 0)
       fetchLeads()
     } catch (error) {
-      console.error('Erro ao criar leads de exemplo:', error)
+      console.error('[CreateSampleLeads] Erro:', error)
     }
   }
 
