@@ -122,7 +122,6 @@ const handleB2BStatusLogic = async (leadData: any, isB2B: boolean) => {
       if (error) {
         console.error('Erro ao atualizar responsavel_encontrado:', error)
       } else {
-        console.log('Demais contatos da empresa atualizados com responsavel_encontrado = true')
       }
     } catch (err) {
       console.error('Erro na atualização automática:', err)
@@ -161,7 +160,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
   }, [userId, isOpen])
 
   const fetchUserTipoNegocio = async () => {
-    console.log('[Modal] Buscando tipo de negócio para userId:', userId)
     try {
       const { data, error} = await supabase
         .from('user_tipos_negocio')
@@ -180,7 +178,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         .eq('ativo', true)
         .single()
 
-      console.log('[Modal] Resultado da busca:', data, 'Error:', error)
 
       if (error) throw error
 
@@ -205,8 +202,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         status_personalizados: statusPersonalizadosParsed
       }
 
-      console.log('[Modal] Tipo carregado:', tipoProcessado?.nome, '| ID:', tipoProcessado?.id)
-      console.log('[Modal] Campos personalizados:', camposPersonalizadosParsed.length, 'campos')
 
       setUserTipoNegocio(tipoProcessado)
 
@@ -241,7 +236,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         ? statusPersonalizados[0]
         : 'novo_lead'
 
-      console.log('[Modal] Criando lead com tipo_negocio_id:', userTipoNegocio.id, 'status:', statusInicial)
 
       // Construir leadData com campos básicos + dinâmicos
       const leadData: any = {
@@ -253,11 +247,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         tipo_negocio_id: userTipoNegocio.id, // ID real do banco
         dados_personalizados: camposPersonalizados // Todos os campos dinâmicos vão aqui
       }
-
-      console.log('[Modal] Dados do lead a inserir:', {
-        ...leadData,
-        dados_personalizados: Object.keys(camposPersonalizados).length + ' campos'
-      })
 
       const { error } = await supabase
         .from('leads')
@@ -469,7 +458,6 @@ export default function LeadsPage() {
   const fetchUserTipoNegocio = async () => {
     if (!user) return
 
-    console.log('Dashboard: Buscando tipo de negócio para usuário:', user.id)
 
     try {
       const { data, error } = await supabase
@@ -484,7 +472,6 @@ export default function LeadsPage() {
         .eq('user_id', user.id)
         .single()
 
-      console.log('Dashboard: Resultado da busca:', data, 'Error:', error)
 
       if (error) throw error
 
@@ -504,13 +491,11 @@ export default function LeadsPage() {
             : tipoNegocio.metricas_config || {}
         }
         setUserTipoNegocio(tipoProcessado)
-        console.log('Dashboard: Tipo configurado:', tipoProcessado)
       }
     } catch (error) {
       console.error('Erro ao buscar tipo de negócio:', error)
       // Fallback baseado no usuário
       if (user.id === '28') {
-        console.log('Dashboard: Configurando usuário 28 como previdenciário (fallback)')
         setUserTipoNegocio({
           id: 2,
           nome: 'previdenciario',
@@ -534,7 +519,6 @@ export default function LeadsPage() {
     try {
       const planInfo = getUserPlanInfo(user as any)
       setUserPlanInfo(planInfo)
-      console.log('Plan info loaded:', planInfo)
     } catch (error) {
       console.error('Erro ao buscar informações do plano:', error)
     }
@@ -1039,7 +1023,6 @@ export default function LeadsPage() {
       return
     }
 
-    console.log('[CreateSampleLeads] Iniciando para usuário:', user.id)
 
     try {
       // Buscar tipo de negócio COMPLETO do usuário com campos_personalizados e status
@@ -1072,8 +1055,6 @@ export default function LeadsPage() {
           ? JSON.parse(tipoNegocio.status_personalizados)
           : [])
 
-      console.log('[CreateSampleLeads] Tipo:', tipoNegocio.nome, 'ID:', tipoNegocio.id)
-      console.log('[CreateSampleLeads] Status disponíveis:', statusPersonalizados.length)
 
       // Criar leads genéricos baseados nos status do tipo de negócio
       // Máximo 4 leads de exemplo, um para cada status (até 4)
@@ -1105,8 +1086,6 @@ export default function LeadsPage() {
         dados_personalizados: {} // Vazio para leads de exemplo
       }))
 
-      console.log('[CreateSampleLeads] Criando', sampleLeads.length, 'leads genéricos')
-      console.log('[CreateSampleLeads] Dados a inserir:', JSON.stringify(sampleLeads, null, 2))
 
       const { data, error } = await supabase
         .from('leads')
@@ -1118,7 +1097,6 @@ export default function LeadsPage() {
         throw error
       }
 
-      console.log('[CreateSampleLeads] Leads criados com sucesso:', data?.length || 0)
       fetchLeads()
     } catch (error) {
       console.error('[CreateSampleLeads] Erro:', error)
@@ -1515,7 +1493,6 @@ export default function LeadsPage() {
     }))
 
     // Debug: verificar se selectedLead está definido
-    console.log('Selected lead no Kanban:', selectedLead?.nome_cliente || 'nenhum')
 
     return (
       <div className="flex gap-6 overflow-x-auto pb-4">
@@ -1576,7 +1553,6 @@ export default function LeadsPage() {
                              config.color.includes('orange') ? '#F97316' :
                              config.color.includes('indigo') ? '#6366F1' : '#10B981' }}
                     onClick={() => {
-                      console.log('Card clicado:', lead.nome_cliente, lead.id)
                       setSelectedLead(lead)
                       setShowLeadModal(true)
                     }}
