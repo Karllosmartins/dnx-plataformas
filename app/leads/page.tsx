@@ -7,6 +7,7 @@ import { useAuth } from '../../components/AuthWrapper'
 import { getUserPlanInfo } from '../../lib/permissions'
 import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit, Crown, Info } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import DynamicFormFields from '../../components/DynamicFormFields'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome
@@ -139,19 +140,16 @@ interface CreateLeadModalProps {
 }
 
 function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadModalProps) {
+  // Campos básicos fixos (sempre presentes)
   const [formData, setFormData] = useState({
     nome_cliente: '',
-    cpf: '',
-    cpf_cnpj: '',
-    nome_empresa: '',
     telefone: '',
-    origem: 'WhatsApp',
-    tipo_consulta_interesse: 'Consulta Rating',
-    valor_estimado_divida: '',
-    tempo_negativado: '',
-    segmento_empresa: '',
-    porte_empresa: 'pequena'
+    origem: 'WhatsApp'
   })
+
+  // Campos personalizados dinâmicos (vem do tipo de negócio)
+  const [camposPersonalizados, setCamposPersonalizados] = useState<Record<string, any>>({})
+
   const [loading, setLoading] = useState(false)
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
 
@@ -163,7 +161,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
   }, [userId, isOpen])
 
   const fetchUserTipoNegocio = async () => {
-    console.log('Modal: Buscando tipo de negócio para userId:', userId)
+    console.log('[Modal] Buscando tipo de negócio para userId:', userId)
     try {
       const { data, error} = await supabase
         .from('user_tipos_negocio')
@@ -182,38 +180,42 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
         .eq('ativo', true)
         .single()
 
-      console.log('Modal: Resultado da busca:', data, 'Error:', error)
+      console.log('[Modal] Resultado da busca:', data, 'Error:', error)
 
       if (error) throw error
 
       const tipoNegocio = Array.isArray(data?.tipos_negocio) ? data?.tipos_negocio[0] : data?.tipos_negocio
 
-      console.log('[Modal] Tipo de negócio carregado:', tipoNegocio?.nome, 'ID:', tipoNegocio?.id)
-      setUserTipoNegocio(tipoNegocio)
+      // Processar campos_personalizados e status_personalizados
+      const camposPersonalizadosParsed = Array.isArray(tipoNegocio?.campos_personalizados)
+        ? tipoNegocio.campos_personalizados
+        : (typeof tipoNegocio?.campos_personalizados === 'string'
+          ? JSON.parse(tipoNegocio.campos_personalizados)
+          : [])
 
-      // Configuração dinâmica baseada no tipo
-      // Manter compatibilidade com tipos antigos hardcoded
-      if (tipoNegocio?.nome === 'previdenciario') {
-        console.log('Modal: Configurando para previdenciário')
-        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Análise de Viabilidade' }))
-      } else if (tipoNegocio?.nome === 'b2b') {
-        console.log('Modal: Configurando para B2B')
-        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Prospecção', origem: 'LinkedIn' }))
-      } else if (tipoNegocio?.nome === 'limpa_nome') {
-        console.log('Modal: Configurando para limpa nome')
-        setFormData(prev => ({ ...prev, tipo_consulta_interesse: 'Consulta Rating' }))
-      } else {
-        // Tipo genérico/personalizado - usar configuração padrão
-        console.log('Modal: Configurando tipo genérico:', tipoNegocio?.nome)
-        setFormData(prev => ({
-          ...prev,
-          tipo_consulta_interesse: 'Consulta',
-          origem: 'WhatsApp'
-        }))
+      const statusPersonalizadosParsed = Array.isArray(tipoNegocio?.status_personalizados)
+        ? tipoNegocio.status_personalizados
+        : (typeof tipoNegocio?.status_personalizados === 'string'
+          ? JSON.parse(tipoNegocio.status_personalizados)
+          : [])
+
+      const tipoProcessado = {
+        ...tipoNegocio,
+        campos_personalizados: camposPersonalizadosParsed,
+        status_personalizados: statusPersonalizadosParsed
+      }
+
+      console.log('[Modal] Tipo carregado:', tipoProcessado?.nome, '| ID:', tipoProcessado?.id)
+      console.log('[Modal] Campos personalizados:', camposPersonalizadosParsed.length, 'campos')
+
+      setUserTipoNegocio(tipoProcessado)
+
+      // Configurar origem padrão apenas para B2B (única exceção mantida)
+      if (tipoProcessado?.nome === 'b2b') {
+        setFormData(prev => ({ ...prev, origem: 'LinkedIn' }))
       }
     } catch (error) {
-      console.error('Erro ao buscar tipo de negócio:', error)
-      // Não forçar fallback para limpa_nome - mostrar erro
+      console.error('[Modal] Erro ao buscar tipo de negócio:', error)
       setUserTipoNegocio(null)
     }
   }
@@ -241,60 +243,21 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
       console.log('[Modal] Criando lead com tipo_negocio_id:', userTipoNegocio.id, 'status:', statusInicial)
 
-      let leadData: any = {
+      // Construir leadData com campos básicos + dinâmicos
+      const leadData: any = {
         user_id: parseInt(userId || '0'),
         nome_cliente: formData.nome_cliente,
         telefone: formData.telefone,
         origem: formData.origem,
         status_generico: statusInicial,
-        tipo_negocio_id: userTipoNegocio.id // Usar ID real do banco
+        tipo_negocio_id: userTipoNegocio.id, // ID real do banco
+        dados_personalizados: camposPersonalizados // Todos os campos dinâmicos vão aqui
       }
 
-      // Campos específicos baseados no tipo de negócio
-      if (userTipoNegocio?.nome === 'b2b') {
-        leadData = {
-          ...leadData,
-          cpf_cnpj: formData.cpf_cnpj ? formData.cpf_cnpj.replace(/[^0-9]/g, '') : null,
-          nome_empresa: formData.nome_empresa || null,
-          responsavel_encontrado: false,
-          falando_com_responsavel: false,
-          dados_personalizados: {
-            segmento_empresa: formData.segmento_empresa,
-            porte_empresa: formData.porte_empresa,
-            tipo_servico: formData.tipo_consulta_interesse
-          }
-        }
-      } else if (userTipoNegocio?.nome === 'previdenciario') {
-        leadData = {
-          ...leadData,
-          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
-          dados_personalizados: {
-            tipo_servico: formData.tipo_consulta_interesse,
-            valor_estimado_caso: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
-            situacao_atual: formData.tempo_negativado || null
-          }
-        }
-      } else if (userTipoNegocio?.nome === 'limpa_nome') {
-        leadData = {
-          ...leadData,
-          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
-          dados_personalizados: {
-            tipo_consulta_interesse: formData.tipo_consulta_interesse,
-            valor_estimado_divida: formData.valor_estimado_divida ? parseFloat(formData.valor_estimado_divida) : null,
-            tempo_negativado: formData.tempo_negativado || null
-          }
-        }
-      } else {
-        // Tipo genérico - usar campos padrão simples
-        leadData = {
-          ...leadData,
-          cpf: formData.cpf ? formData.cpf.replace(/[^0-9]/g, '') : null,
-          dados_personalizados: {
-            tipo_consulta_interesse: formData.tipo_consulta_interesse,
-            observacoes: formData.tempo_negativado || null
-          }
-        }
-      }
+      console.log('[Modal] Dados do lead a inserir:', {
+        ...leadData,
+        dados_personalizados: Object.keys(camposPersonalizados).length + ' campos'
+      })
 
       const { error } = await supabase
         .from('leads')
@@ -304,19 +267,13 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
 
       onLeadCreated()
       onClose()
+      // Limpar formulário
       setFormData({
         nome_cliente: '',
-        cpf: '',
-        cpf_cnpj: '',
-        nome_empresa: '',
         telefone: '',
-        origem: 'WhatsApp',
-        tipo_consulta_interesse: 'Consulta Rating',
-        valor_estimado_divida: '',
-        tempo_negativado: '',
-        segmento_empresa: '',
-        porte_empresa: 'pequena'
+        origem: 'WhatsApp'
       })
+      setCamposPersonalizados({})
     } catch (error) {
       console.error('Erro ao criar lead:', error)
     } finally {
@@ -353,50 +310,14 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
             />
           </div>
 
-          {userTipoNegocio?.nome === 'b2b' ? (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CNPJ *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="00.000.000/0001-00"
-                  value={formData.cpf_cnpj}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome da Empresa *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nome da empresa"
-                  value={formData.nome_empresa}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nome_empresa: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CPF
-              </label>
-              <input
-                type="text"
-                placeholder="000.000.000-00"
-                value={formData.cpf}
-                onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
+          {/* Campos personalizados dinâmicos baseados no tipo de negócio */}
+          <DynamicFormFields
+            campos={userTipoNegocio?.campos_personalizados || []}
+            valores={camposPersonalizados}
+            onChange={(nome, valor) => {
+              setCamposPersonalizados(prev => ({ ...prev, [nome]: valor }))
+            }}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -421,6 +342,7 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
               onChange={(e) => setFormData(prev => ({ ...prev, origem: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+              {/* TODO FASE 1.4: Tornar origem dinâmica via origens_padrao do banco */}
               {userTipoNegocio?.nome === 'b2b' ? (
                 <>
                   <option value="LinkedIn">LinkedIn</option>
@@ -446,156 +368,6 @@ function CreateLeadModal({ isOpen, onClose, onLeadCreated, userId }: CreateLeadM
               )}
             </select>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {userTipoNegocio?.nome === 'previdenciario' ? 'Tipo de Serviço' :
-               userTipoNegocio?.nome === 'b2b' ? 'Tipo de Serviço' : 'Tipo de Consulta de Interesse'}
-            </label>
-            <select
-              value={formData.tipo_consulta_interesse}
-              onChange={(e) => setFormData(prev => ({ ...prev, tipo_consulta_interesse: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {userTipoNegocio?.nome === 'previdenciario' ? (
-                <>
-                  <option value="Análise de Viabilidade">Análise de Viabilidade</option>
-                  <option value="Revisão de Benefício">Revisão de Benefício</option>
-                  <option value="Recurso INSS">Recurso INSS</option>
-                  <option value="Aposentadoria">Aposentadoria</option>
-                  <option value="Auxílio Doença">Auxílio Doença</option>
-                  <option value="BPC/LOAS">BPC/LOAS</option>
-                </>
-              ) : userTipoNegocio?.nome === 'b2b' ? (
-                <>
-                  <option value="Prospecção">Prospecção</option>
-                  <option value="Consultoria">Consultoria</option>
-                  <option value="Software">Software/Tecnologia</option>
-                  <option value="Marketing Digital">Marketing Digital</option>
-                  <option value="Vendas">Vendas</option>
-                  <option value="Treinamento">Treinamento</option>
-                  <option value="Outros Serviços">Outros Serviços</option>
-                </>
-              ) : (
-                <>
-                  <option value="Consulta Rating">Consulta Rating</option>
-                  <option value="Consulta Completa">Consulta Completa</option>
-                  <option value="Análise de Crédito">Análise de Crédito</option>
-                  <option value="Limpa Nome">Limpa Nome</option>
-                </>
-              )}
-            </select>
-          </div>
-
-          {userTipoNegocio?.nome === 'previdenciario' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor do Caso Estimado
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.valor_estimado_divida}
-                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          ) : userTipoNegocio?.nome === 'b2b' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Budget Estimado
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.valor_estimado_divida}
-                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor Estimado da Dívida
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.valor_estimado_divida}
-                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado_divida: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {userTipoNegocio?.nome === 'previdenciario' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Situação Atual
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Aposentado, Trabalhando, Afastado"
-                value={formData.tempo_negativado}
-                onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          ) : userTipoNegocio?.nome === 'b2b' ? (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Segmento da Empresa
-                </label>
-                <select
-                  value={formData.segmento_empresa}
-                  onChange={(e) => setFormData(prev => ({ ...prev, segmento_empresa: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecione o segmento</option>
-                  <option value="tecnologia">Tecnologia</option>
-                  <option value="saude">Saúde</option>
-                  <option value="educacao">Educação</option>
-                  <option value="industria">Indústria</option>
-                  <option value="varejo">Varejo</option>
-                  <option value="servicos">Serviços</option>
-                  <option value="financeiro">Financeiro</option>
-                  <option value="outros">Outros</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Porte da Empresa
-                </label>
-                <select
-                  value={formData.porte_empresa}
-                  onChange={(e) => setFormData(prev => ({ ...prev, porte_empresa: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="pequena">Pequena (até 99 funcionários)</option>
-                  <option value="media">Média (100-499 funcionários)</option>
-                  <option value="grande">Grande (500+ funcionários)</option>
-                </select>
-              </div>
-            </>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tempo Negativado
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: 2 anos, 6 meses"
-                value={formData.tempo_negativado}
-                onChange={(e) => setFormData(prev => ({ ...prev, tempo_negativado: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
 
           <div className="flex gap-3 pt-4">
             <button

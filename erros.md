@@ -1,56 +1,107 @@
-661-a4807c9bea894384.js:1 User string from localStorage: {"id":"32","email":"rickdosimoveis@gmail.com","name":"Rick dos Imóveis Assessoria Imobiliária","role":"user","created_at":"2025-10-17T21:11:30.647515+00:00","active":true}
-661-a4807c9bea894384.js:1 Usuario atual: {id: '32', email: 'rickdosimoveis@gmail.com', name: 'Rick dos Imóveis Assessoria Imobiliária', role: 'user', created_at: '2025-10-17T21:11:30.647515+00:00', …}
-page-6f474d1dc02d80bb.js:1 Tipo de negócio: mcmv_imoveis
-page-6f474d1dc02d80bb.js:1 Status personalizados: (11) ['lead_capturado', 'qualificacao_andamento', 'aguardando_documentacao', 'analise_credito', 'credito_aprovado', 'credito_ajustes', 'reuniao_agendada', 'proposta_enviada', 'negociando', 'negocio_fechado', 'perdido']0: "lead_capturado"1: "qualificacao_andamento"2: "aguardando_documentacao"3: "analise_credito"4: "credito_aprovado"5: "credito_ajustes"6: "reuniao_agendada"7: "proposta_enviada"8: "negociando"9: "negocio_fechado"10: "perdido"length: 11[[Prototype]]: Array(0)
-page-6f474d1dc02d80bb.js:1 Status encontrados nos leads: []length: 0[[Prototype]]: Array(0)
-feature_collector.js:23 using deprecated parameters for the initialization function; pass a single object instead
-H @ feature_collector.js:23
-main @ feature_collector.js:23
-mainFunction @ feature_collector.js:23
-(anônimo) @ feature_collector.js:23
-
-
-no dashboard aparece isso:
-0
-Novos Leads
-0
-Qualificados
-0
-Em Andamento
-0
-Casos Viáveis
-0
-Em Negociação
-0
-Fechados
-0
-Leads Perdidos
-0
-Total Geral
-
-Total de Leads
-
-0
-
-0 novos leads
-
-Taxa de Conversão
-
-0.0%
-
-0 fechados
-
-Receita Total
-
-R$ 0,00
-
-0 em andamento
-
-Contratos Fechados
-
-R$ 0,00
-
-0 contratos
-
-
-esse é o novo tipo de negocio: [{"idx":3,"id":5,"nome":"mcmv_imoveis","nome_exibicao":"Imóveis MCMV - Goiânia","descricao":"Venda de imóveis residenciais com financiamento MCMV na região metropolitana de Goiânia","icone":"home","cor":"#10B981","campos_personalizados":"[{\"nome\": \"objetivo_compra\", \"tipo\": \"select\", \"label\": \"Objetivo da Compra\", \"opcoes\": [\"morar\", \"investir\"], \"obrigatorio\": true}, {\"nome\": \"localizacao_preferida\", \"tipo\": \"select\", \"label\": \"Localização Preferida\", \"opcoes\": [\"goiania\", \"aparecida\", \"ambos\"], \"obrigatorio\": true}, {\"nome\": \"quantidade_quartos\", \"tipo\": \"select\", \"label\": \"Quantidade de Quartos\", \"opcoes\": [\"1\", \"2\", \"3\", \"4_ou_mais\"], \"obrigatorio\": false}, {\"nome\": \"tipo_imovel\", \"tipo\": \"select\", \"label\": \"Tipo de Imóvel\", \"opcoes\": [\"casa\", \"apartamento\", \"indiferente\"], \"obrigatorio\": false}, {\"nome\": \"estagio_imovel\", \"tipo\": \"select\", \"label\": \"Estágio do Imóvel\", \"opcoes\": [\"planta\", \"pronto\", \"indiferente\"], \"obrigatorio\": false}, {\"nome\": \"tem_aprovacao_bancaria\", \"tipo\": \"select\", \"label\": \"Já tem aprovação bancária?\", \"opcoes\": [\"sim\", \"nao\", \"nao_sabe\"], \"obrigatorio\": false}, {\"nome\": \"banco_aprovacao\", \"tipo\": \"text\", \"label\": \"Banco da Aprovação\", \"obrigatorio\": false}, {\"nome\": \"tipo_vinculo\", \"tipo\": \"select\", \"label\": \"Tipo de Vínculo Empregatício\", \"opcoes\": [\"carteira_assinada\", \"autonomo\", \"outros\"], \"obrigatorio\": false}, {\"nome\": \"faixa_parcela\", \"tipo\": \"select\", \"label\": \"Faixa de Parcela Desejada\", \"opcoes\": [\"ate_500\", \"500_800\", \"800_1200\", \"1200_1800\", \"acima_1800\"], \"obrigatorio\": false}, {\"nome\": \"valor_entrada_disponivel\", \"tipo\": \"select\", \"label\": \"Valor de Entrada Disponível\", \"opcoes\": [\"sem_entrada\", \"ate_5k\", \"5k_15k\", \"15k_30k\", \"acima_30k\"], \"obrigatorio\": false}, {\"nome\": \"forma_pagamento\", \"tipo\": \"select\", \"label\": \"Forma de Pagamento\", \"opcoes\": [\"financiamento_caixa\", \"financiamento_construtora\", \"a_vista\"], \"obrigatorio\": false}, {\"nome\": \"compra_conjunta\", \"tipo\": \"select\", \"label\": \"Compra com mais alguém?\", \"opcoes\": [\"sim\", \"nao\"], \"obrigatorio\": false}, {\"nome\": \"nome_co_comprador\", \"tipo\": \"text\", \"label\": \"Nome do Co-comprador\", \"obrigatorio\": false}, {\"nome\": \"cpf_co_comprador\", \"tipo\": \"text\", \"label\": \"CPF do Co-comprador\", \"obrigatorio\": false}, {\"nome\": \"vinculo_co_comprador\", \"tipo\": \"select\", \"label\": \"Vínculo do Co-comprador\", \"opcoes\": [\"carteira_assinada\", \"autonomo\"], \"obrigatorio\": false}, {\"nome\": \"status_documentacao\", \"tipo\": \"select\", \"label\": \"Status da Documentação\", \"opcoes\": [\"nao_solicitada\", \"solicitada\", \"parcial\", \"completa\", \"recusou_enviar\"], \"obrigatorio\": false}, {\"nome\": \"data_solicitacao_docs\", \"tipo\": \"date\", \"label\": \"Data Solicitação Documentos\", \"obrigatorio\": false}, {\"nome\": \"data_recebimento_docs\", \"tipo\": \"date\", \"label\": \"Data Recebimento Documentos\", \"obrigatorio\": false}, {\"nome\": \"quantidade_fotos_recebidas\", \"tipo\": \"number\", \"label\": \"Quantidade de Fotos Recebidas\", \"obrigatorio\": false}, {\"nome\": \"tipo_documentacao\", \"tipo\": \"select\", \"label\": \"Tipo de Documentação\", \"opcoes\": [\"autonomo\", \"clt\", \"mista\"], \"obrigatorio\": false}, {\"nome\": \"data_envio_analise\", \"tipo\": \"date\", \"label\": \"Data Envio para Análise Caixa\", \"obrigatorio\": false}, {\"nome\": \"status_caixa\", \"tipo\": \"select\", \"label\": \"Status Análise Caixa\", \"opcoes\": [\"aguardando\", \"em_analise\", \"aprovado\", \"reprovado\", \"pendencias\"], \"obrigatorio\": false}, {\"nome\": \"valor_aprovado\", \"tipo\": \"number\", \"label\": \"Valor Aprovado (R$)\", \"obrigatorio\": false}, {\"nome\": \"prazo_aprovacao_meses\", \"tipo\": \"number\", \"label\": \"Prazo Aprovação (meses)\", \"obrigatorio\": false}, {\"nome\": \"taxa_juros\", \"tipo\": \"number\", \"label\": \"Taxa de Juros (%)\", \"obrigatorio\": false}, {\"nome\": \"motivo_reprovacao\", \"tipo\": \"textarea\", \"label\": \"Motivo Reprovação/Pendência\", \"obrigatorio\": false}, {\"nome\": \"status_reuniao\", \"tipo\": \"select\", \"label\": \"Status da Reunião\", \"opcoes\": [\"nao_agendada\", \"agendada\", \"realizada\", \"nao_compareceu\", \"reagendada\"], \"obrigatorio\": false}, {\"nome\": \"data_reuniao\", \"tipo\": \"datetime\", \"label\": \"Data e Hora da Reunião\", \"obrigatorio\": false}, {\"nome\": \"tipo_reuniao\", \"tipo\": \"select\", \"label\": \"Tipo de Reunião\", \"opcoes\": [\"online\", \"presencial\", \"entrega_docs\"], \"obrigatorio\": false}, {\"nome\": \"link_reuniao\", \"tipo\": \"text\", \"label\": \"Link da Reunião Online\", \"obrigatorio\": false}, {\"nome\": \"confirmacao_enviada\", \"tipo\": \"select\", \"label\": \"Confirmação Enviada?\", \"opcoes\": [\"sim\", \"nao\"], \"obrigatorio\": false}, {\"nome\": \"construtoras_interesse\", \"tipo\": \"text\", \"label\": \"Construtoras de Interesse\", \"obrigatorio\": false}, {\"nome\": \"faixa_valor_imovel\", \"tipo\": \"select\", \"label\": \"Faixa de Valor do Imóvel\", \"opcoes\": [\"ate_150k\", \"150k_200k\", \"200k_250k\", \"250k_300k\", \"acima_300k\"], \"obrigatorio\": false}, {\"nome\": \"origem_lead\", \"tipo\": \"select\", \"label\": \"Origem do Lead\", \"opcoes\": [\"whatsapp\", \"instagram\", \"facebook\", \"indicacao\", \"google\", \"site\", \"outros\"], \"obrigatorio\": false}, {\"nome\": \"temperatura_lead\", \"tipo\": \"select\", \"label\": \"Temperatura do Lead\", \"opcoes\": [\"quente\", \"morno\", \"frio\"], \"obrigatorio\": false}, {\"nome\": \"nivel_interesse\", \"tipo\": \"select\", \"label\": \"Nível de Interesse\", \"opcoes\": [\"1\", \"2\", \"3\", \"4\", \"5\"], \"obrigatorio\": false}, {\"nome\": \"possui_imovel_nome\", \"tipo\": \"select\", \"label\": \"Possui imóvel no nome?\", \"opcoes\": [\"sim\", \"nao\"], \"obrigatorio\": false}, {\"nome\": \"primeira_compra\", \"tipo\": \"select\", \"label\": \"É primeira compra?\", \"opcoes\": [\"sim\", \"nao\"], \"obrigatorio\": false}, {\"nome\": \"tamanho_familia\", \"tipo\": \"number\", \"label\": \"Quantidade de Pessoas na Família\", \"obrigatorio\": false}, {\"nome\": \"urgencia_compra\", \"tipo\": \"select\", \"label\": \"Urgência da Compra\", \"opcoes\": [\"imediato\", \"1_3_meses\", \"3_6_meses\", \"6_12_meses\", \"sem_pressa\"], \"obrigatorio\": false}, {\"nome\": \"motivo_perda\", \"tipo\": \"select\", \"label\": \"Motivo da Perda\", \"opcoes\": [\"nao_interessou_imoveis\", \"valor_acima_orcamento\", \"credito_reprovado\", \"comprou_outro_corretor\", \"desistiu_compra\", \"nao_respondeu\", \"localizacao_nao_atendeu\", \"prazo_entrega_nao_atendeu\", \"outro\"], \"obrigatorio\": false}, {\"nome\": \"observacoes_atendimento\", \"tipo\": \"textarea\", \"label\": \"Notas do Atendimento\", \"obrigatorio\": false}, {\"nome\": \"objecoes_apresentadas\", \"tipo\": \"textarea\", \"label\": \"Objeções Apresentadas\", \"obrigatorio\": false}, {\"nome\": \"preferencias_especificas\", \"tipo\": \"textarea\", \"label\": \"Preferências Específicas\", \"obrigatorio\": false}]","status_personalizados":"[\"lead_capturado\", \"qualificacao_andamento\", \"aguardando_documentacao\", \"analise_credito\", \"credito_aprovado\", \"credito_ajustes\", \"reuniao_agendada\", \"proposta_enviada\", \"negociando\", \"negocio_fechado\", \"perdido\"]","metricas_config":"{\"alertas\": [{\"acao\": \"notificar\", \"nome\": \"lead_sem_resposta_48h\", \"condicao\": \"ultimo_contato > 48 horas\"}, {\"acao\": \"notificar\", \"nome\": \"docs_solicitados_sem_envio\", \"condicao\": \"status_documentacao == solicitada E dias_desde_solicitacao > 5\"}, {\"acao\": \"enviar_lembrete\", \"nome\": \"reuniao_proximo_dia\", \"condicao\": \"status_reuniao == agendada E data_reuniao - hoje == 1\"}, {\"acao\": \"verificar_retorno\", \"nome\": \"analise_48h\", \"condicao\": \"status_caixa == em_analise E dias_desde_envio >= 2\"}], \"campos_receita\": [{\"tipo\": \"soma\", \"campo\": \"valor_aprovado\", \"label\": \"Valor do Financiamento Aprovado\"}, {\"tipo\": \"distribuicao\", \"campo\": \"faixa_valor_imovel\", \"label\": \"Faixa de Valor dos Imóveis\"}], \"campos_conversao\": [{\"de\": \"lead_capturado\", \"para\": \"qualificacao_andamento\", \"label\": \"Taxa de Qualificação\"}, {\"de\": \"qualificacao_andamento\", \"para\": \"aguardando_documentacao\", \"label\": \"Taxa de Solicitação de Docs\"}, {\"de\": \"aguardando_documentacao\", \"para\": \"analise_credito\", \"label\": \"Taxa de Envio de Docs\"}, {\"de\": \"analise_credito\", \"para\": \"credito_aprovado\", \"label\": \"Taxa de Aprovação de Crédito\"}, {\"de\": \"credito_aprovado\", \"para\": \"reuniao_agendada\", \"label\": \"Taxa de Agendamento\"}, {\"de\": \"reuniao_agendada\", \"para\": \"proposta_enviada\", \"label\": \"Taxa de Comparecimento\"}, {\"de\": \"proposta_enviada\", \"para\": \"negocio_fechado\", \"label\": \"Taxa de Fechamento\"}], \"metricas_principais\": [{\"nome\": \"ticket_medio\", \"tipo\": \"media\", \"campo\": \"valor_aprovado\", \"label\": \"Ticket Médio\", \"filtro_status\": [\"negocio_fechado\"]}, {\"nome\": \"tempo_medio_fechamento\", \"tipo\": \"tempo_entre_status\", \"label\": \"Tempo Médio de Fechamento (dias)\", \"status_final\": \"negocio_fechado\", \"status_inicial\": \"lead_capturado\"}, {\"nome\": \"taxa_aprovacao_geral\", \"tipo\": \"percentual\", \"label\": \"Taxa de Aprovação Geral (%)\", \"numerador_status\": [\"credito_aprovado\"], \"denominador_status\": [\"analise_credito\"]}, {\"nome\": \"leads_por_origem\", \"tipo\": \"distribuicao\", \"campo\": \"origem_lead\", \"label\": \"Leads por Origem\"}, {\"nome\": \"taxa_docs_enviados\", \"tipo\": \"percentual\", \"campo\": \"status_documentacao\", \"label\": \"Taxa de Envio de Docs (%)\", \"valor_alvo\": \"completa\"}, {\"nome\": \"motivos_perda\", \"tipo\": \"distribuicao\", \"campo\": \"motivo_perda\", \"label\": \"Principais Motivos de Perda\", \"filtro_status\": [\"perdido\"]}, {\"nome\": \"temperatura_leads\", \"tipo\": \"distribuicao\", \"campo\": \"temperatura_lead\", \"label\": \"Distribuição de Temperatura\"}, {\"nome\": \"objetivo_distribuicao\", \"tipo\": \"distribuicao\", \"campo\": \"objetivo_compra\", \"label\": \"Morar vs Investir\"}, {\"nome\": \"tipo_vinculo_distribuicao\", \"tipo\": \"distribuicao\", \"campo\": \"tipo_vinculo\", \"label\": \"CLT vs Autônomo\"}, {\"nome\": \"taxa_reuniao_realizada\", \"tipo\": \"percentual\", \"campo\": \"status_reuniao\", \"label\": \"Taxa de Comparecimento em Reuniões (%)\", \"valor_alvo\": \"realizada\"}]}","ativo":true,"ordem":1,"created_at":"2025-10-17 19:58:46.864369+00","updated_at":"2025-10-17 19:58:46.864369+00"}]
+661-a4807c9bea894384.js:1 User string from localStorage: null
+661-a4807c9bea894384.js:1 Usuario atual: null
+661-a4807c9bea894384.js:1 AuthWrapper: Iniciando processo de login
+661-a4807c9bea894384.js:1 Tentativa de login: rickdosimoveis@gmail.com
+661-a4807c9bea894384.js:1 Resultado da busca no Supabase: Object
+661-a4807c9bea894384.js:1 Verificando senha...
+661-a4807c9bea894384.js:1 Login bem-sucedido!
+661-a4807c9bea894384.js:1 AuthWrapper: Resultado do login: Object
+661-a4807c9bea894384.js:1 AuthWrapper: Login bem-sucedido, definindo usuário
+page-10a4699b503ae2d3.js:1 [Dashboard] Filtrando leads por tipo_negocio_id: 5 mcmv_imoveis
+page-10a4699b503ae2d3.js:1 [Dashboard] Leads carregados: 0
+page-10a4699b503ae2d3.js:1 Tipo de negócio: mcmv_imoveis
+page-10a4699b503ae2d3.js:1 Status personalizados: Array(11)
+page-10a4699b503ae2d3.js:1 Status encontrados nos leads: Array(0)
+page-5226ed659f2fba62.js:1 Dashboard: Buscando tipo de negócio para usuário: 32
+page-5226ed659f2fba62.js:1 Plan info loaded: Object
+page-5226ed659f2fba62.js:1 Dashboard: Resultado da busca: Object Error: null
+page-5226ed659f2fba62.js:1 Dashboard: Tipo configurado: Object
+page-5226ed659f2fba62.js:1 Modal: Buscando tipo de negócio para userId: 32
+page-5226ed659f2fba62.js:1 Modal: Resultado da busca: Object Error: null
+page-5226ed659f2fba62.js:1 [Modal] Tipo de negócio carregado: mcmv_imoveis ID: 5
+page-5226ed659f2fba62.js:1 Modal: Configurando tipo genérico: mcmv_imoveis
+page-10a4699b503ae2d3.js:1 [Dashboard] Filtrando leads por tipo_negocio_id: 5 mcmv_imoveis
+page-10a4699b503ae2d3.js:1 [Dashboard] Leads carregados: 0
+page-10a4699b503ae2d3.js:1 Tipo de negócio: mcmv_imoveis
+page-10a4699b503ae2d3.js:1 Status personalizados: Array(11)
+page-10a4699b503ae2d3.js:1 Status encontrados nos leads: Array(0)
+page-5226ed659f2fba62.js:1 Dashboard: Buscando tipo de negócio para usuário: 32
+page-5226ed659f2fba62.js:1 Plan info loaded: Object
+page-5226ed659f2fba62.js:1 Dashboard: Resultado da busca: Object Error: null
+page-5226ed659f2fba62.js:1 Dashboard: Tipo configurado: Object
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Iniciando para usuário: 32
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Resultado da busca tipo: Object Erro: null
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Tipo detectado: mcmv_imoveis
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Inserindo leads: 4 leads
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Dados a inserir: [
+  {
+    "user_id": 32,
+    "nome_cliente": "João Silva Santos",
+    "cpf": "12345678901",
+    "telefone": "(11) 99999-9999",
+    "origem": "WhatsApp",
+    "status_limpa_nome": "qualificacao",
+    "valor_estimado_divida": 15000,
+    "tempo_negativado": "2 anos",
+    "tipo_consulta_interesse": "Consulta Rating",
+    "tipo_negocio_id": 1,
+    "dados_personalizados": {}
+  },
+  {
+    "user_id": 32,
+    "nome_cliente": "Maria Oliveira",
+    "cpf": "98765432100",
+    "telefone": "(11) 88888-8888",
+    "origem": "Site",
+    "status_limpa_nome": "pagamento_consulta",
+    "valor_estimado_divida": 8500,
+    "tempo_negativado": "1 ano e 6 meses",
+    "tipo_consulta_interesse": "Consulta Completa",
+    "valor_pago_consulta": 199,
+    "tipo_negocio_id": 1,
+    "dados_personalizados": {}
+  },
+  {
+    "user_id": 32,
+    "nome_cliente": "Carlos Eduardo",
+    "cpf": "45678912345",
+    "telefone": "(21) 77777-7777",
+    "origem": "Indicação",
+    "status_limpa_nome": "consta_divida",
+    "valor_estimado_divida": 12000,
+    "valor_real_divida": 11547.85,
+    "valor_pago_consulta": 199,
+    "tempo_negativado": "3 anos",
+    "tipo_consulta_interesse": "Limpa Nome",
+    "orgaos_negativados": [
+      "SPC",
+      "SERASA",
+      "Banco do Brasil"
+    ],
+    "tipo_negocio_id": 1,
+    "dados_personalizados": {}
+  },
+  {
+    "user_id": 32,
+    "nome_cliente": "Ana Paula Costa",
+    "cpf": "78912345678",
+    "telefone": "(31) 66666-6666",
+    "origem": "WhatsApp",
+    "status_limpa_nome": "cliente_fechado",
+    "valor_estimado_divida": 20000,
+    "valor_real_divida": 18750,
+    "valor_pago_consulta": 199,
+    "valor_contrato": 2500,
+    "tempo_negativado": "4 anos",
+    "tipo_consulta_interesse": "Análise de Crédito",
+    "vendedor_responsavel": "Vendedor Principal",
+    "tipo_negocio_id": 1,
+    "dados_personalizados": {}
+  }
+]
+enwxbkyvnrjderqdygtl.supabase.co/rest/v1/leads?columns=%22user_id%22%2C%22nome_cliente%22%2C%22cpf%22%2C%22telefone%22%2C%22origem%22%2C%22status_limpa_nome%22%2C%22valor_estimado_divida%22%2C%22tempo_negativado%22%2C%22tipo_consulta_interesse%22%2C%22tipo_negocio_id%22%2C%22dados_personalizados%22%2C%22valor_pago_consulta%22%2C%22valor_real_divida%22%2C%22orgaos_negativados%22%2C%22valor_contrato%22%2C%22vendedor_responsavel%22&select=*:1  Failed to load resource: the server responded with a status of 400 ()
+page-5226ed659f2fba62.js:1 CreateSampleLeads: Resultado da inserção: Object
+472-ceed697e056bc12d.js:1 CreateSampleLeads: Erro na inserção: Object
+window.console.error @ 472-ceed697e056bc12d.js:1
+472-ceed697e056bc12d.js:1 Erro ao criar leads de exemplo: Object
+window.console.error @ 472-ceed697e056bc12d.js:1
