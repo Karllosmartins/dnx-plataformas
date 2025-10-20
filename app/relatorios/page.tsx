@@ -459,18 +459,66 @@ export default function RelatoriosPage() {
   const exportToCSV = () => {
     const filteredLeads = getFilteredLeads()
 
-    const headers = ['Nome', 'Telefone', 'CPF/CNPJ', 'Status', 'Campanha', 'Origem', 'Valor', 'WhatsApp', 'Data']
-    const rows = filteredLeads.map(lead => [
-      lead.nome_cliente || '',
-      lead.telefone || '',
-      lead.cpf || lead.cpf_cnpj || '',
-      lead.status_generico || '',
-      lead.nome_campanha || '',
-      lead.origem || '',
-      lead.valor_contrato || '0',
-      lead.existe_whatsapp ? 'Sim' : 'Não',
-      lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : ''
-    ])
+    // Headers base
+    const baseHeaders = ['Nome', 'Telefone', 'CPF/CNPJ', 'Status', 'Campanha', 'Origem', 'Valor', 'WhatsApp', 'Data']
+
+    // Adicionar headers de campos personalizados
+    const customFieldHeaders: string[] = []
+    const customFieldNames: string[] = []
+
+    if (userTipoNegocio?.campos_personalizados && Array.isArray(userTipoNegocio.campos_personalizados)) {
+      userTipoNegocio.campos_personalizados.forEach((campo: any) => {
+        const fieldName = campo.nome || campo.name
+        if (fieldName) {
+          customFieldNames.push(fieldName)
+          // Formatar nome do campo para o header
+          const formattedName = fieldName
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+          customFieldHeaders.push(formattedName)
+        }
+      })
+    }
+
+    const headers = [...baseHeaders, ...customFieldHeaders]
+
+    const rows = filteredLeads.map(lead => {
+      // Valores base
+      const baseValues = [
+        lead.nome_cliente || '',
+        lead.telefone || '',
+        lead.cpf || lead.cpf_cnpj || '',
+        lead.status_generico || '',
+        lead.nome_campanha || '',
+        lead.origem || '',
+        lead.valor_contrato || '0',
+        lead.existe_whatsapp ? 'Sim' : 'Não',
+        lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : ''
+      ]
+
+      // Extrair valores de campos personalizados
+      const customValues: string[] = []
+      if (customFieldNames.length > 0 && lead.dados_personalizados) {
+        try {
+          const dados = typeof lead.dados_personalizados === 'string'
+            ? JSON.parse(lead.dados_personalizados)
+            : lead.dados_personalizados
+
+          customFieldNames.forEach(fieldName => {
+            const valor = dados[fieldName]
+            customValues.push(valor ? String(valor) : '')
+          })
+        } catch (e) {
+          // Se houver erro no parsing, preencher com vazios
+          customFieldNames.forEach(() => customValues.push(''))
+        }
+      } else {
+        // Se não houver dados_personalizados, preencher com vazios
+        customFieldNames.forEach(() => customValues.push(''))
+      }
+
+      return [...baseValues, ...customValues]
+    })
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
