@@ -900,16 +900,16 @@ export default function RelatoriosPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {metrics.metricasPrincipais.map((metrica: any, index: number) => {
-              // Cores para os cards
+              // Cores para os cards - usando valores RGB diretos
               const colors = [
-                { from: 'cyan-500', to: 'cyan-600', light: 'cyan-100', icon: 'cyan-200' },
-                { from: 'emerald-500', to: 'emerald-600', light: 'emerald-100', icon: 'emerald-200' },
-                { from: 'violet-500', to: 'violet-600', light: 'violet-100', icon: 'violet-200' },
-                { from: 'rose-500', to: 'rose-600', light: 'rose-100', icon: 'rose-200' },
-                { from: 'amber-500', to: 'amber-600', light: 'amber-100', icon: 'amber-200' },
-                { from: 'indigo-500', to: 'indigo-600', light: 'indigo-100', icon: 'indigo-200' },
-                { from: 'pink-500', to: 'pink-600', light: 'pink-100', icon: 'pink-200' },
-                { from: 'teal-500', to: 'teal-600', light: 'teal-100', icon: 'teal-200' },
+                { gradient: 'linear-gradient(to bottom right, #06b6d4, #0891b2)' }, // cyan
+                { gradient: 'linear-gradient(to bottom right, #10b981, #059669)' }, // emerald
+                { gradient: 'linear-gradient(to bottom right, #8b5cf6, #7c3aed)' }, // violet
+                { gradient: 'linear-gradient(to bottom right, #f43f5e, #e11d48)' }, // rose
+                { gradient: 'linear-gradient(to bottom right, #f59e0b, #d97706)' }, // amber
+                { gradient: 'linear-gradient(to bottom right, #6366f1, #4f46e5)' }, // indigo
+                { gradient: 'linear-gradient(to bottom right, #ec4899, #db2777)' }, // pink
+                { gradient: 'linear-gradient(to bottom right, #14b8a6, #0d9488)' }, // teal
               ]
               const color = colors[index % colors.length]
 
@@ -968,16 +968,19 @@ export default function RelatoriosPage() {
               return (
                 <div
                   key={metrica.nome}
-                  className={`bg-gradient-to-br from-${color.from} to-${color.to} rounded-lg shadow-lg p-6 text-white`}
+                  className="rounded-lg shadow-lg p-6"
+                  style={{ background: color.gradient }}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white opacity-90 text-sm font-medium">
+                      <p className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                         {metrica.label}
                       </p>
-                      <p className="text-2xl font-bold mt-2">{valorFormatado}</p>
+                      <p className="text-2xl font-bold mt-2" style={{ color: '#ffffff' }}>
+                        {valorFormatado}
+                      </p>
                     </div>
-                    <IconComponent className="h-10 w-10 text-white opacity-70" />
+                    <IconComponent className="h-10 w-10" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                   </div>
                 </div>
               )
