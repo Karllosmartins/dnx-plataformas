@@ -317,6 +317,36 @@ export default function RelatoriosPage() {
       }
     })
 
+    // Análise de campos personalizados
+    const customFieldsData: Record<string, Record<string, number>> = {}
+
+    if (userTipoNegocio?.campos_personalizados && Array.isArray(userTipoNegocio.campos_personalizados)) {
+      userTipoNegocio.campos_personalizados.forEach((campo: any) => {
+        const fieldName = campo.nome || campo.name
+        if (fieldName) {
+          customFieldsData[fieldName] = {}
+
+          filteredLeads.forEach(lead => {
+            if (lead.dados_personalizados) {
+              try {
+                const dados = typeof lead.dados_personalizados === 'string'
+                  ? JSON.parse(lead.dados_personalizados)
+                  : lead.dados_personalizados
+
+                const valor = dados[fieldName]
+                if (valor) {
+                  const valorStr = String(valor)
+                  customFieldsData[fieldName][valorStr] = (customFieldsData[fieldName][valorStr] || 0) + 1
+                }
+              } catch (e) {
+                // Ignora erros de parsing
+              }
+            }
+          })
+        }
+      })
+    }
+
     // Métricas específicas por tipo de negócio
     let specificMetrics: any = {}
 
@@ -392,7 +422,8 @@ export default function RelatoriosPage() {
       campanhaValores,
       origemCounts,
       timeline,
-      specific: specificMetrics
+      specific: specificMetrics,
+      customFields: customFieldsData
     }
   }
 
@@ -846,6 +877,77 @@ export default function RelatoriosPage() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Gráficos de Campos Personalizados */}
+      {metrics.customFields && Object.keys(metrics.customFields).length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <Activity className="h-6 w-6 mr-2 text-purple-600" />
+            Análise de Campos Personalizados
+          </h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Object.entries(metrics.customFields).map(([fieldName, fieldData]) => {
+              // Só renderizar se houver dados
+              if (Object.keys(fieldData).length === 0) return null
+
+              const chartData = Object.entries(fieldData)
+                .map(([value, count]) => ({
+                  name: value,
+                  value: count as number
+                }))
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 10) // Máximo de 10 itens para não poluir o gráfico
+
+              // Formatando o nome do campo
+              const formattedFieldName = fieldName
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase())
+
+              return (
+                <div key={fieldName} className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Target className="h-5 w-5 mr-2 text-purple-600" />
+                    {formattedFieldName}
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={120}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8B5CF6" name={formattedFieldName}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  {/* Resumo */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total de variações:</span>
+                      <span className="font-semibold text-gray-900">{Object.keys(fieldData).length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-gray-600">Mais comum:</span>
+                      <span className="font-semibold text-purple-600">
+                        {chartData[0]?.name} ({chartData[0]?.value} leads)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tabela de Valor por Campanha */}
       <div className="bg-white rounded-lg shadow p-6">
