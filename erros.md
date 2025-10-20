@@ -1,12 +1,41 @@
 661-a4807c9bea894384.js:1 User string from localStorage: {"id":"32","email":"rickdosimoveis@gmail.com","name":"Rick dos Imóveis Assessoria Imobiliária","role":"user","created_at":"2025-10-17T21:11:30.647515+00:00","active":true}
-661-a4807c9bea894384.js:1 Usuario atual: Object
-page-7324df39013d8c95.js:1 [Dashboard] Filtrando leads por tipo_negocio_id: 5 mcmv_imoveis
-page-7324df39013d8c95.js:1 [Dashboard] Leads carregados: 5
-page-7324df39013d8c95.js:1 Tipo de negócio: mcmv_imoveis
-page-7324df39013d8c95.js:1 Status personalizados: Array(11)
-page-7324df39013d8c95.js:1 Status encontrados nos leads: Array(4)
-feature_collector.js:23 using deprecated parameters for the initialization function; pass a single object instead
-H @ feature_collector.js:23
-enwxbkyvnrjderqdygtl.supabase.co/rest/v1/users?select=tipo_negocio_id&id=eq.32:1  Failed to load resource: the server responded with a status of 400 ()
-472-ceed697e056bc12d.js:1 Erro ao buscar tipo de negócio: Object
-push.20811.window.console.error @ 472-ceed697e056bc12d.js:1
+661-a4807c9bea894384.js:1 Usuario atual: {id: '32', email: 'rickdosimoveis@gmail.com', name: 'Rick dos Imóveis Assessoria Imobiliária', role: 'user', created_at: '2025-10-17T21:11:30.647515+00:00', …}
+472-ceed697e056bc12d.js:1 Error: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7B%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at ue (fd9d1056-053a427fed818d2b.js:9:29914)
+    at U (fd9d1056-053a427fed818d2b.js:9:35391)
+    at V (fd9d1056-053a427fed818d2b.js:9:35603)
+    at uh (fd9d1056-053a427fed818d2b.js:9:57181)
+    at rC (fd9d1056-053a427fed818d2b.js:9:114717)
+    at Jk (fd9d1056-053a427fed818d2b.js:9:102245)
+    at Ik (fd9d1056-053a427fed818d2b.js:9:101422)
+    at df (fd9d1056-053a427fed818d2b.js:9:101240)
+    at ef (fd9d1056-053a427fed818d2b.js:9:98669)
+    at qf (fd9d1056-053a427fed818d2b.js:9:98092)
+window.console.error @ 472-ceed697e056bc12d.js:1
+gh @ fd9d1056-053a427fed818d2b.js:9
+i.callback @ fd9d1056-053a427fed818d2b.js:9
+fe @ fd9d1056-053a427fed818d2b.js:9
+ge @ fd9d1056-053a427fed818d2b.js:9
+gj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+jj @ fd9d1056-053a427fed818d2b.js:9
+ij @ fd9d1056-053a427fed818d2b.js:9
+Ok @ fd9d1056-053a427fed818d2b.js:9
+jf @ fd9d1056-053a427fed818d2b.js:9
+wk @ fd9d1056-053a427fed818d2b.js:9
+qf @ fd9d1056-053a427fed818d2b.js:9
+P @ 472-ceed697e056bc12d.js:25

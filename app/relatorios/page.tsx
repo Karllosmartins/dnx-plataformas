@@ -921,22 +921,47 @@ export default function RelatoriosPage() {
                 metrica.tipo === 'distribuicao' ? BarChart3 :
                 Activity
 
-              // Formatar valor
-              let valorFormatado = metrica.valor
-              if (metrica.tipo === 'media' && typeof metrica.valor === 'string') {
-                valorFormatado = `R$ ${parseFloat(metrica.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              // Formatar valor de forma segura
+              let valorFormatado: string | number = '-'
+
+              if (metrica.tipo === 'media') {
+                if (typeof metrica.valor === 'number') {
+                  valorFormatado = `R$ ${metrica.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                } else if (typeof metrica.valor === 'string') {
+                  const num = parseFloat(metrica.valor)
+                  if (!isNaN(num)) {
+                    valorFormatado = `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                  }
+                }
               } else if (metrica.tipo === 'percentual') {
-                valorFormatado = `${metrica.valor}%`
+                if (typeof metrica.valor === 'number' || typeof metrica.valor === 'string') {
+                  valorFormatado = `${metrica.valor}%`
+                }
               } else if (metrica.tipo === 'tempo_entre_status') {
-                valorFormatado = `${metrica.valor} dias`
-              } else if (metrica.tipo === 'distribuicao' && typeof metrica.valor === 'object') {
-                // Para distribuição, mostrar o item mais comum
-                const entries = Object.entries(metrica.valor)
-                if (entries.length > 0) {
-                  const [topItem, topCount] = entries.reduce((a, b) =>
-                    ((b[1] as number) > (a[1] as number)) ? b : a
-                  )
-                  valorFormatado = `${topItem}: ${topCount}`
+                if (typeof metrica.valor === 'number' || typeof metrica.valor === 'string') {
+                  valorFormatado = `${metrica.valor} dias`
+                }
+              } else if (metrica.tipo === 'distribuicao') {
+                if (typeof metrica.valor === 'object' && metrica.valor !== null) {
+                  // Para distribuição, mostrar o item mais comum
+                  const entries = Object.entries(metrica.valor)
+                  if (entries.length > 0) {
+                    const [topItem, topCount] = entries.reduce((a, b) =>
+                      ((b[1] as number) > (a[1] as number)) ? b : a
+                    )
+                    valorFormatado = `${topItem}: ${topCount}`
+                  } else {
+                    valorFormatado = 'Sem dados'
+                  }
+                } else if (typeof metrica.valor === 'string' || typeof metrica.valor === 'number') {
+                  valorFormatado = String(metrica.valor)
+                }
+              } else {
+                // Fallback: converter qualquer valor para string
+                if (typeof metrica.valor === 'object' && metrica.valor !== null) {
+                  valorFormatado = 'N/A'
+                } else {
+                  valorFormatado = String(metrica.valor || '-')
                 }
               }
 
