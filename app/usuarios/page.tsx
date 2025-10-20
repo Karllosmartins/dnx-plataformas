@@ -149,30 +149,35 @@ export default function UsuariosPage() {
         // Carregar tipos de negócio para cada usuário
         const usersWithTypes = await Promise.all(
           data.map(async (user) => {
-            const { data: userTipos, error: tiposError } = await supabase
-              .from('user_tipos_negocio')
-              .select(`
-                tipo_negocio_id,
-                tipos_negocio!inner (
-                  id,
-                  nome_exibicao,
-                  cor
-                )
-              `)
-              .eq('user_id', user.id)
+            try {
+              const { data: userTipos, error: tiposError } = await supabase
+                .from('user_tipos_negocio')
+                .select(`
+                  tipo_negocio_id,
+                  tipos_negocio (
+                    id,
+                    nome_exibicao,
+                    cor
+                  )
+                `)
+                .eq('user_id', user.id)
 
-            if (tiposError) {
-              console.error('Erro ao carregar tipos do usuário:', tiposError)
+              if (tiposError) {
+                console.error('Erro ao carregar tipos do usuário:', tiposError)
+                return { ...user, tipos_negocio: [] }
+              }
+
+              return {
+                ...user,
+                tipos_negocio: userTipos?.map(ut => ut.tipos_negocio).filter(Boolean) || []
+              }
+            } catch (err) {
+              console.error('Erro ao processar usuário:', err)
               return { ...user, tipos_negocio: [] }
-            }
-
-            return {
-              ...user,
-              tipos_negocio: userTipos?.map(ut => ut.tipos_negocio) || []
             }
           })
         )
-        
+
         setUsers(usersWithTypes)
       }
     } catch (error) {
@@ -201,9 +206,30 @@ export default function UsuariosPage() {
   const saveUser = async (userData: UserFormData, credentials?: ConfigCredentials) => {
     try {
       // Separar tipos_negocio dos dados do usuário
-      const { tipos_negocio, ...userDataOnly } = userData
+      const { tipos_negocio, plano, ...userDataOnly } = userData
+
+      // Buscar o ID do plano baseado no nome
+      let plano_id: number | null = null
+      if (plano) {
+        const { data: planoData, error: planoError } = await supabase
+          .from('planos')
+          .select('id')
+          .eq('nome', plano)
+          .maybeSingle()
+
+        if (planoError) {
+          console.error('Erro ao buscar plano:', planoError)
+          throw new Error(`Erro ao buscar plano: ${planoError.message}`)
+        }
+
+        if (planoData) {
+          plano_id = planoData.id
+        }
+      }
+
       const dataToSave = {
         ...userDataOnly,
+        plano_id: plano_id,
         updated_at: new Date().toISOString()
       }
 
