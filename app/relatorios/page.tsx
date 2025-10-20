@@ -105,26 +105,54 @@ export default function RelatoriosPage() {
     if (!user?.id) return
 
     try {
-      // Buscar tipo de negócio do usuário
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tipo_negocio_id')
-        .eq('id', parseInt(user.id))
-        .single()
+      // Buscar tipo de negócio do usuário através da tabela intermediária
+      const { data: userTypesData, error: typesError } = await supabase
+        .from('user_tipos_negocio')
+        .select(`
+          tipos_negocio (
+            id, nome, nome_exibicao, cor,
+            campos_personalizados, status_personalizados, metricas_config
+          )
+        `)
+        .eq('user_id', parseInt(user.id || '0'))
+        .eq('ativo', true)
 
-      if (userError) throw userError
+      if (typesError) throw typesError
 
-      if (userData?.tipo_negocio_id) {
-        const { data: tipoData, error: tipoError } = await supabase
-          .from('tipos_negocio')
-          .select('*')
-          .eq('id', userData.tipo_negocio_id)
-          .single()
+      if (userTypesData && userTypesData.length > 0) {
+        const tipoData = userTypesData[0].tipos_negocio as any
 
-        if (tipoError) throw tipoError
+        if (tipoData) {
+          // Parsear metricas_config se vier como string
+          if (typeof tipoData.metricas_config === 'string') {
+            try {
+              tipoData.metricas_config = JSON.parse(tipoData.metricas_config)
+            } catch (e) {
+              console.error('Erro ao parsear metricas_config:', e)
+            }
+          }
 
-        setUserTipoNegocio(tipoData)
-        configureDashboard(tipoData)
+          // Parsear campos_personalizados se vier como string
+          if (typeof tipoData.campos_personalizados === 'string') {
+            try {
+              tipoData.campos_personalizados = JSON.parse(tipoData.campos_personalizados)
+            } catch (e) {
+              console.error('Erro ao parsear campos_personalizados:', e)
+            }
+          }
+
+          // Parsear status_personalizados se vier como string
+          if (typeof tipoData.status_personalizados === 'string') {
+            try {
+              tipoData.status_personalizados = JSON.parse(tipoData.status_personalizados)
+            } catch (e) {
+              console.error('Erro ao parsear status_personalizados:', e)
+            }
+          }
+
+          setUserTipoNegocio(tipoData)
+          configureDashboard(tipoData)
+        }
       }
     } catch (error) {
       console.error('Erro ao buscar tipo de negócio:', error)
