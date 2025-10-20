@@ -3,6 +3,36 @@
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/AuthWrapper'
+
+interface TipoNegocio {
+  id: number
+  nome: string
+  nome_exibicao: string
+  descricao?: string
+  icone?: string
+  cor?: string
+  campos_personalizados?: any[]
+  status_personalizados?: string[]
+  metricas_config?: any
+  ativo: boolean
+  ordem: number
+}
+
+interface DashboardConfig {
+  title: string
+  subtitle: string
+  metrics?: {
+    novosLeads?: string
+    qualificados?: string
+    emAndamento?: string
+    casosViaveis?: string
+    fechados?: string
+    negociacao?: string
+    leadsPerdidos?: string
+    totalGeral?: string
+  }
+  statusLabels?: Record<string, string>
+}
 import {
   BarChart3,
   TrendingUp,
@@ -42,6 +72,8 @@ export default function RelatoriosPage() {
   const [loading, setLoading] = useState(true)
   const [campanhas, setCampanhas] = useState<string[]>([])
   const [origens, setOrigens] = useState<string[]>([])
+  const [userTipoNegocio, setUserTipoNegocio] = useState<TipoNegocio | null>(null)
+  const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig | null>(null)
 
   const [filters, setFilters] = useState({
     campanha: '',
@@ -54,9 +86,137 @@ export default function RelatoriosPage() {
 
   useEffect(() => {
     if (user?.id) {
+      fetchUserTipoNegocio()
       fetchLeads()
     }
   }, [user])
+
+  const fetchUserTipoNegocio = async () => {
+    if (!user?.id) return
+
+    try {
+      // Buscar tipo de negócio do usuário
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tipo_negocio_id')
+        .eq('id', parseInt(user.id))
+        .single()
+
+      if (userError) throw userError
+
+      if (userData?.tipo_negocio_id) {
+        const { data: tipoData, error: tipoError } = await supabase
+          .from('tipos_negocio')
+          .select('*')
+          .eq('id', userData.tipo_negocio_id)
+          .single()
+
+        if (tipoError) throw tipoError
+
+        setUserTipoNegocio(tipoData)
+        configureDashboard(tipoData)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar tipo de negócio:', error)
+    }
+  }
+
+  const configureDashboard = (tipoNegocio: TipoNegocio) => {
+    const config: DashboardConfig = {
+      title: 'Relatórios',
+      subtitle: 'Análises e métricas'
+    }
+
+    // Carregar configuração de métricas do banco de dados
+    if (tipoNegocio.metricas_config) {
+      const metricasConfig = tipoNegocio.metricas_config as any
+
+      config.metrics = {
+        novosLeads: metricasConfig.label_novos || 'Novos',
+        qualificados: metricasConfig.label_qualificados || 'Qualificados',
+        emAndamento: metricasConfig.label_em_andamento || 'Em Andamento',
+        casosViaveis: metricasConfig.label_casos_viaveis || 'Casos Viáveis',
+        fechados: metricasConfig.label_fechados || 'Fechados',
+        negociacao: metricasConfig.label_negociacao || 'Em Negociação',
+        leadsPerdidos: metricasConfig.label_perdidos || 'Perdidos',
+        totalGeral: metricasConfig.label_total || 'Total Geral'
+      }
+    }
+
+    // Configurações específicas por tipo de negócio
+    if (tipoNegocio.nome === 'limpa_nome') {
+      config.title = 'Relatórios - Limpa Nome'
+      config.subtitle = 'Análise de consultas e negociações'
+      if (!tipoNegocio.metricas_config) {
+        config.metrics = {
+          novosLeads: 'Novos Leads',
+          qualificados: 'Qualificados',
+          emAndamento: 'Pagou Consulta',
+          casosViaveis: 'Dívidas Encontradas',
+          fechados: 'Clientes Fechados',
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Leads Perdidos',
+          totalGeral: 'Total Geral'
+        }
+      }
+    } else if (tipoNegocio.nome === 'previdenciario') {
+      config.title = 'Relatórios - Previdenciário'
+      config.subtitle = 'Análise de casos e processos'
+      if (!tipoNegocio.metricas_config) {
+        config.metrics = {
+          novosLeads: 'Novos Casos',
+          qualificados: 'Análise Viabilidade',
+          emAndamento: 'Contratos Enviados',
+          casosViaveis: 'Casos Viáveis',
+          fechados: 'Casos Finalizados',
+          negociacao: 'Processos Iniciados',
+          leadsPerdidos: 'Casos Perdidos',
+          totalGeral: 'Total Geral'
+        }
+      }
+    } else if (tipoNegocio.nome === 'b2b') {
+      config.title = 'Relatórios - B2B'
+      config.subtitle = 'Análise de vendas corporativas'
+      if (!tipoNegocio.metricas_config) {
+        config.metrics = {
+          novosLeads: 'Novos Contatos',
+          qualificados: 'Qualificação',
+          emAndamento: 'Apresentações',
+          casosViaveis: 'Propostas Enviadas',
+          fechados: 'Deals Fechados',
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Contatos Perdidos',
+          totalGeral: 'Total Geral'
+        }
+      }
+    } else {
+      // Configuração genérica baseada no nome do tipo
+      config.title = `Relatórios - ${tipoNegocio.nome_exibicao || tipoNegocio.nome}`
+      config.subtitle = tipoNegocio.descricao || 'Análises e métricas'
+      if (!tipoNegocio.metricas_config) {
+        config.metrics = {
+          novosLeads: 'Novos Leads',
+          qualificados: 'Qualificados',
+          emAndamento: 'Em Andamento',
+          casosViaveis: 'Casos Viáveis',
+          fechados: 'Fechados',
+          negociacao: 'Em Negociação',
+          leadsPerdidos: 'Leads Perdidos',
+          totalGeral: 'Total Geral'
+        }
+      }
+    }
+
+    // Criar mapeamento de labels de status
+    if (tipoNegocio.status_personalizados && Array.isArray(tipoNegocio.status_personalizados)) {
+      config.statusLabels = {}
+      tipoNegocio.status_personalizados.forEach((status: string) => {
+        config.statusLabels![status] = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      })
+    }
+
+    setDashboardConfig(config)
+  }
 
   const fetchLeads = async () => {
     if (!user?.id) return
@@ -194,7 +354,7 @@ export default function RelatoriosPage() {
 
   // Preparar dados para gráficos
   const statusChartData = Object.entries(metrics.statusCounts).map(([status, count]) => ({
-    name: status.replace(/_/g, ' ').toUpperCase(),
+    name: dashboardConfig?.statusLabels?.[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     value: count
   }))
 
@@ -231,10 +391,10 @@ export default function RelatoriosPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center">
             <BarChart3 className="h-8 w-8 mr-3 text-blue-600" />
-            Relatórios e Análises
+            {dashboardConfig?.title || 'Relatórios e Análises'}
           </h1>
           <p className="mt-2 text-gray-600">
-            Dashboard completo com métricas e análises dos seus leads
+            {dashboardConfig?.subtitle || 'Dashboard completo com métricas e análises'}
           </p>
         </div>
         <button
@@ -253,7 +413,7 @@ export default function RelatoriosPage() {
           <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Campanha</label>
             <select
@@ -278,6 +438,22 @@ export default function RelatoriosPage() {
               <option value="">Todas</option>
               {origens.map((o) => (
                 <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todos</option>
+              {userTipoNegocio?.status_personalizados && userTipoNegocio.status_personalizados.map((status: string) => (
+                <option key={status} value={status}>
+                  {dashboardConfig?.statusLabels?.[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </option>
               ))}
             </select>
           </div>
@@ -329,7 +505,9 @@ export default function RelatoriosPage() {
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm font-medium">Total de Leads</p>
+              <p className="text-blue-100 text-sm font-medium">
+                {dashboardConfig?.title?.replace('Relatórios - ', 'Total de ') || 'Total de Leads'}
+              </p>
               <p className="text-3xl font-bold mt-2">{metrics.total}</p>
             </div>
             <Users className="h-12 w-12 text-blue-200" />
@@ -339,7 +517,9 @@ export default function RelatoriosPage() {
         <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm font-medium">Com WhatsApp</p>
+              <p className="text-green-100 text-sm font-medium">
+                {userTipoNegocio?.nome === 'b2b' ? 'Com Contato Válido' : 'Com WhatsApp'}
+              </p>
               <p className="text-3xl font-bold mt-2">{metrics.comWhatsApp}</p>
               <p className="text-green-100 text-xs mt-1">{metrics.taxaWhatsApp}% do total</p>
             </div>
@@ -350,7 +530,10 @@ export default function RelatoriosPage() {
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm font-medium">Valor Total</p>
+              <p className="text-purple-100 text-sm font-medium">
+                {userTipoNegocio?.nome === 'previdenciario' ? 'Valor Total Estimado' :
+                 userTipoNegocio?.nome === 'b2b' ? 'Receita Total' : 'Valor Total'}
+              </p>
               <p className="text-3xl font-bold mt-2">R$ {metrics.valorTotal.toLocaleString('pt-BR')}</p>
             </div>
             <DollarSign className="h-12 w-12 text-purple-200" />
@@ -360,7 +543,10 @@ export default function RelatoriosPage() {
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm font-medium">Valor Médio</p>
+              <p className="text-orange-100 text-sm font-medium">
+                {userTipoNegocio?.nome === 'b2b' ? 'Ticket Médio' :
+                 userTipoNegocio?.nome === 'previdenciario' ? 'Valor Médio por Caso' : 'Valor Médio'}
+              </p>
               <p className="text-3xl font-bold mt-2">R$ {parseFloat(metrics.valorMedio).toLocaleString('pt-BR')}</p>
             </div>
             <Target className="h-12 w-12 text-orange-200" />
