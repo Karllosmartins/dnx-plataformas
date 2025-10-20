@@ -652,6 +652,13 @@ export default function ExtracaoLeadsPage() {
   }
 
   // Effects
+  // Autenticar automaticamente ao carregar a página
+  useEffect(() => {
+    if (user && !apiConfig.authenticated) {
+      authenticateAPI()
+    }
+  }, [user])
+
   useEffect(() => {
     if (apiConfig.authenticated && !loading) {
       loadUfs()
@@ -693,22 +700,13 @@ export default function ExtracaoLeadsPage() {
           <p className="text-gray-600">Sistema completo de extração de leads com filtros avançados da API Profile</p>
         </div>
 
-        {/* Autenticação */}
+        {/* Autenticação Automática */}
         {!apiConfig.authenticated ? (
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <div className="text-center">
-              <Database className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Conectar à API Profile</h2>
-              <p className="text-gray-600 mb-6">Faça a autenticação para acessar os dados de leads</p>
-              
-              <button
-                onClick={authenticateAPI}
-                disabled={loading}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-              >
-                {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Settings className="h-5 w-5" />}
-                {loading ? 'Conectando...' : 'Conectar API'}
-              </button>
+              <RefreshCw className="h-16 w-16 text-blue-500 mx-auto mb-4 animate-spin" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Conectando à API Profile</h2>
+              <p className="text-gray-600">Autenticando automaticamente...</p>
             </div>
           </div>
         ) : (
