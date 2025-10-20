@@ -377,10 +377,135 @@ export default function RelatoriosPage() {
       })
     }
 
-    // Métricas específicas removidas - agora usa apenas dados dinâmicos:
-    // - Funil de conversão (baseado em status_personalizados)
-    // - Campos personalizados (baseado em campos_personalizados)
-    // - Análise temporal (genérica para todos)
+    // Métricas Principais Dinâmicas (baseadas em metricas_config)
+    const metricasPrincipais: any[] = []
+
+    if (userTipoNegocio?.metricas_config?.metricas_principais && Array.isArray(userTipoNegocio.metricas_config.metricas_principais)) {
+      userTipoNegocio.metricas_config.metricas_principais.forEach((metricaConfig: any) => {
+        let valor: any = null
+
+        switch (metricaConfig.tipo) {
+          case 'media':
+            // Calcular média de um campo específico
+            if (metricaConfig.campo) {
+              const leadsComCampo = filteredLeads.filter(l => {
+                // Verificar se é campo padrão ou personalizado
+                if (l[metricaConfig.campo as keyof Lead]) {
+                  return l[metricaConfig.campo as keyof Lead]
+                }
+                // Verificar em dados_personalizados
+                if (l.dados_personalizados) {
+                  try {
+                    const dados = typeof l.dados_personalizados === 'string'
+                      ? JSON.parse(l.dados_personalizados)
+                      : l.dados_personalizados
+                    return dados[metricaConfig.campo]
+                  } catch (e) {
+                    return false
+                  }
+                }
+                return false
+              })
+
+              if (leadsComCampo.length > 0) {
+                const soma = leadsComCampo.reduce((sum, l) => {
+                  let val = l[metricaConfig.campo as keyof Lead]
+                  if (!val && l.dados_personalizados) {
+                    try {
+                      const dados = typeof l.dados_personalizados === 'string'
+                        ? JSON.parse(l.dados_personalizados)
+                        : l.dados_personalizados
+                      val = dados[metricaConfig.campo]
+                    } catch (e) {}
+                  }
+                  return sum + (parseFloat(val as string) || 0)
+                }, 0)
+                valor = (soma / leadsComCampo.length).toFixed(2)
+              } else {
+                valor = '0.00'
+              }
+            }
+            break
+
+          case 'percentual':
+            // Calcular percentual entre dois conjuntos de status
+            if (metricaConfig.numerador_status && metricaConfig.denominador_status) {
+              const numerador = filteredLeads.filter(l =>
+                metricaConfig.numerador_status.includes(l.status_generico)
+              ).length
+              const denominador = filteredLeads.filter(l =>
+                metricaConfig.denominador_status.includes(l.status_generico)
+              ).length
+              valor = denominador > 0 ? ((numerador / denominador) * 100).toFixed(1) : '0.0'
+            }
+            break
+
+          case 'tempo_entre_status':
+            // Calcular tempo médio entre dois status
+            if (metricaConfig.status_inicial && metricaConfig.status_final) {
+              const leadsCompletos = filteredLeads.filter(l =>
+                l.status_generico === metricaConfig.status_final
+              )
+
+              if (leadsCompletos.length > 0) {
+                const tempos = leadsCompletos
+                  .filter(l => l.created_at && l.updated_at)
+                  .map(l => {
+                    const dataInicio = new Date(l.created_at!)
+                    const dataFim = new Date(l.updated_at!)
+                    return (dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24) // dias
+                  })
+
+                if (tempos.length > 0) {
+                  const tempoMedio = tempos.reduce((a, b) => a + b, 0) / tempos.length
+                  valor = tempoMedio.toFixed(1)
+                } else {
+                  valor = '0.0'
+                }
+              } else {
+                valor = '0.0'
+              }
+            }
+            break
+
+          case 'distribuicao':
+            // Para distribuição, vamos calcular o total e criar dados do gráfico
+            if (metricaConfig.campo) {
+              const distribuicao: Record<string, number> = {}
+              filteredLeads.forEach(l => {
+                let val = l[metricaConfig.campo as keyof Lead]
+                if (!val && l.dados_personalizados) {
+                  try {
+                    const dados = typeof l.dados_personalizados === 'string'
+                      ? JSON.parse(l.dados_personalizados)
+                      : l.dados_personalizados
+                    val = dados[metricaConfig.campo]
+                  } catch (e) {}
+                }
+                if (val) {
+                  const valStr = String(val)
+                  distribuicao[valStr] = (distribuicao[valStr] || 0) + 1
+                }
+              })
+              valor = distribuicao
+            }
+            break
+
+          default:
+            valor = null
+        }
+
+        if (valor !== null) {
+          metricasPrincipais.push({
+            nome: metricaConfig.nome,
+            label: metricaConfig.label,
+            tipo: metricaConfig.tipo,
+            valor: valor,
+            campo: metricaConfig.campo
+          })
+        }
+      })
+    }
 
     // Análise Temporal (mês a mês)
     const monthlyData: Record<string, any> = {}
@@ -455,7 +580,8 @@ export default function RelatoriosPage() {
       timeline,
       customFields: customFieldsData,
       funnel: funnelData,
-      temporal: monthlyComparison
+      temporal: monthlyComparison,
+      metricasPrincipais: metricasPrincipais
     }
   }
 
@@ -736,11 +862,76 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      {/* Seção de Métricas Específicas removida - agora 100% dinâmico via:
-          - Funil de Conversão (baseado em status_personalizados)
-          - Campos Personalizados (baseado em campos_personalizados)
-          - Análise Temporal (genérica para todos os tipos)
-      */}
+      {/* Métricas Principais Dinâmicas */}
+      {metrics.metricasPrincipais && metrics.metricasPrincipais.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <Zap className="h-6 w-6 mr-2 text-yellow-500" />
+            Métricas Principais - {userTipoNegocio?.nome_exibicao}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {metrics.metricasPrincipais.map((metrica: any, index: number) => {
+              // Cores para os cards
+              const colors = [
+                { from: 'cyan-500', to: 'cyan-600', light: 'cyan-100', icon: 'cyan-200' },
+                { from: 'emerald-500', to: 'emerald-600', light: 'emerald-100', icon: 'emerald-200' },
+                { from: 'violet-500', to: 'violet-600', light: 'violet-100', icon: 'violet-200' },
+                { from: 'rose-500', to: 'rose-600', light: 'rose-100', icon: 'rose-200' },
+                { from: 'amber-500', to: 'amber-600', light: 'amber-100', icon: 'amber-200' },
+                { from: 'indigo-500', to: 'indigo-600', light: 'indigo-100', icon: 'indigo-200' },
+                { from: 'pink-500', to: 'pink-600', light: 'pink-100', icon: 'pink-200' },
+                { from: 'teal-500', to: 'teal-600', light: 'teal-100', icon: 'teal-200' },
+              ]
+              const color = colors[index % colors.length]
+
+              // Ícones baseados no tipo
+              const IconComponent =
+                metrica.tipo === 'media' ? DollarSign :
+                metrica.tipo === 'percentual' ? Percent :
+                metrica.tipo === 'tempo_entre_status' ? Clock :
+                metrica.tipo === 'distribuicao' ? BarChart3 :
+                Activity
+
+              // Formatar valor
+              let valorFormatado = metrica.valor
+              if (metrica.tipo === 'media' && typeof metrica.valor === 'string') {
+                valorFormatado = `R$ ${parseFloat(metrica.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              } else if (metrica.tipo === 'percentual') {
+                valorFormatado = `${metrica.valor}%`
+              } else if (metrica.tipo === 'tempo_entre_status') {
+                valorFormatado = `${metrica.valor} dias`
+              } else if (metrica.tipo === 'distribuicao' && typeof metrica.valor === 'object') {
+                // Para distribuição, mostrar o item mais comum
+                const entries = Object.entries(metrica.valor)
+                if (entries.length > 0) {
+                  const [topItem, topCount] = entries.reduce((a, b) =>
+                    ((b[1] as number) > (a[1] as number)) ? b : a
+                  )
+                  valorFormatado = `${topItem}: ${topCount}`
+                }
+              }
+
+              return (
+                <div
+                  key={metrica.nome}
+                  className={`bg-gradient-to-br from-${color.from} to-${color.to} rounded-lg shadow-lg p-6 text-white`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-${color.light} text-sm font-medium`}>
+                        {metrica.label}
+                      </p>
+                      <p className="text-2xl font-bold mt-2">{valorFormatado}</p>
+                    </div>
+                    <IconComponent className={`h-10 w-10 text-${color.icon}`} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
