@@ -52,7 +52,9 @@ import {
   Briefcase,
   FileCheck,
   Filter,
-  ArrowDownRight
+  ArrowDownRight,
+  CalendarRange,
+  ArrowUpRight
 } from 'lucide-react'
 import {
   BarChart,
@@ -439,6 +441,66 @@ export default function RelatoriosPage() {
       }
     }
 
+    // Análise Temporal (mês a mês)
+    const monthlyData: Record<string, any> = {}
+    const now = new Date()
+    const last12Months: string[] = []
+
+    // Gerar array com os últimos 12 meses
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+      last12Months.push(monthKey)
+
+      monthlyData[monthKey] = {
+        monthKey,
+        monthLabel: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+        leads: 0,
+        valor: 0,
+        comWhatsApp: 0
+      }
+    }
+
+    // Agrupar leads por mês
+    filteredLeads.forEach(lead => {
+      if (lead.created_at) {
+        const date = new Date(lead.created_at)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].leads += 1
+          monthlyData[monthKey].valor += lead.valor_contrato || 0
+          if (lead.existe_whatsapp) {
+            monthlyData[monthKey].comWhatsApp += 1
+          }
+        }
+      }
+    })
+
+    // Calcular métricas comparativas (mês atual vs mês anterior)
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const lastMonthKey = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`
+
+    const currentMonth = monthlyData[currentMonthKey] || { leads: 0, valor: 0 }
+    const lastMonth = monthlyData[lastMonthKey] || { leads: 0, valor: 0 }
+
+    const leadsGrowth = lastMonth.leads > 0
+      ? (((currentMonth.leads - lastMonth.leads) / lastMonth.leads) * 100).toFixed(1)
+      : '0'
+
+    const valueGrowth = lastMonth.valor > 0
+      ? (((currentMonth.valor - lastMonth.valor) / lastMonth.valor) * 100).toFixed(1)
+      : '0'
+
+    const monthlyComparison = {
+      currentMonth: currentMonth,
+      lastMonth: lastMonth,
+      leadsGrowth: parseFloat(leadsGrowth),
+      valueGrowth: parseFloat(valueGrowth),
+      monthlyTimeline: last12Months.map(key => monthlyData[key])
+    }
+
     return {
       total,
       comWhatsApp,
@@ -452,7 +514,8 @@ export default function RelatoriosPage() {
       timeline,
       specific: specificMetrics,
       customFields: customFieldsData,
-      funnel: funnelData
+      funnel: funnelData,
+      temporal: monthlyComparison
     }
   }
 
@@ -1127,6 +1190,168 @@ export default function RelatoriosPage() {
                       : 0}%
                   </div>
                   <div className="text-xs text-purple-600 mt-1">Conversão Total</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Análise Temporal - Comparativo Mês a Mês */}
+      {metrics.temporal && metrics.temporal.monthlyTimeline && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <CalendarRange className="h-6 w-6 mr-2 text-orange-600" />
+            Comparativo Temporal - Últimos 12 Meses
+          </h2>
+
+          {/* Cards de Comparação Mês Atual vs Anterior */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {/* Mês Atual */}
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-600">Mês Atual</span>
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="text-3xl font-bold text-blue-900 mb-1">
+                {metrics.temporal.currentMonth.leads}
+              </div>
+              <div className="text-sm text-gray-500">
+                {dashboardConfig?.title?.replace('Relatórios - ', '') || 'Leads'}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  Receita: R$ {metrics.temporal.currentMonth.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            {/* Mês Anterior */}
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-gray-400">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-600">Mês Anterior</span>
+                <Clock className="h-5 w-5 text-gray-600" />
+              </div>
+              <div className="text-3xl font-bold text-gray-700 mb-1">
+                {metrics.temporal.lastMonth.leads}
+              </div>
+              <div className="text-sm text-gray-500">
+                {dashboardConfig?.title?.replace('Relatórios - ', '') || 'Leads'}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  Receita: R$ {metrics.temporal.lastMonth.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            {/* Crescimento */}
+            <div className={`bg-white rounded-lg shadow p-6 border-l-4 ${
+              metrics.temporal.leadsGrowth >= 0 ? 'border-green-500' : 'border-red-500'
+            }`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-600">Crescimento</span>
+                {metrics.temporal.leadsGrowth >= 0 ? (
+                  <ArrowUpRight className="h-5 w-5 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                )}
+              </div>
+              <div className={`text-3xl font-bold mb-1 ${
+                metrics.temporal.leadsGrowth >= 0 ? 'text-green-900' : 'text-red-900'
+              }`}>
+                {metrics.temporal.leadsGrowth >= 0 ? '+' : ''}{metrics.temporal.leadsGrowth}%
+              </div>
+              <div className="text-sm text-gray-500">Variação de leads</div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className={`text-sm font-medium ${
+                  metrics.temporal.valueGrowth >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  Receita: {metrics.temporal.valueGrowth >= 0 ? '+' : ''}{metrics.temporal.valueGrowth}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráfico de Evolução Temporal */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Evolução nos Últimos 12 Meses
+            </h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={metrics.temporal.monthlyTimeline}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="monthLabel"
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value: any, name: string) => {
+                    if (name === 'Receita (R$)') {
+                      return `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    }
+                    return value
+                  }}
+                />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="leads"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  name="Leads"
+                  dot={{ fill: '#3B82F6', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  name="Receita (R$)"
+                  dot={{ fill: '#10B981', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+
+            {/* Resumo Estatístico */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Maior Volume</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    {Math.max(...metrics.temporal.monthlyTimeline.map((m: any) => m.leads))}
+                  </div>
+                  <div className="text-xs text-gray-500">leads/mês</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Menor Volume</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    {Math.min(...metrics.temporal.monthlyTimeline.map((m: any) => m.leads))}
+                  </div>
+                  <div className="text-xs text-gray-500">leads/mês</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Média Mensal</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    {(metrics.temporal.monthlyTimeline.reduce((sum: number, m: any) => sum + m.leads, 0) / 12).toFixed(0)}
+                  </div>
+                  <div className="text-xs text-gray-500">leads/mês</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Total 12 Meses</div>
+                  <div className="text-lg font-bold text-green-900">
+                    R$ {metrics.temporal.monthlyTimeline.reduce((sum: number, m: any) => sum + m.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-xs text-gray-500">receita total</div>
                 </div>
               </div>
             </div>
