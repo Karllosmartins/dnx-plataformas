@@ -44,7 +44,13 @@ import {
   FileBarChart,
   Activity,
   Percent,
-  Clock
+  Clock,
+  CheckCircle,
+  TrendingDown,
+  Zap,
+  Award,
+  Briefcase,
+  FileCheck
 } from 'lucide-react'
 import {
   BarChart,
@@ -311,6 +317,70 @@ export default function RelatoriosPage() {
       }
     })
 
+    // Métricas específicas por tipo de negócio
+    let specificMetrics: any = {}
+
+    if (userTipoNegocio?.nome === 'limpa_nome') {
+      const pagouConsulta = filteredLeads.filter(l => l.valor_pago_consulta && l.valor_pago_consulta > 0).length
+      const dividasEncontradas = filteredLeads.filter(l =>
+        l.status_limpa_nome === 'consta_divida' || l.status_generico === 'consta_divida'
+      ).length
+      const clientesFechados = filteredLeads.filter(l =>
+        l.status_limpa_nome === 'cliente_fechado' || l.status_generico === 'cliente_fechado'
+      ).length
+
+      specificMetrics = {
+        pagouConsulta,
+        dividasEncontradas,
+        taxaDividas: pagouConsulta > 0 ? ((dividasEncontradas / pagouConsulta) * 100).toFixed(1) : '0',
+        taxaConversao: dividasEncontradas > 0 ? ((clientesFechados / dividasEncontradas) * 100).toFixed(1) : '0',
+        valorConsultas: filteredLeads.reduce((sum, l) => sum + (l.valor_pago_consulta || 0), 0),
+        ticketMedioConsulta: pagouConsulta > 0 ? (filteredLeads.reduce((sum, l) => sum + (l.valor_pago_consulta || 0), 0) / pagouConsulta).toFixed(2) : '0'
+      }
+    } else if (userTipoNegocio?.nome === 'previdenciario') {
+      const casosAnalise = filteredLeads.filter(l =>
+        l.status_generico === 'qualificado' || l.status_generico === 'analise_viabilidade'
+      ).length
+      const casosViaveis = filteredLeads.filter(l =>
+        l.status_generico === 'caso_viavel' || l.status_generico === 'casos_viaveis'
+      ).length
+      const casosFechados = filteredLeads.filter(l =>
+        l.status_generico === 'fechado' || l.status_generico === 'caso_finalizado'
+      ).length
+
+      specificMetrics = {
+        casosAnalise,
+        casosViaveis,
+        casosFechados,
+        taxaViabilidade: casosAnalise > 0 ? ((casosViaveis / casosAnalise) * 100).toFixed(1) : '0',
+        taxaFechamento: casosViaveis > 0 ? ((casosFechados / casosViaveis) * 100).toFixed(1) : '0',
+        valorMedioCaso: casosFechados > 0 ? (valorTotal / casosFechados).toFixed(2) : '0'
+      }
+    } else if (userTipoNegocio?.nome === 'b2b') {
+      const qualificados = filteredLeads.filter(l =>
+        l.status_generico === 'qualificado' || l.status_generico === 'qualificacao'
+      ).length
+      const apresentacoes = filteredLeads.filter(l =>
+        l.status_generico === 'em_andamento' || l.status_generico === 'apresentacao'
+      ).length
+      const propostasEnviadas = filteredLeads.filter(l =>
+        l.status_generico === 'caso_viavel' || l.status_generico === 'proposta_enviada'
+      ).length
+      const dealsFechados = filteredLeads.filter(l =>
+        l.status_generico === 'fechado' || l.status_generico === 'deal_fechado'
+      ).length
+
+      specificMetrics = {
+        qualificados,
+        apresentacoes,
+        propostasEnviadas,
+        dealsFechados,
+        taxaQualificacao: total > 0 ? ((qualificados / total) * 100).toFixed(1) : '0',
+        taxaFechamento: propostasEnviadas > 0 ? ((dealsFechados / propostasEnviadas) * 100).toFixed(1) : '0',
+        ticketMedio: dealsFechados > 0 ? (valorTotal / dealsFechados).toFixed(2) : '0'
+      }
+    }
+
     return {
       total,
       comWhatsApp,
@@ -321,7 +391,8 @@ export default function RelatoriosPage() {
       campanhaCounts,
       campanhaValores,
       origemCounts,
-      timeline
+      timeline,
+      specific: specificMetrics
     }
   }
 
@@ -553,6 +624,146 @@ export default function RelatoriosPage() {
           </div>
         </div>
       </div>
+
+      {/* Cards de Métricas Específicas por Tipo de Negócio */}
+      {metrics.specific && Object.keys(metrics.specific).length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <Zap className="h-6 w-6 mr-2 text-blue-600" />
+            Métricas Específicas - {dashboardConfig?.title?.replace('Relatórios - ', '') || ''}
+          </h2>
+
+          {/* Cards específicos do Limpa Nome */}
+          {userTipoNegocio?.nome === 'limpa_nome' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-cyan-100 text-sm font-medium">Consultas Realizadas</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.pagouConsulta}</p>
+                    <p className="text-cyan-100 text-xs mt-1">
+                      R$ {metrics.specific.ticketMedioConsulta} médio
+                    </p>
+                  </div>
+                  <FileCheck className="h-12 w-12 text-cyan-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-emerald-100 text-sm font-medium">Dívidas Encontradas</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.dividasEncontradas}</p>
+                    <p className="text-emerald-100 text-xs mt-1">
+                      {metrics.specific.taxaDividas}% das consultas
+                    </p>
+                  </div>
+                  <CheckCircle className="h-12 w-12 text-emerald-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-sm font-medium">Taxa de Conversão</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.taxaConversao}%</p>
+                    <p className="text-indigo-100 text-xs mt-1">Dívidas → Clientes</p>
+                  </div>
+                  <Award className="h-12 w-12 text-indigo-200" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cards específicos do Previdenciário */}
+          {userTipoNegocio?.nome === 'previdenciario' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sky-100 text-sm font-medium">Casos em Análise</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.casosAnalise}</p>
+                  </div>
+                  <Clock className="h-12 w-12 text-sky-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-teal-100 text-sm font-medium">Casos Viáveis</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.casosViaveis}</p>
+                    <p className="text-teal-100 text-xs mt-1">
+                      {metrics.specific.taxaViabilidade}% de viabilidade
+                    </p>
+                  </div>
+                  <CheckCircle className="h-12 w-12 text-teal-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-violet-100 text-sm font-medium">Taxa de Fechamento</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.taxaFechamento}%</p>
+                    <p className="text-violet-100 text-xs mt-1">Viáveis → Fechados</p>
+                  </div>
+                  <Award className="h-12 w-12 text-violet-200" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cards específicos do B2B */}
+          {userTipoNegocio?.nome === 'b2b' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm font-medium">Qualificados</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.qualificados}</p>
+                    <p className="text-blue-100 text-xs mt-1">
+                      {metrics.specific.taxaQualificacao}% do total
+                    </p>
+                  </div>
+                  <CheckCircle className="h-12 w-12 text-blue-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-sm font-medium">Apresentações</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.apresentacoes}</p>
+                  </div>
+                  <Briefcase className="h-12 w-12 text-indigo-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm font-medium">Propostas Enviadas</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.propostasEnviadas}</p>
+                  </div>
+                  <FileCheck className="h-12 w-12 text-purple-200" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-pink-100 text-sm font-medium">Taxa de Fechamento</p>
+                    <p className="text-3xl font-bold mt-2">{metrics.specific.taxaFechamento}%</p>
+                    <p className="text-pink-100 text-xs mt-1">Propostas → Deals</p>
+                  </div>
+                  <Award className="h-12 w-12 text-pink-200" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
