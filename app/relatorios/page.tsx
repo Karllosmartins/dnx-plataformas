@@ -972,12 +972,12 @@ export default function RelatoriosPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className={`text-${color.light} text-sm font-medium`}>
+                      <p className="text-white opacity-90 text-sm font-medium">
                         {metrica.label}
                       </p>
                       <p className="text-2xl font-bold mt-2">{valorFormatado}</p>
                     </div>
-                    <IconComponent className={`h-10 w-10 text-${color.icon}`} />
+                    <IconComponent className="h-10 w-10 text-white opacity-70" />
                   </div>
                 </div>
               )
