@@ -241,6 +241,16 @@ export default function ExtracaoLeadsPage() {
   // Estado do modal de criação de extração
   const [modalCriarExtracaoAberto, setModalCriarExtracaoAberto] = useState(false)
 
+  // Função helper para tratar desserialização incorreta de arrays
+  const ensureArray = (data: any): any[] => {
+    if (Array.isArray(data)) return data
+    if (data && typeof data === 'object') {
+      const values = Object.values(data).filter(item => item && typeof item === 'object')
+      return values.length > 0 ? values : []
+    }
+    return []
+  }
+
   // Carregar UFs
   const loadUfs = async () => {
     if (!apiConfig.token) return
@@ -253,7 +263,7 @@ export default function ExtracaoLeadsPage() {
         }
       })
       const data = await response.json()
-      setUfs(data || [])
+      setUfs(ensureArray(data))
     } catch (error) {
       console.error('Erro ao carregar UFs:', error)
     }
@@ -290,9 +300,9 @@ export default function ExtracaoLeadsPage() {
         }
       })
       const data = await response.json()
-      
+
       console.log('loadCidades: resposta recebida:', { dataLength: data?.length || 0, data })
-      setCidades(data || [])
+      setCidades(ensureArray(data))
     } catch (error) {
       console.error('Erro ao carregar cidades:', error)
     }
@@ -331,13 +341,13 @@ export default function ExtracaoLeadsPage() {
       const [sexosData, classesSociaisData, estadosCivisData, profissoesData, scoresData, operadorasData, dddsData] = 
         await Promise.all(responses.map(r => r.json()))
 
-      setSexos(sexosData || [])
-      setClassesSociais(classesSociaisData || [])
-      setEstadosCivis(estadosCivisData || [])
-      setProfissoes(profissoesData || [])
-      setScoresPf(scoresData || [])
-      setOperadoras(operadorasData || [])
-      setDdds(dddsData || { estados: [] })
+      setSexos(ensureArray(sexosData))
+      setClassesSociais(ensureArray(classesSociaisData))
+      setEstadosCivis(ensureArray(estadosCivisData))
+      setProfissoes(ensureArray(profissoesData))
+      setScoresPf(ensureArray(scoresData))
+      setOperadoras(ensureArray(operadorasData))
+      setDdds(dddsData && typeof dddsData === 'object' && 'estados' in dddsData ? dddsData : { estados: [] })
 
     } catch (error) {
       console.error('Erro ao carregar dados PF:', error)
@@ -374,12 +384,12 @@ export default function ExtracaoLeadsPage() {
       const [cnaesData, portesData, tiposEmpresaData, scoresData, operadorasData, dddsData] = 
         await Promise.all(responses.map(r => r.json()))
 
-      setCnaes(cnaesData || [])
-      setPortes(portesData || [])
-      setTiposEmpresa(tiposEmpresaData || [])
-      setScoresPj(scoresData || [])
-      setOperadoras(operadorasData || [])
-      setDdds(dddsData || { estados: [] })
+      setCnaes(ensureArray(cnaesData))
+      setPortes(ensureArray(portesData))
+      setTiposEmpresa(ensureArray(tiposEmpresaData))
+      setScoresPj(ensureArray(scoresData))
+      setOperadoras(ensureArray(operadorasData))
+      setDdds(dddsData && typeof dddsData === 'object' && 'estados' in dddsData ? dddsData : { estados: [] })
 
     } catch (error) {
       console.error('Erro ao carregar dados PJ:', error)
