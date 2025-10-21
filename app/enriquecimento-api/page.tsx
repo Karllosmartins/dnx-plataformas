@@ -243,16 +243,19 @@ export default function EnriquecimentoAPIPage() {
 
       // Debug - verificar estrutura
       if (dadosEmpresaItem) {
-        console.log(`Enriquecimento: DEBUG - tem dados, empresa: ${!!dadosEmpresaItem.empresa}, razaoSocial: ${!!dadosEmpresaItem.razaoSocial}, receitaFederal: ${!!dadosEmpresaItem.receitaFederal}`)
+        console.log(`Enriquecimento: DEBUG - tem dados, empresa: ${!!dadosEmpresaItem.empresa}, razaoSocial: ${!!dadosEmpresaItem.razaoSocial}, receitaFederal: ${!!dadosEmpresaItem.receitaFederal}, msg: ${dadosEmpresaItem.msg}`)
+        console.log(`Enriquecimento: DEBUG - estrutura empresa:`, dadosEmpresaItem.empresa)
+        console.log(`Enriquecimento: DEBUG - estrutura receitaFederal:`, dadosEmpresaItem.receitaFederal)
       }
 
-      if (dadosEmpresaItem && dadosEmpresaItem.msg === 'Consulta realizada com sucesso.' && (dadosEmpresaItem.empresa || dadosEmpresaItem.receitaFederal?.razaoSocial || dadosEmpresaItem.razaoSocial)) {
+      // Verificação simplificada - se tem dados e sucesso na consulta
+      if (dadosEmpresaItem && dadosEmpresaItem.msg === 'Consulta realizada com sucesso.') {
         // Determinar estrutura dos dados
-        const empresaInfo = dadosEmpresaItem.empresa || dadosEmpresaItem
+        const empresaInfo = dadosEmpresaItem.empresa || dadosEmpresaItem.receitaFederal || dadosEmpresaItem
 
         const empresa: EmpresaEnriquecida = {
           cnpj: empresaInfo.cnpj || cnpj,
-          razaoSocial: empresaInfo.razaoSocial || empresaInfo.nomeRazaoSocial || 'Empresa não identificada',
+          razaoSocial: empresaInfo.razaoSocial || empresaInfo.nomeRazaoSocial || dadosEmpresaItem.receitaFederal?.razaoSocial || 'Empresa não identificada',
           nomeFantasia: empresaInfo.nomeFantasia || empresaInfo.nomefantasia || null,
           telefones: dadosEmpresaItem.telefones || [],
           emails: dadosEmpresaItem.emails || [],
@@ -261,6 +264,7 @@ export default function EnriquecimentoAPIPage() {
         }
 
         console.log(`Enriquecimento: Empresa criada:`, empresa)
+        console.log(`Enriquecimento: Empresa terá ${empresa.telefones.length} telefones`)
 
         // Buscar dados dos sócios
         const sociosData = dadosEmpresaItem.receitaFederal?.socios || dadosEmpresaItem.socios || []
