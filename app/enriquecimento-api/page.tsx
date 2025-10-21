@@ -438,6 +438,122 @@ export default function EnriquecimentoAPIPage() {
   }
 
 
+  const exportarLeadsParaExcel = () => {
+    try {
+      const dados: any[] = []
+
+      // Percorrer todas as empresas enriquecidas
+      empresasEnriquecidas.forEach((empresa, empresaIndex) => {
+        // Adicionar linha para a empresa (se tiver telefones)
+        empresa.telefones.forEach((telefone, telIndex) => {
+          dados.push({
+            'Nome Contato': empresa.razaoSocial,
+            'Tipo': 'Empresa',
+            'Telefone': telefone.telefoneFormatado || telefone.telefone,
+            'Tipo Telefone': telefone.tipoTelefone || '',
+            'Email': empresa.emails[0]?.email || '',
+            'CNPJ/CPF': empresa.cnpj,
+            'Empresa': empresa.razaoSocial,
+            'Nome Fantasia': empresa.nomeFantasia || '',
+            'Campanha': nomeCampanha,
+            'Origem': 'Enriquecimento API',
+            'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+          })
+        })
+
+        // Se a empresa não tiver telefones, criar uma linha mesmo assim
+        if (empresa.telefones.length === 0) {
+          dados.push({
+            'Nome Contato': empresa.razaoSocial,
+            'Tipo': 'Empresa',
+            'Telefone': '',
+            'Tipo Telefone': '',
+            'Email': empresa.emails[0]?.email || '',
+            'CNPJ/CPF': empresa.cnpj,
+            'Empresa': empresa.razaoSocial,
+            'Nome Fantasia': empresa.nomeFantasia || '',
+            'Campanha': nomeCampanha,
+            'Origem': 'Enriquecimento API',
+            'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+          })
+        }
+
+        // Adicionar linhas para os sócios
+        empresa.socios.forEach((socio) => {
+          socio.telefones.forEach((telefone) => {
+            dados.push({
+              'Nome Contato': socio.nome,
+              'Tipo': 'Sócio',
+              'Telefone': telefone.telefoneFormatado || telefone.telefone,
+              'Tipo Telefone': '',
+              'Email': socio.emails[0]?.email || '',
+              'CNPJ/CPF': socio.cpfCnpj,
+              'Empresa': empresa.razaoSocial,
+              'Participação': socio.participacao || '',
+              'Nome Fantasia': empresa.nomeFantasia || '',
+              'Campanha': nomeCampanha,
+              'Origem': 'Enriquecimento API',
+              'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+            })
+          })
+
+          // Se o sócio não tiver telefones, criar uma linha mesmo assim
+          if (socio.telefones.length === 0) {
+            dados.push({
+              'Nome Contato': socio.nome,
+              'Tipo': 'Sócio',
+              'Telefone': '',
+              'Tipo Telefone': '',
+              'Email': socio.emails[0]?.email || '',
+              'CNPJ/CPF': socio.cpfCnpj,
+              'Empresa': empresa.razaoSocial,
+              'Participação': socio.participacao || '',
+              'Nome Fantasia': empresa.nomeFantasia || '',
+              'Campanha': nomeCampanha,
+              'Origem': 'Enriquecimento API',
+              'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+            })
+          }
+        })
+      })
+
+      // Criar workbook e adicionar dados
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet(dados)
+
+      // Ajustar largura das colunas
+      const wscols = [
+        { wch: 25 },
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 25 },
+        { wch: 18 },
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 }
+      ]
+      ws['!cols'] = wscols
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Leads Enriquecidos')
+
+      // Gerar nome do arquivo com data
+      const dataFormatada = new Date().toISOString().split('T')[0]
+      const nomeArquivo = `leads_enriquecidos_${nomeCampanha}_${dataFormatada}.xlsx`
+
+      // Fazer download
+      XLSX.writeFile(wb, nomeArquivo)
+
+      alert(`✅ Arquivo baixado com sucesso! (${dados.length} contatos)`)
+    } catch (error) {
+      console.error('Erro ao exportar leads:', error)
+      alert('❌ Erro ao exportar leads')
+    }
+  }
+
   const reiniciarProcesso = () => {
     setEtapaAtual('upload')
     setArquivo(null)
@@ -672,6 +788,13 @@ export default function EnriquecimentoAPIPage() {
                 </div>
 
                 <div className="mt-6 flex space-x-4">
+                  <button
+                    onClick={exportarLeadsParaExcel}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Baixar Leads em Excel
+                  </button>
                   <button
                     onClick={reiniciarProcesso}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center"
