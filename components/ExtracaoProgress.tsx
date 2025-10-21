@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { 
-  Download, 
-  RefreshCw, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  Download,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
   Clock,
   X,
-  ExternalLink 
+  ExternalLink,
+  Save
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 interface ExtracaoProgressProps {
   extracaoId: number
@@ -51,8 +53,156 @@ export default function ExtracaoProgress({
   })
   const [polling, setPolling] = useState(true)
   const [consultandoManual, setConsultandoManual] = useState(false)
+  const [salvandoNoBanco, setSalvandoNoBanco] = useState(false)
+  const [mensagemSalvamento, setMensagemSalvamento] = useState<string | null>(null)
   const pollingCountRef = useRef(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const jaExtraidoRef = useRef(false) // Para evitar múltiplas tentativas
+
+  // Função para salvar extrações no banco de dados
+  const salvarExtracoesNoBanco = async () => {
+    if (jaExtraidoRef.current) {
+      console.log('⚠️ Extração já foi processada anteriormente')
+      return
+    }
+
+    jaExtraidoRef.current = true
+    setSalvandoNoBanco(true)
+    setMensagemSalvamento('Salvando leads no banco de dados...')
+
+    try {
+      console.log('💾 Iniciando salvamento de leads para o banco de dados')
+
+      // Buscar arquivo de extração
+      const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
+
+      console.log('📥 Buscando arquivo de extração:', downloadUrl)
+      const fileResponse = await fetch(downloadUrl)
+
+      if (!fileResponse.ok) {
+        throw new Error(`Erro ao buscar arquivo: ${fileResponse.status}`)
+      }
+
+      // Obter conteúdo do arquivo
+      const fileContent = await fileResponse.text()
+      console.log('📄 Arquivo recebido, tamanho:', fileContent.length, 'bytes')
+
+      // Parsing: dividir por linhas e extrair dados
+      // Esperamos formato CSV com cabeçalho (ignorar primeira linha)
+      const linhas = fileContent.trim().split('\n')
+      if (linhas.length < 2) {
+        throw new Error('Arquivo vazio ou sem dados válidos')
+      }
+
+      console.log(`📋 Total de linhas encontradas: ${linhas.length}`)
+
+      let totalSalvos = 0
+      let totalDuplicados = 0
+      let totalErros = 0
+
+      // Processar cada linha (ignorar cabeçalho)
+      for (let i = 1; i < linhas.length; i++) {
+        try {
+          const linha = linhas[i].trim()
+          if (!linha) continue
+
+          // Parsing simples: supor formato "nome,telefone" ou CSV mais complexo
+          // Se for CSV, pode ter vírgulas dentro de aspas, então fazer parsing robusto
+          const campos = linha.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+
+          if (campos.length < 2) continue
+
+          const nomeLead = campos[0]?.trim() || 'Sem nome'
+          const telefoneBruto = campos[1]?.trim() || ''
+
+          // Formatar telefone: remover caracteres não numéricos
+          const telefoneNumerico = telefoneBruto.replace(/\D/g, '')
+
+          if (!telefoneNumerico || telefoneNumerico.length < 10) {
+            console.log(`⏭️ Linha ${i}: Telefone inválido ou incompleto`)
+            totalErros++
+            continue
+          }
+
+          // Formatar telefone: (XX) 99999-9999 ou (XX) 9999-9999
+          let numeroFormatado: string
+          if (telefoneNumerico.length === 11) {
+            // Com 9 dígito
+            numeroFormatado = `(${telefoneNumerico.slice(0, 2)}) ${telefoneNumerico.slice(2, 7)}-${telefoneNumerico.slice(7)}`
+          } else if (telefoneNumerico.length === 10) {
+            // Sem 9 dígito
+            numeroFormatado = `(${telefoneNumerico.slice(0, 2)}) ${telefoneNumerico.slice(2, 6)}-${telefoneNumerico.slice(6)}`
+          } else {
+            console.log(`⏭️ Linha ${i}: Telefone com formato desconhecido`)
+            totalErros++
+            continue
+          }
+
+          console.log(`📞 Processando: ${nomeLead} - ${numeroFormatado}`)
+
+          // Verificar duplicata
+          const { data: existingLead, error: searchError } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('numero_formatado', numeroFormatado)
+            .maybeSingle()
+
+          if (searchError) {
+            console.error(`Erro ao buscar duplicata para ${numeroFormatado}:`, searchError)
+            totalErros++
+            continue
+          }
+
+          if (existingLead) {
+            console.log(`✅ Telefone ${numeroFormatado} já existe para este usuário`)
+            totalDuplicados++
+            continue
+          }
+
+          // Salvar novo lead
+          const { data: insertedLead, error: insertError } = await supabase
+            .from('leads')
+            .insert({
+              user_id: userId,
+              nome_cliente: nomeLead,
+              numero_formatado: numeroFormatado,
+              nome_campanha: nomeArquivo, // Usar nome da extração como campanha
+              origem: 'Extração de Leads',
+              email_usuario: null,
+              nome_empresa: null,
+              cpf_cnpj: null,
+              ativo: true,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+
+          if (insertError) {
+            console.error(`Erro ao inserir lead ${numeroFormatado}:`, insertError)
+            totalErros++
+            continue
+          }
+
+          console.log(`✔️ Lead salvo com sucesso: ${nomeLead} - ${numeroFormatado}`)
+          totalSalvos++
+        } catch (lineError) {
+          console.error(`Erro ao processar linha ${i}:`, lineError)
+          totalErros++
+        }
+      }
+
+      setMensagemSalvamento(
+        `✅ Salvamento concluído! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
+      )
+      console.log('✅ Salvamento concluído:', { totalSalvos, totalDuplicados, totalErros })
+    } catch (error) {
+      console.error('💥 Erro ao salvar extrações:', error)
+      setMensagemSalvamento(`❌ Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setSalvandoNoBanco(false)
+    }
+  }
 
   // Função para verificar status da extração
   const verificarStatus = async (manual = false) => {
@@ -90,6 +240,12 @@ export default function ExtracaoProgress({
           if (intervalRef.current) {
             clearInterval(intervalRef.current)
             intervalRef.current = null
+          }
+
+          // Salvar no banco quando completar com sucesso
+          if (data.extracao.status === 'Processado' || data.extracao.status === 'Finalizada') {
+            console.log('💾 Iniciando salvamento automático no banco de dados...')
+            salvarExtracoesNoBanco()
           }
         }
       } else {
@@ -260,6 +416,24 @@ export default function ExtracaoProgress({
               )}
             </div>
           </div>
+
+          {/* Mensagem de Salvamento */}
+          {(salvandoNoBanco || mensagemSalvamento) && (
+            <div className={`p-3 rounded-lg border ${
+              salvandoNoBanco
+                ? 'bg-blue-50 border-blue-200 text-blue-800'
+                : mensagemSalvamento.includes('✅')
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              <div className="flex items-center gap-2">
+                {salvandoNoBanco && (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                )}
+                <span className="text-sm font-medium">{mensagemSalvamento}</span>
+              </div>
+            </div>
+          )}
 
           {/* Informações adicionais */}
           {status.tipoExtracao && (
