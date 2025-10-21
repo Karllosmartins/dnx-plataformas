@@ -61,6 +61,8 @@ export default function ExtracaoProgress({
 
   // Função para salvar extrações no banco de dados
   const salvarExtracoesNoBanco = async () => {
+    console.log('🔍 DEBUG: salvarExtracoesNoBanco chamada, jaExtraidoRef.current =', jaExtraidoRef.current)
+
     if (jaExtraidoRef.current) {
       console.log('⚠️ Extração já foi processada anteriormente')
       return
@@ -72,6 +74,7 @@ export default function ExtracaoProgress({
 
     try {
       console.log('💾 Iniciando salvamento de leads para o banco de dados')
+      console.log('📋 Props recebidas:', { idExtracaoAPI, nomeArquivo, userId, apiKey: apiKey ? 'presente' : 'ausente' })
 
       // Buscar arquivo de extração
       const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
@@ -79,22 +82,30 @@ export default function ExtracaoProgress({
       console.log('📥 Buscando arquivo de extração:', downloadUrl)
       const fileResponse = await fetch(downloadUrl)
 
+      console.log('📥 Resposta do fetch:', { status: fileResponse.status, ok: fileResponse.ok, headers: fileResponse.headers })
+
       if (!fileResponse.ok) {
-        throw new Error(`Erro ao buscar arquivo: ${fileResponse.status}`)
+        const errorText = await fileResponse.text()
+        console.error('❌ Erro response:', { status: fileResponse.status, errorText })
+        throw new Error(`Erro ao buscar arquivo: ${fileResponse.status} - ${errorText}`)
       }
 
       // Obter conteúdo do arquivo
       const fileContent = await fileResponse.text()
       console.log('📄 Arquivo recebido, tamanho:', fileContent.length, 'bytes')
+      console.log('📄 Primeiras 500 caracteres:', fileContent.substring(0, 500))
 
       // Parsing: dividir por linhas e extrair dados
       // Esperamos formato CSV com cabeçalho (ignorar primeira linha)
       const linhas = fileContent.trim().split('\n')
+      console.log(`🔍 DEBUG Parsing: Total de linhas brutas: ${linhas.length}`)
+
       if (linhas.length < 2) {
         throw new Error('Arquivo vazio ou sem dados válidos')
       }
 
       console.log(`📋 Total de linhas encontradas: ${linhas.length}`)
+      console.log(`📋 Cabeçalho (linha 0): ${linhas[0]}`)
 
       let totalSalvos = 0
       let totalDuplicados = 0
@@ -104,16 +115,27 @@ export default function ExtracaoProgress({
       for (let i = 1; i < linhas.length; i++) {
         try {
           const linha = linhas[i].trim()
-          if (!linha) continue
+          if (!linha) {
+            console.log(`⏭️ Linha ${i}: vazia, pulando`)
+            continue
+          }
+
+          console.log(`🔍 Processando linha ${i}: "${linha.substring(0, 100)}"`)
 
           // Parsing simples: supor formato "nome,telefone" ou CSV mais complexo
           // Se for CSV, pode ter vírgulas dentro de aspas, então fazer parsing robusto
           const campos = linha.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
 
-          if (campos.length < 2) continue
+          console.log(`🔍 Campos extraídos (${campos.length}):`, campos.slice(0, 3))
+
+          if (campos.length < 2) {
+            console.log(`⏭️ Linha ${i}: menos de 2 campos, pulando`)
+            continue
+          }
 
           const nomeLead = campos[0]?.trim() || 'Sem nome'
           const telefoneBruto = campos[1]?.trim() || ''
+          console.log(`📝 Nome: "${nomeLead}", Telefone bruto: "${telefoneBruto}"`)
 
           // Formatar telefone: remover caracteres não numéricos
           const telefoneNumerico = telefoneBruto.replace(/\D/g, '')
@@ -141,6 +163,7 @@ export default function ExtracaoProgress({
           console.log(`📞 Processando: ${nomeLead} - ${numeroFormatado}`)
 
           // Verificar duplicata
+          console.log(`🔍 Verificando duplicata: user_id=${userId}, numero_formatado=${numeroFormatado}`)
           const { data: existingLead, error: searchError } = await supabase
             .from('leads')
             .select('id')
@@ -148,8 +171,10 @@ export default function ExtracaoProgress({
             .eq('numero_formatado', numeroFormatado)
             .maybeSingle()
 
+          console.log(`🔍 Resultado busca duplicata:`, { existingLead, searchError })
+
           if (searchError) {
-            console.error(`Erro ao buscar duplicata para ${numeroFormatado}:`, searchError)
+            console.error(`❌ Erro ao buscar duplicata para ${numeroFormatado}:`, searchError)
             totalErros++
             continue
           }
@@ -161,6 +186,13 @@ export default function ExtracaoProgress({
           }
 
           // Salvar novo lead
+          console.log(`💾 Tentando inserir lead:`, {
+            user_id: userId,
+            nome_cliente: nomeLead,
+            numero_formatado: numeroFormatado,
+            nome_campanha: nomeArquivo
+          })
+
           const { data: insertedLead, error: insertError } = await supabase
             .from('leads')
             .insert({
@@ -178,8 +210,10 @@ export default function ExtracaoProgress({
             .select()
             .single()
 
+          console.log(`💾 Resultado insert:`, { insertedLead, insertError })
+
           if (insertError) {
-            console.error(`Erro ao inserir lead ${numeroFormatado}:`, insertError)
+            console.error(`❌ Erro ao inserir lead ${numeroFormatado}:`, insertError)
             totalErros++
             continue
           }
@@ -192,14 +226,16 @@ export default function ExtracaoProgress({
         }
       }
 
-      setMensagemSalvamento(
-        `✅ Salvamento concluído! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
-      )
-      console.log('✅ Salvamento concluído:', { totalSalvos, totalDuplicados, totalErros })
+      const mensagem = `✅ Salvamento concluído! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
+      setMensagemSalvamento(mensagem)
+      console.log('✅ Salvamento concluído:', { totalSalvos, totalDuplicados, totalErros, mensagem })
     } catch (error) {
       console.error('💥 Erro ao salvar extrações:', error)
-      setMensagemSalvamento(`❌ Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      const mensagemErro = `❌ Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+      setMensagemSalvamento(mensagemErro)
+      console.error('💥 Mensagem de erro definida:', mensagemErro)
     } finally {
+      console.log('🏁 Finalizando salvamento')
       setSalvandoNoBanco(false)
     }
   }
@@ -245,7 +281,9 @@ export default function ExtracaoProgress({
           // Salvar no banco quando completar com sucesso
           if (data.extracao.status === 'Processado' || data.extracao.status === 'Finalizada') {
             console.log('💾 Iniciando salvamento automático no banco de dados...')
-            salvarExtracoesNoBanco()
+            console.log('💾 DEBUG: Chamando salvarExtracoesNoBanco()')
+            await salvarExtracoesNoBanco()
+            console.log('💾 DEBUG: salvarExtracoesNoBanco() concluída')
           }
         }
       } else {
