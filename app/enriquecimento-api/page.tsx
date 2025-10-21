@@ -44,6 +44,9 @@ interface EmpresaEnriquecida {
     }>
   }>
   totalContatos: number
+  // Dados completos da API para exportação
+  dadosCompletos: any // API response completo
+  sociosCompletos: Array<any> // Dados completos dos sócios
 }
 
 export default function EnriquecimentoAPIPage() {
@@ -254,6 +257,9 @@ export default function EnriquecimentoAPIPage() {
         // Determinar estrutura dos dados
         const empresaInfo = dadosEmpresaItem.empresa || dadosEmpresaItem.receitaFederal || dadosEmpresaItem
 
+        // Array para guardar sócios completos antes de processar
+        const sociosCompletos: any[] = []
+
         const empresa: EmpresaEnriquecida = {
           cnpj: empresaInfo.cnpj || cnpj,
           razaoSocial: empresaInfo.razaoSocial || empresaInfo.nomeRazaoSocial || dadosEmpresaItem.receitaFederal?.razaoSocial || 'Empresa não identificada',
@@ -261,7 +267,9 @@ export default function EnriquecimentoAPIPage() {
           telefones: dadosEmpresaItem.telefones || [],
           emails: dadosEmpresaItem.emails || [],
           socios: [],
-          totalContatos: 0
+          totalContatos: 0,
+          dadosCompletos: dadosEmpresaItem, // Guardar todos os dados da API
+          sociosCompletos: sociosCompletos // Será preenchido abaixo
         }
 
         console.log(`Enriquecimento: Empresa criada:`, empresa)
@@ -323,6 +331,13 @@ export default function EnriquecimentoAPIPage() {
                   telefones: dadosSocioItem.telefones || [],
                   emails: dadosSocioItem.emails || []
                 })
+
+                // Guardar dados completos do sócio para exportação
+                sociosCompletos.push({
+                  ...dadosSocioItem,
+                  participacao: socio.participacao || '0%',
+                  nomeRazaoSocial: nomeSocio
+                })
               }
             }
           }
@@ -356,12 +371,12 @@ export default function EnriquecimentoAPIPage() {
   const upsertContato = async (contato: any, tipo: string) => {
     const userId = parseInt(user?.id || '0')
 
-    // Verificar se já existe um lead com este user_id e telefone
+    // Verificar se já existe um lead com este user_id e numero_formatado (para evitar duplicatas)
     const { data: existingLead, error: searchError } = await supabase
       .from('leads')
       .select('id')
       .eq('user_id', userId)
-      .eq('telefone', contato.telefone)
+      .eq('numero_formatado', contato.numero_formatado)
       .maybeSingle()
 
     if (searchError && searchError.code !== 'PGRST116') {
@@ -370,18 +385,9 @@ export default function EnriquecimentoAPIPage() {
     }
 
     if (existingLead) {
-      // Atualizar lead existente
-      console.log(`Cadastro: Atualizando ${tipo} existente:`, contato)
-      const { data, error } = await supabase
-        .from('leads')
-        .update(contato)
-        .eq('id', existingLead.id)
-
-      if (error) {
-        console.error(`Cadastro: Erro ao atualizar ${tipo}:`, error)
-      } else {
-        console.log(`Cadastro: ${tipo} atualizado com sucesso:`, data)
-      }
+      // Lead com este telefone já existe, não inserir novamente
+      console.log(`Cadastro: Telefone duplicado encontrado para ${tipo}, pulando:`, contato.numero_formatado)
+      return
     } else {
       // Inserir novo lead
       console.log(`Cadastro: Inserindo novo ${tipo}:`, contato)
@@ -440,114 +446,166 @@ export default function EnriquecimentoAPIPage() {
 
   const exportarLeadsParaExcel = () => {
     try {
-      const dados: any[] = []
+      const dadosEmpresas: any[] = []
+      const dadosPessoas: any[] = []
 
       // Percorrer todas as empresas enriquecidas
-      empresasEnriquecidas.forEach((empresa, empresaIndex) => {
-        // Adicionar linha para a empresa (se tiver telefones)
-        empresa.telefones.forEach((telefone, telIndex) => {
-          dados.push({
-            'Nome Contato': empresa.razaoSocial,
-            'Tipo': 'Empresa',
-            'Telefone': telefone.telefoneFormatado || telefone.telefone,
-            'Tipo Telefone': telefone.tipoTelefone || '',
-            'Email': empresa.emails[0]?.email || '',
-            'CNPJ/CPF': empresa.cnpj,
-            'Empresa': empresa.razaoSocial,
-            'Nome Fantasia': empresa.nomeFantasia || '',
-            'Campanha': nomeCampanha,
-            'Origem': 'Enriquecimento API',
-            'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
-          })
-        })
+      empresasEnriquecidas.forEach((empresa) => {
+        // === ABA 1: DADOS DE EMPRESAS ===
+        const empresaData = empresa.dadosCompletos
 
-        // Se a empresa não tiver telefones, criar uma linha mesmo assim
-        if (empresa.telefones.length === 0) {
-          dados.push({
-            'Nome Contato': empresa.razaoSocial,
-            'Tipo': 'Empresa',
+        // Extrair dados da empresa
+        const empresaInfo = empresaData?.empresa || empresaData?.receitaFederal || {}
+        const enderecos = empresaData?.enderecos || []
+        const telefones = empresaData?.telefones || []
+        const emails = empresaData?.emails || []
+
+        // Adicionar linha para cada telefone da empresa
+        if (telefones.length > 0) {
+          telefones.forEach((tel: any) => {
+            dadosEmpresas.push({
+              'Razão Social': empresaInfo.razaoSocial || '',
+              'Nome Fantasia': empresaInfo.nomeFantasia || empresaInfo.nomefantasia || '',
+              'CNPJ': empresaInfo.cnpj || '',
+              'CNPJ Formatado': empresaInfo.cnpjFormatado || '',
+              'Data Abertura': empresaInfo.dataAbertura || '',
+              'Situação Cadastral': empresaData?.receitaFederal?.situacaoCadastral || '',
+              'Porte': empresaInfo.porte || empresaData?.receitaFederal?.porte || '',
+              'Capital Social': empresaData?.receitaFederal?.capitalSocial || '',
+              'CNAE Código': empresaData?.receitaFederal?.cnaeCod || '',
+              'CNAE Descrição': empresaData?.receitaFederal?.cnaeDesc || '',
+              'Risco': empresaInfo.risco || '',
+              'Score': empresaInfo.score || '',
+              'Telefone': tel.telefoneFormatado || tel.telefone || '',
+              'Tipo Telefone': tel.tipoTelefone || '',
+              'Email': emails[0]?.email || '',
+              'Endereço': enderecos[0]?.endereco || '',
+              'Número': enderecos[0]?.numero || '',
+              'Bairro': enderecos[0]?.bairro || '',
+              'Cidade': enderecos[0]?.cidade || '',
+              'UF': enderecos[0]?.uf || '',
+              'CEP': enderecos[0]?.cepFormatado || '',
+              'Complemento': enderecos[0]?.complemento || '',
+              'Campanha': nomeCampanha,
+              'Data Exportação': new Date().toLocaleDateString('pt-BR')
+            })
+          })
+        } else {
+          // Se não tiver telefone, ainda assim adiciona a empresa
+          dadosEmpresas.push({
+            'Razão Social': empresaInfo.razaoSocial || '',
+            'Nome Fantasia': empresaInfo.nomeFantasia || empresaInfo.nomefantasia || '',
+            'CNPJ': empresaInfo.cnpj || '',
+            'CNPJ Formatado': empresaInfo.cnpjFormatado || '',
+            'Data Abertura': empresaInfo.dataAbertura || '',
+            'Situação Cadastral': empresaData?.receitaFederal?.situacaoCadastral || '',
+            'Porte': empresaInfo.porte || empresaData?.receitaFederal?.porte || '',
+            'Capital Social': empresaData?.receitaFederal?.capitalSocial || '',
+            'CNAE Código': empresaData?.receitaFederal?.cnaeCod || '',
+            'CNAE Descrição': empresaData?.receitaFederal?.cnaeDesc || '',
+            'Risco': empresaInfo.risco || '',
+            'Score': empresaInfo.score || '',
             'Telefone': '',
             'Tipo Telefone': '',
-            'Email': empresa.emails[0]?.email || '',
-            'CNPJ/CPF': empresa.cnpj,
-            'Empresa': empresa.razaoSocial,
-            'Nome Fantasia': empresa.nomeFantasia || '',
+            'Email': emails[0]?.email || '',
+            'Endereço': enderecos[0]?.endereco || '',
+            'Número': enderecos[0]?.numero || '',
+            'Bairro': enderecos[0]?.bairro || '',
+            'Cidade': enderecos[0]?.cidade || '',
+            'UF': enderecos[0]?.uf || '',
+            'CEP': enderecos[0]?.cepFormatado || '',
+            'Complemento': enderecos[0]?.complemento || '',
             'Campanha': nomeCampanha,
-            'Origem': 'Enriquecimento API',
-            'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+            'Data Exportação': new Date().toLocaleDateString('pt-BR')
           })
         }
 
-        // Adicionar linhas para os sócios
-        empresa.socios.forEach((socio) => {
-          socio.telefones.forEach((telefone) => {
-            dados.push({
-              'Nome Contato': socio.nome,
-              'Tipo': 'Sócio',
-              'Telefone': telefone.telefoneFormatado || telefone.telefone,
-              'Tipo Telefone': '',
-              'Email': socio.emails[0]?.email || '',
-              'CNPJ/CPF': socio.cpfCnpj,
-              'Empresa': empresa.razaoSocial,
-              'Participação': socio.participacao || '',
-              'Nome Fantasia': empresa.nomeFantasia || '',
-              'Campanha': nomeCampanha,
-              'Origem': 'Enriquecimento API',
-              'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
-            })
-          })
+        // === ABA 2: DADOS DE PESSOAS FÍSICAS (SÓCIOS) ===
+        empresa.sociosCompletos.forEach((socio: any) => {
+          const pessoaInfo = socio?.pessoa || socio || {}
+          const telefonespf = socio?.telefones || []
+          const emailspf = socio?.emails || []
 
-          // Se o sócio não tiver telefones, criar uma linha mesmo assim
-          if (socio.telefones.length === 0) {
-            dados.push({
-              'Nome Contato': socio.nome,
-              'Tipo': 'Sócio',
+          if (telefonespf.length > 0) {
+            telefonespf.forEach((tel: any) => {
+              dadosPessoas.push({
+                'Nome': socio.nomeRazaoSocial || pessoaInfo.nome || '',
+                'CPF': socio.cpfCnpj || '',
+                'Data Nascimento': socio.dataNascimentoAbertura || '',
+                'Participação': socio.participacao || '',
+                'Qualificação': socio.qualificacaoDesc || '',
+                'Telefone': tel.telefoneFormatado || tel.telefone || '',
+                'Tipo Telefone': tel.tipoTelefone || '',
+                'Email': emailspf[0]?.email || '',
+                'Endereço': socio.endereco || '',
+                'Bairro': socio.bairro || '',
+                'Cidade': socio.cidade || '',
+                'UF': socio.uf || '',
+                'CEP': socio.cepFormatado || '',
+                'Empresa': empresa.razaoSocial,
+                'CNPJ Empresa': empresa.cnpj,
+                'Campanha': nomeCampanha,
+                'Data Exportação': new Date().toLocaleDateString('pt-BR')
+              })
+            })
+          } else {
+            // Adicionar mesmo sem telefone
+            dadosPessoas.push({
+              'Nome': socio.nomeRazaoSocial || pessoaInfo.nome || '',
+              'CPF': socio.cpfCnpj || '',
+              'Data Nascimento': socio.dataNascimentoAbertura || '',
+              'Participação': socio.participacao || '',
+              'Qualificação': socio.qualificacaoDesc || '',
               'Telefone': '',
               'Tipo Telefone': '',
-              'Email': socio.emails[0]?.email || '',
-              'CNPJ/CPF': socio.cpfCnpj,
+              'Email': emailspf[0]?.email || '',
+              'Endereço': socio.endereco || '',
+              'Bairro': socio.bairro || '',
+              'Cidade': socio.cidade || '',
+              'UF': socio.uf || '',
+              'CEP': socio.cepFormatado || '',
               'Empresa': empresa.razaoSocial,
-              'Participação': socio.participacao || '',
-              'Nome Fantasia': empresa.nomeFantasia || '',
+              'CNPJ Empresa': empresa.cnpj,
               'Campanha': nomeCampanha,
-              'Origem': 'Enriquecimento API',
-              'Data Enriquecimento': new Date().toLocaleDateString('pt-BR')
+              'Data Exportação': new Date().toLocaleDateString('pt-BR')
             })
           }
         })
       })
 
-      // Criar workbook e adicionar dados
+      // Criar workbook com 2 abas
       const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.json_to_sheet(dados)
 
-      // Ajustar largura das colunas
-      const wscols = [
-        { wch: 25 },
-        { wch: 12 },
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 25 },
-        { wch: 18 },
-        { wch: 25 },
-        { wch: 15 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 12 },
-        { wch: 20 }
+      // Aba 1: Empresas
+      const wsEmpresas = XLSX.utils.json_to_sheet(dadosEmpresas)
+      wsEmpresas['!cols'] = [
+        { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+        { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 40 },
+        { wch: 12 }, { wch: 8 }, { wch: 18 }, { wch: 18 }, { wch: 25 },
+        { wch: 35 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 12 },
+        { wch: 12 }, { wch: 25 }, { wch: 20 }, { wch: 18 }
       ]
-      ws['!cols'] = wscols
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Leads Enriquecidos')
+      // Aba 2: Pessoas Físicas
+      const wsPessoas = XLSX.utils.json_to_sheet(dadosPessoas)
+      wsPessoas['!cols'] = [
+        { wch: 30 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
+        { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 35 }, { wch: 20 },
+        { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 25 }, { wch: 20 },
+        { wch: 20 }, { wch: 18 }
+      ]
+
+      XLSX.utils.book_append_sheet(wb, wsEmpresas, 'Empresas')
+      XLSX.utils.book_append_sheet(wb, wsPessoas, 'Pessoas Físicas')
 
       // Gerar nome do arquivo com data
       const dataFormatada = new Date().toISOString().split('T')[0]
-      const nomeArquivo = `leads_enriquecidos_${nomeCampanha}_${dataFormatada}.xlsx`
+      const nomeArquivo = `enriquecimento_${nomeCampanha}_${dataFormatada}.xlsx`
 
       // Fazer download
       XLSX.writeFile(wb, nomeArquivo)
 
-      alert(`✅ Arquivo baixado com sucesso! (${dados.length} contatos)`)
+      alert(`✅ Arquivo baixado com sucesso!\n\nEmpresas: ${dadosEmpresas.length}\nPessoas Físicas: ${dadosPessoas.length}`)
     } catch (error) {
       console.error('Erro ao exportar leads:', error)
       alert('❌ Erro ao exportar leads')
