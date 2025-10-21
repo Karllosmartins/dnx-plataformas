@@ -237,8 +237,9 @@ export default function EnriquecimentoAPIPage() {
         const dadosEmpresa = await buscarDadosEmpresa(cnpj)
         console.log(`Enriquecimento: Resposta para ${cnpj}:`, dadosEmpresa)
 
-      // A API retorna um array, pegar o primeiro item
-      const dadosEmpresaItem = Array.isArray(dadosEmpresa) ? dadosEmpresa[0] : dadosEmpresa
+      // A API retorna um array, mas pode vir como {0: {...}} após JSON serialization
+      // Pegar o primeiro item de diferentes formas possíveis
+      const dadosEmpresaItem = dadosEmpresa[0] || dadosEmpresa['0'] || Object.values(dadosEmpresa).find((item: any) => item?.msg) || null
       console.log(`Enriquecimento: Dados processados para ${cnpj}:`, dadosEmpresaItem)
 
       // Debug - verificar estrutura
@@ -309,8 +310,8 @@ export default function EnriquecimentoAPIPage() {
               const dadosSocio = await buscarDadosSocio(cpfSocio)
               console.log(`Enriquecimento: Dados do sócio ${nomeSocio}:`, dadosSocio)
 
-              // A API pode retornar um array ou objeto para CPF também
-              const dadosSocioItem = Array.isArray(dadosSocio) ? dadosSocio[0] : dadosSocio
+              // A API pode retornar um array ou objeto {0: {...}} após JSON serialization
+              const dadosSocioItem = dadosSocio[0] || dadosSocio['0'] || Object.values(dadosSocio).find((item: any) => item?.msg) || null
 
               if (dadosSocioItem && (dadosSocioItem.pessoa || dadosSocioItem.nome)) {
                 const pessoaInfo = dadosSocioItem.pessoa || dadosSocioItem
