@@ -241,7 +241,12 @@ export default function EnriquecimentoAPIPage() {
       const dadosEmpresaItem = Array.isArray(dadosEmpresa) ? dadosEmpresa[0] : dadosEmpresa
       console.log(`Enriquecimento: Dados processados para ${cnpj}:`, dadosEmpresaItem)
 
-      if (dadosEmpresaItem && (dadosEmpresaItem.empresa || dadosEmpresaItem.razaoSocial)) {
+      // Debug - verificar estrutura
+      if (dadosEmpresaItem) {
+        console.log(`Enriquecimento: DEBUG - tem dados, empresa: ${!!dadosEmpresaItem.empresa}, razaoSocial: ${!!dadosEmpresaItem.razaoSocial}, receitaFederal: ${!!dadosEmpresaItem.receitaFederal}`)
+      }
+
+      if (dadosEmpresaItem && dadosEmpresaItem.msg === 'Consulta realizada com sucesso.' && (dadosEmpresaItem.empresa || dadosEmpresaItem.receitaFederal?.razaoSocial || dadosEmpresaItem.razaoSocial)) {
         // Determinar estrutura dos dados
         const empresaInfo = dadosEmpresaItem.empresa || dadosEmpresaItem
 
