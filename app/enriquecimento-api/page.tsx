@@ -11,44 +11,10 @@ import {
   Users,
   Building,
   Phone,
-  Mail,
-  Send,
   CheckCircle,
-  AlertCircle,
-  Bot,
-  MessageSquare,
   Download
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
-
-interface InstanciaWhatsApp {
-  id: number
-  nome: string
-  numero_telefone: string
-  status: string
-}
-
-interface TemplateAprovado {
-  id: number
-  nome: string
-  conteudo: string
-  variaveis: string[]
-}
-
-interface InstanciaCompleta {
-  id: number
-  instancia: string
-  is_official_api: boolean
-  waba_id: string | null
-  apikey: string | null
-}
-
-interface AgenteIA {
-  id: number
-  nome: string
-  funcao: string
-}
 
 interface EmpresaEnriquecida {
   cnpj: string
@@ -85,21 +51,6 @@ export default function EnriquecimentoAPIPage() {
 
   // Estados do formulário
   const [nomeCampanha, setNomeCampanha] = useState('')
-  const [instanciaWhatsApp, setInstanciaWhatsApp] = useState('')
-  const [templateAprovado, setTemplateAprovado] = useState('')
-  const [variavel1, setVariavel1] = useState('nome')
-  const [variavel2, setVariavel2] = useState('empresa')
-  const [instrucaoAdicional, setInstrucaoAdicional] = useState('')
-  const [agenteIA, setAgenteIA] = useState('')
-  const [mensagem, setMensagem] = useState('')
-  const [instanciaOficial, setInstanciaOficial] = useState(false)
-
-  // Estados dos dados
-  const [instancias, setInstancias] = useState<InstanciaWhatsApp[]>([])
-  const [instanciasCompletas, setInstanciasCompletas] = useState<InstanciaCompleta[]>([])
-  const [templates, setTemplates] = useState<TemplateAprovado[]>([])
-  const [templatesOficiais, setTemplatesOficiais] = useState<WhatsAppOfficialTemplate[]>([])
-  const [agentes, setAgentes] = useState<AgenteIA[]>([])
 
   // Estados do processo
   const [arquivo, setArquivo] = useState<File | null>(null)
@@ -107,11 +58,10 @@ export default function EnriquecimentoAPIPage() {
   const [empresasEnriquecidas, setEmpresasEnriquecidas] = useState<EmpresaEnriquecida[]>([])
 
   // Estados de controle
-  const [etapaAtual, setEtapaAtual] = useState<'upload' | 'enriquecendo' | 'resultados' | 'disparo'>('upload')
+  const [etapaAtual, setEtapaAtual] = useState<'upload' | 'enriquecendo' | 'resultados'>('upload')
   const [enriquecendo, setEnriquecendo] = useState(false)
   const [progressoEnriquecimento, setProgressoEnriquecimento] = useState(0)
   const [statusEnriquecimento, setStatusEnriquecimento] = useState('')
-  const [enviandoDisparo, setEnviandoDisparo] = useState(false)
 
   // Estados para controle de limites
   const [userPlan, setUserPlan] = useState<any>(null)
@@ -119,10 +69,7 @@ export default function EnriquecimentoAPIPage() {
 
   useEffect(() => {
     if (user) {
-      carregarInstancias()
-      carregarAgentes()
       carregarDadosUsuario()
-      // Templates são carregados quando uma instância é selecionada
     }
   }, [user])
 
@@ -141,93 +88,6 @@ export default function EnriquecimentoAPIPage() {
     }
   }
 
-  const carregarInstancias = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('instancia_whtats')
-        .select('id, instancia, is_official_api, waba_id, apikey')
-        .eq('user_id', parseInt(user?.id || '0'))
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      // Armazenar dados completos das instâncias
-      setInstanciasCompletas(data || [])
-
-      // Converter para formato esperado da interface
-      const instanciasFormatadas = data?.map(inst => ({
-        id: inst.id,
-        nome: inst.instancia,
-        numero_telefone: '', // Não usado neste contexto
-        status: 'connected'
-      })) || []
-
-      setInstancias(instanciasFormatadas)
-    } catch (error) {
-      console.error('Erro ao carregar instâncias:', error)
-    }
-  }
-
-  const carregarTemplates = async (instanciaId: string) => {
-    const instanciaCompleta = instanciasCompletas.find(i => i.instancia === instanciaId)
-
-    if (!instanciaCompleta?.is_official_api || !instanciaCompleta.waba_id || !instanciaCompleta.apikey) {
-      // Se não é API oficial, usar dados mockados
-      const templatesMock: TemplateAprovado[] = [
-        {
-          id: 1,
-          nome: 'Template Enriquecimento',
-          conteudo: 'Olá {{var1}}, da empresa {{var2}}! Temos uma oportunidade para você.',
-          variaveis: ['var1', 'var2']
-        }
-      ]
-      setTemplates(templatesMock)
-      return
-    }
-
-    try {
-      const api = new WhatsAppOfficialAPI(instanciaCompleta.apikey, instanciaCompleta.waba_id)
-      const templates = await api.getTemplates()
-      setTemplatesOficiais(templates)
-
-      // Converter para formato esperado
-      const templatesFormatados = templates.map((template, index) => ({
-        id: index + 1,
-        nome: template.name,
-        conteudo: template.components.find(c => c.type === 'BODY')?.text || '',
-        variaveis: ['var1', 'var2'] // Simplificado por enquanto
-      }))
-
-      setTemplates(templatesFormatados)
-    } catch (error) {
-      console.error('Erro ao carregar templates:', error)
-      // Fallback para dados mockados em caso de erro
-      const templatesMock: TemplateAprovado[] = [
-        {
-          id: 1,
-          nome: 'Template Enriquecimento',
-          conteudo: 'Olá {{var1}}, da empresa {{var2}}! Temos uma oportunidade para você.',
-          variaveis: ['var1', 'var2']
-        }
-      ]
-      setTemplates(templatesMock)
-    }
-  }
-
-  const carregarAgentes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('agentes_ia')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('estagio', 'ativo')
-
-      if (error) throw error
-      setAgentes(data || [])
-    } catch (error) {
-      console.error('Erro ao carregar agentes:', error)
-    }
-  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -567,76 +427,6 @@ export default function EnriquecimentoAPIPage() {
     }
   }
 
-  const iniciarDisparo = async () => {
-    // Validação baseada no tipo de API
-    if (!instanciaWhatsApp) {
-      alert('Selecione uma instância WhatsApp.')
-      return
-    }
-
-    if (instanciaOficial && !templateAprovado) {
-      alert('Selecione um template aprovado.')
-      return
-    }
-
-    if (!instanciaOficial && !mensagem.trim()) {
-      alert('Digite uma mensagem.')
-      return
-    }
-
-    setEnviandoDisparo(true)
-
-    try {
-      // Preparar dados para o webhook - apenas configuração da campanha
-      const instancia = instancias.find(i => i.id.toString() === instanciaWhatsApp)
-      const template = templates.find(t => t.id.toString() === templateAprovado)
-      const agente = agentes.find(a => a.id.toString() === agenteIA)
-
-      const webhookData = {
-        campanha: nomeCampanha,
-        instancia: instancia?.nome,
-        template: instanciaOficial ? template?.nome : null,
-        mensagem: !instanciaOficial ? mensagem : null,
-        variavel1: variavel1,
-        variavel2: variavel2,
-        instrucaoAdicional: instrucaoAdicional,
-        user_id: user?.id,
-        agente: agente?.id,
-        is_official_api: instanciaOficial
-      }
-
-      console.log('Enviando configuração de disparo para webhook:', webhookData)
-
-      // Enviar para o webhook
-      const response = await fetch('https://webhooks.dnmarketing.com.br/webhook/49c846c0-3853-4dc9-85db-0824cd1d7c6e', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(webhookData)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro no webhook: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('Resposta do webhook:', result)
-
-      alert('Disparo iniciado com sucesso! A campanha será processada.')
-
-      // Voltar para início após sucesso
-      setTimeout(() => {
-        reiniciarProcesso()
-      }, 2000)
-
-    } catch (error) {
-      console.error('Erro ao iniciar disparo:', error)
-      alert('Erro ao iniciar disparo. Verifique os logs para mais detalhes.')
-    } finally {
-      setEnviandoDisparo(false)
-    }
-  }
 
   const reiniciarProcesso = () => {
     setEtapaAtual('upload')
@@ -646,14 +436,6 @@ export default function EnriquecimentoAPIPage() {
     setProgressoEnriquecimento(0)
     setStatusEnriquecimento('')
     setNomeCampanha('')
-    setInstanciaWhatsApp('')
-    setTemplateAprovado('')
-    setVariavel1('nome')
-    setVariavel2('empresa')
-    setInstrucaoAdicional('')
-    setAgenteIA('')
-    setMensagem('')
-    setInstanciaOficial(false)
     setLeadsConsumidosEnriquecimento(0)
     // Recarregar dados do usuário para atualizar saldos
     carregarDadosUsuario()
@@ -668,7 +450,7 @@ export default function EnriquecimentoAPIPage() {
             Enriquecimento com API
           </h1>
           <p className="mt-2 text-sm text-gray-700">
-            Enriqueça dados de empresas usando CNPJ e envie mensagens personalizadas
+            Enriqueça dados de empresas usando CNPJ, consulte na API Datecode e cadastre automaticamente no banco de dados
           </p>
         </div>
 
@@ -881,193 +663,13 @@ export default function EnriquecimentoAPIPage() {
 
                 <div className="mt-6 flex space-x-4">
                   <button
-                    onClick={() => setEtapaAtual('disparo')}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center"
-                  >
-                    <Send className="h-5 w-5 mr-2" />
-                    Configurar Disparo
-                  </button>
-                  <button
                     onClick={reiniciarProcesso}
-                    className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center"
                   >
+                    <Download className="h-5 w-5 mr-2" />
                     Novo Enriquecimento
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Etapa 4: Configuração do Disparo */}
-        {etapaAtual === 'disparo' && (
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <Send className="h-5 w-5 mr-2 text-green-600" />
-                4. Configurar Disparo
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900">Campanha: {nomeCampanha}</h4>
-                    <p className="text-sm text-blue-700">
-                      {empresasEnriquecidas.reduce((total, emp) => total + emp.totalContatos, 0)} contatos enriquecidos
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Instância WhatsApp *
-                    </label>
-                    <select
-                      value={instanciaWhatsApp}
-                      onChange={(e) => {
-                        setInstanciaWhatsApp(e.target.value)
-                        // Verificar se é API oficial
-                        if (e.target.value) {
-                          const instanciaCompleta = instanciasCompletas.find(i => i.id.toString() === e.target.value)
-                          const instancia = instancias.find(i => i.id.toString() === e.target.value)
-
-                          if (instanciaCompleta) {
-                            setInstanciaOficial(instanciaCompleta.is_official_api || false)
-
-                            // Carregar templates apenas para APIs oficiais
-                            if (instanciaCompleta.is_official_api && instancia) {
-                              carregarTemplates(instancia.nome)
-                            }
-                          }
-                        } else {
-                          setInstanciaOficial(false)
-                        }
-                      }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="">Selecione uma instância</option>
-                      {instancias.map((inst) => (
-                        <option key={inst.id} value={inst.id}>
-                          {inst.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {instanciaOficial ? (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Template Aprovado *
-                      </label>
-                      <select
-                        value={templateAprovado}
-                        onChange={(e) => setTemplateAprovado(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                      >
-                        <option value="">Selecione um template</option>
-                        {templates.map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.nome}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Mensagem *
-                      </label>
-                      <textarea
-                        value={mensagem}
-                        onChange={(e) => setMensagem(e.target.value)}
-                        placeholder="Digite a mensagem que será enviada"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 h-32 resize-none"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Variável 1
-                    </label>
-                    <select
-                      value={variavel1}
-                      onChange={(e) => setVariavel1(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="nome">Nome da Pessoa</option>
-                      <option value="empresa">Nome da Empresa</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Variável 2
-                    </label>
-                    <select
-                      value={variavel2}
-                      onChange={(e) => setVariavel2(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="empresa">Nome da Empresa</option>
-                      <option value="nome">Nome da Pessoa</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Agente para Atendimento
-                    </label>
-                    <select
-                      value={agenteIA}
-                      onChange={(e) => setAgenteIA(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="">Selecione um agente (opcional)</option>
-                      {agentes.map((agente) => (
-                        <option key={agente.id} value={agente.id}>
-                          {agente.nome} - {agente.funcao}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Instrução Adicional (Opcional)
-                </label>
-                <textarea
-                  value={instrucaoAdicional}
-                  onChange={(e) => setInstrucaoAdicional(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Instruções especiais para o agente..."
-                />
-              </div>
-
-              <div className="mt-6 flex space-x-4">
-                <button
-                  onClick={iniciarDisparo}
-                  disabled={enviandoDisparo || !nomeCampanha || !instanciaWhatsApp || !templateAprovado}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center"
-                >
-                  {enviandoDisparo ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  ) : (
-                    <Send className="h-5 w-5 mr-2" />
-                  )}
-                  {enviandoDisparo ? 'Enviando...' : 'Iniciar Disparo'}
-                </button>
-                <button
-                  onClick={() => setEtapaAtual('resultados')}
-                  className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
-                >
-                  Voltar aos Resultados
-                </button>
               </div>
             </div>
           </div>

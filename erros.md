@@ -1,41 +1,32 @@
-661-a4807c9bea894384.js:1 User string from localStorage: {"id":"32","email":"rickdosimoveis@gmail.com","name":"Rick dos Imóveis Assessoria Imobiliária","role":"user","created_at":"2025-10-17T21:11:30.647515+00:00","active":true}
-661-a4807c9bea894384.js:1 Usuario atual: {id: '32', email: 'rickdosimoveis@gmail.com', name: 'Rick dos Imóveis Assessoria Imobiliária', role: 'user', created_at: '2025-10-17T21:11:30.647515+00:00', …}
-472-ceed697e056bc12d.js:1 Error: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7B%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
-    at ue (fd9d1056-053a427fed818d2b.js:9:29914)
-    at U (fd9d1056-053a427fed818d2b.js:9:35391)
-    at V (fd9d1056-053a427fed818d2b.js:9:35603)
-    at uh (fd9d1056-053a427fed818d2b.js:9:57181)
-    at rC (fd9d1056-053a427fed818d2b.js:9:114717)
-    at Jk (fd9d1056-053a427fed818d2b.js:9:102245)
-    at Ik (fd9d1056-053a427fed818d2b.js:9:101422)
-    at df (fd9d1056-053a427fed818d2b.js:9:101240)
-    at ef (fd9d1056-053a427fed818d2b.js:9:98669)
-    at qf (fd9d1056-053a427fed818d2b.js:9:98092)
+661-a4807c9bea894384.js:1 User string from localStorage: {"id":"24","email":"karllosmartins1000@gmail.com","name":"Karllos Martins","role":"admin","created_at":"2025-09-03T00:32:07.725098+00:00","active":true}
+661-a4807c9bea894384.js:1 Usuario atual: Object
+page-7324df39013d8c95.js:1 [Dashboard] Filtrando leads por tipo_negocio_id: 1 limpa_nome
+page-7324df39013d8c95.js:1 [Dashboard] Leads carregados: 1
+page-7324df39013d8c95.js:1 Tipo de negócio: limpa_nome
+page-7324df39013d8c95.js:1 Status personalizados: Array(8)
+page-7324df39013d8c95.js:1 Status encontrados nos leads: Array(1)
+feature_collector.js:23 using deprecated parameters for the initialization function; pass a single object instead
+H @ feature_collector.js:23
+page-7324df39013d8c95.js:1 [Dashboard] Filtrando leads por tipo_negocio_id: 1 limpa_nome
+page-7324df39013d8c95.js:1 [Dashboard] Leads carregados: 1
+page-7324df39013d8c95.js:1 Tipo de negócio: limpa_nome
+page-7324df39013d8c95.js:1 Status personalizados: Array(8)
+page-7324df39013d8c95.js:1 Status encontrados nos leads: Array(1)
+page-b9d048365dd83f4d.js:1 Upload: Arquivo selecionado: teste.xlsx
+page-b9d048365dd83f4d.js:1 Upload: Iniciando processamento do arquivo
+page-b9d048365dd83f4d.js:1 Upload: Nome da planilha: Página1
+page-b9d048365dd83f4d.js:1 Upload: Dados brutos da planilha: Array(2)
+page-b9d048365dd83f4d.js:1 Upload: CNPJs extraídos: Array(1)
+page-b9d048365dd83f4d.js:1 Upload: Sucesso! Encontrados 1 CNPJs
+page-b9d048365dd83f4d.js:1 Enriquecimento: Iniciando processo com 1 CNPJs
+page-b9d048365dd83f4d.js:1 Enriquecimento: Estado atualizado, iniciando loop de CNPJs
+page-b9d048365dd83f4d.js:1 Enriquecimento: Processando CNPJ 1/1: 60489014000142
+page-b9d048365dd83f4d.js:1 Enriquecimento: Chamando buscarDadosEmpresa para 60489014000142
+api/datecode:1  Failed to load resource: the server responded with a status of 500 ()
+472-ceed697e056bc12d.js:1 Erro ao buscar dados da empresa 60489014000142: Error: Erro na API: 500
+    at buscarDadosEmpresa (page-b9d048365dd83f4d.js:1:4540)
+    at async iniciarEnriquecimento (page-b9d048365dd83f4d.js:1:6119)
 window.console.error @ 472-ceed697e056bc12d.js:1
-gh @ fd9d1056-053a427fed818d2b.js:9
-i.callback @ fd9d1056-053a427fed818d2b.js:9
-fe @ fd9d1056-053a427fed818d2b.js:9
-ge @ fd9d1056-053a427fed818d2b.js:9
-gj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-jj @ fd9d1056-053a427fed818d2b.js:9
-ij @ fd9d1056-053a427fed818d2b.js:9
-Ok @ fd9d1056-053a427fed818d2b.js:9
-jf @ fd9d1056-053a427fed818d2b.js:9
-wk @ fd9d1056-053a427fed818d2b.js:9
-qf @ fd9d1056-053a427fed818d2b.js:9
-P @ 472-ceed697e056bc12d.js:25
+page-b9d048365dd83f4d.js:1 Enriquecimento: Resposta para 60489014000142: null
+page-b9d048365dd83f4d.js:1 Enriquecimento: Dados processados para 60489014000142: null
+page-b9d048365dd83f4d.js:1 Enriquecimento: Dados não encontrados para CNPJ 60489014000142
