@@ -226,7 +226,7 @@ export function hasAvailableConsultas(user: User | UsuarioComPlano, requiredCons
 /**
  * Consome leads do usuário (atualiza no banco)
  */
-export async function consumeLeads(userId: number, quantidade: number, supabaseClient?: any): Promise<{ success: boolean; error?: string }> {
+export async function consumeLeads(userId: number, quantidade: number, supabaseClient?: typeof supabase): Promise<{ success: boolean; error?: string }> {
   try {
     // Usar o cliente fornecido ou o padrão
     const client = supabaseClient || supabase
@@ -271,7 +271,7 @@ export async function consumeLeads(userId: number, quantidade: number, supabaseC
 /**
  * Consome consultas do usuário (atualiza no banco)
  */
-export async function consumeConsultas(userId: number, quantidade: number, supabaseClient?: any): Promise<{ success: boolean; error?: string }> {
+export async function consumeConsultas(userId: number, quantidade: number, supabaseClient?: typeof supabase): Promise<{ success: boolean; error?: string }> {
   try {
     // Usar o cliente fornecido ou o padrão
     const client = supabaseClient || supabase
