@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiLogger } from '../logger'
 
 /**
  * Custom API Error class for structured error handling
@@ -52,10 +53,7 @@ export function handleApiError(error: unknown): NextResponse {
 
   // Handle standard Error instances
   if (error instanceof Error) {
-    // Log unexpected errors in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Unexpected error:', error.message, error.stack)
-    }
+    apiLogger.error({ err: error, stack: error.stack }, 'Unexpected error occurred')
 
     return NextResponse.json(
       {
@@ -68,7 +66,7 @@ export function handleApiError(error: unknown): NextResponse {
   }
 
   // Handle unknown error types
-  console.error('Unknown error type:', error)
+  apiLogger.error({ error }, 'Unknown error type encountered')
 
   return NextResponse.json(
     {
