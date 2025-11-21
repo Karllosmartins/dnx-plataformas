@@ -54,7 +54,20 @@ const ADMIN_ROUTES = ['/admin', '/configuracoes-admin']
 
 async function verifyToken(token: string) {
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret')
+    const jwtSecret = process.env.JWT_SECRET
+
+    // JWT_SECRET é obrigatório em produção
+    if (!jwtSecret && process.env.NODE_ENV === 'production') {
+      console.error('❌ JWT_SECRET não está configurada em produção')
+      return null
+    }
+
+    // Em desenvolvimento, use um padrão, mas log um aviso
+    if (!jwtSecret && process.env.NODE_ENV !== 'production') {
+      console.warn('⚠️  JWT_SECRET não configurada - usando valor padrão (apenas para dev)')
+    }
+
+    const secret = new TextEncoder().encode(jwtSecret || 'dev-secret-only-for-development')
     const { payload } = await jwtVerify(token, secret)
     return payload
   } catch {

@@ -1,4 +1,5 @@
 import { supabase, getSupabaseAdmin } from './supabase'
+import bcrypt from 'bcrypt'
 
 export interface User {
   id: string
@@ -14,11 +15,41 @@ export interface AuthState {
   loading: boolean
 }
 
+/**
+ * Hash uma senha usando bcrypt
+ * @param password Senha em texto plano
+ * @returns Promise<string> Hash da senha
+ */
+export async function hashPassword(password: string): Promise<string> {
+  try {
+    const saltRounds = 10
+    return await bcrypt.hash(password, saltRounds)
+  } catch (error) {
+    console.error('Erro ao fazer hash da senha:', error)
+    throw new Error('Erro ao processar senha')
+  }
+}
+
+/**
+ * Verificar se uma senha corresponde ao hash armazenado
+ * @param password Senha em texto plano
+ * @param hash Hash armazenado no banco de dados
+ * @returns Promise<boolean> True se a senha é válida
+ */
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(password, hash)
+  } catch (error) {
+    console.error('Erro ao verificar senha:', error)
+    throw new Error('Erro ao verificar credenciais')
+  }
+}
+
 export const authService = {
   async signIn(email: string, password: string) {
     try {
       console.log('Tentativa de login:', email)
-      
+
       // Verificar se o usuário existe na tabela users
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -34,9 +65,11 @@ export const authService = {
         throw new Error('Usuário não encontrado ou inativo')
       }
 
-      // Verificar senha (simplificado - em produção usar hash)
-      console.log('Verificando senha...')
-      if (userData.password !== password) {
+      // Verificar senha usando bcrypt
+      console.log('Verificando senha com bcrypt...')
+      const passwordValid = await verifyPassword(password, userData.password)
+
+      if (!passwordValid) {
         console.error('Senha incorreta')
         throw new Error('Senha incorreta')
       }
@@ -94,12 +127,15 @@ export const authService = {
     role: 'admin' | 'user'
   }) {
     try {
+      // Fazer hash da senha
+      const hashedPassword = await hashPassword(userData.password)
+
       const { data, error } = await getSupabaseAdmin()
         .from('users')
         .insert([{
           name: userData.name,
           email: userData.email,
-          password: userData.password, // Em produção, fazer hash
+          password: hashedPassword, // Senha com hash seguro
           role: userData.role,
           active: true
         }])
