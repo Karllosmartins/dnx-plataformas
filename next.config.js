@@ -2,7 +2,7 @@
 const nextConfig = {
   // Configuração para deploy em VPS
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js']
+    serverComponentsExternalPackages: ['@supabase/supabase-js', 'bcrypt', 'pino', 'pino-pretty']
   },
   
   // Output standalone para Docker
