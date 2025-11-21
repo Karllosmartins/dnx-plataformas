@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../lib/supabase'
 import { hasAvailableConsultas, consumeConsultas, getConsultasBalance } from '../../../lib/permissions'
 import { getDatecodeCredentials, createDatecodeAuthHeader, validateDatecodeCredentials } from '../../../lib/datecode'
+import { ApiError, handleApiError } from '../../../lib/api-utils'
 
 export async function POST(request: NextRequest) {
   try {
     const { cnpj, userId } = await request.json()
 
     if (!cnpj) {
-      return NextResponse.json(
-        { error: 'CNPJ é obrigatório' },
-        { status: 400 }
-      )
+      throw ApiError.badRequest('CNPJ e obrigatorio', 'MISSING_CNPJ')
     }
 
     // Se userId foi fornecido, verificar limites do usuário
@@ -23,21 +21,16 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (planError || !userPlan) {
-        return NextResponse.json(
-          { error: 'Usuário não encontrado ou sem plano ativo' },
-          { status: 404 }
-        )
+        throw ApiError.notFound('Usuario nao encontrado ou sem plano ativo', 'USER_NOT_FOUND')
       }
 
       // Verificar se o usuário tem consultas disponíveis
       if (!hasAvailableConsultas(userPlan, 1)) {
         const consultasRestantes = getConsultasBalance(userPlan)
-        return NextResponse.json(
-          {
-            error: 'Limite de consultas excedido',
-            details: `Você não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
-          },
-          { status: 429 }
+        throw new ApiError(
+          429,
+          `Limite de consultas excedido. Consultas restantes: ${consultasRestantes}`,
+          'RATE_LIMIT_EXCEEDED'
         )
       }
     }
@@ -49,12 +42,9 @@ export async function POST(request: NextRequest) {
     const credentials = userId ? await getDatecodeCredentials(userId) : null
 
     if (!validateDatecodeCredentials(credentials)) {
-      return NextResponse.json(
-        {
-          error: 'Credenciais Datecode não configuradas',
-          message: 'Você precisa cadastrar suas credenciais Datecode no menu Usuários antes de realizar consultas.'
-        },
-        { status: 403 }
+      throw ApiError.forbidden(
+        'Voce precisa cadastrar suas credenciais Datecode no menu Usuarios antes de realizar consultas.',
+        'CREDENTIALS_NOT_CONFIGURED'
       )
     }
 
@@ -77,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: 'Erro na consulta Datecode', details: data },
+        { success: false, error: 'Erro na consulta Datecode', details: data },
         { status: response.status }
       )
     }
@@ -99,22 +89,21 @@ export async function POST(request: NextRequest) {
       const consultasRestantes = limiteConsultas - consultasRealizadas
 
       return NextResponse.json({
-        ...data,
-        usage: {
-          consultasRealizadas: consultasRealizadas,
-          limiteConsultas: limiteConsultas,
-          consultasRestantes: consultasRestantes
+        success: true,
+        data: {
+          ...data,
+          usage: {
+            consultasRealizadas: consultasRealizadas,
+            limiteConsultas: limiteConsultas,
+            consultasRestantes: consultasRestantes
+          }
         }
       })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ success: true, data })
 
   } catch (error) {
-    console.error('Erro na API Datecode:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }

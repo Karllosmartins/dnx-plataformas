@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { getLeadsBalance, getConsultasBalance } from '../../../../lib/permissions'
+import { ApiResponse, ApiError, handleApiError } from '../../../../lib/api-utils'
 
 // Marca esta rota como dinâmica
 export const dynamic = 'force-dynamic'
@@ -10,10 +11,7 @@ export async function GET(request: NextRequest) {
     const userId = request.nextUrl.searchParams.get('userId')
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'userId é obrigatório' },
-        { status: 400 }
-      )
+      throw ApiError.badRequest('userId e obrigatorio', 'MISSING_USER_ID')
     }
 
     // Buscar dados do usuário da tabela users diretamente
@@ -24,18 +22,14 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error || !userPlan) {
-      console.error('Erro ao buscar dados do usuário:', error)
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      )
+      throw ApiError.notFound('Usuario nao encontrado', 'USER_NOT_FOUND')
     }
 
     // Calcular saldos
     const leadsRestantes = getLeadsBalance(userPlan)
     const consultasRestantes = getConsultasBalance(userPlan)
 
-    return NextResponse.json({
+    return ApiResponse.success({
       // Leads
       leadsConsumidos: userPlan.leads_consumidos || 0,
       limiteLeads: userPlan.limite_leads || 0,
@@ -52,10 +46,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro na API de limites:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
