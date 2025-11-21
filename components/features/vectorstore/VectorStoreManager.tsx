@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from './AuthWrapper'
-import { supabase, UserAgentVectorStore } from '../lib/supabase'
+import { useAuth } from '../../shared/AuthWrapper'
+import { supabase, UserAgentVectorStore } from '../../../lib/supabase'
 import { 
   Database, 
   Upload, 

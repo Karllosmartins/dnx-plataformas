@@ -1,10 +1,10 @@
 'use client'
 
 import { useAuth } from './AuthWrapper'
-import { hasFeatureAccess, FeatureType } from '../lib/permissions'
+import { hasFeatureAccess, FeatureType } from '../../lib/permissions'
 import { Lock, ArrowUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { supabase, User, UsuarioComPlano } from '../lib/supabase'
+import { supabase, User, UsuarioComPlano } from '../../lib/supabase'
 
 interface PlanProtectionProps {
   feature: FeatureType

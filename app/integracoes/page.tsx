@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { supabase } from '../../lib/supabase'
 import {
   Plug,

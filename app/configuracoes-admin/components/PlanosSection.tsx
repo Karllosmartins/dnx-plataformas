@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, Plano } from '../../../lib/supabase'
-import { useAuth } from '../../../components/AuthWrapper'
+import { useAuth } from '../../../components/shared/AuthWrapper'
 import {
   Crown,
   Users,

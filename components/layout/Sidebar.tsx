@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { hasFeatureAccess } from '../lib/permissions'
-import { supabase, User } from '../lib/supabase'
+import { hasFeatureAccess } from '../../lib/permissions'
+import { supabase, User } from '../../lib/supabase'
 import {
   BarChart3,
   Users,

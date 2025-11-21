@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { supabase, User, Tool, UserTool } from '../../lib/supabase'
 import { getPlanDisplayName } from '../../lib/plans'
 import { 

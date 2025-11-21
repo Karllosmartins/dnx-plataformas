@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../lib/supabase'
-import { useAuth } from '../components/AuthWrapper'
-import MetricCard from '../components/MetricCard'
+import { useAuth } from '../components/shared/AuthWrapper'
+import MetricCard from '../components/features/leads/MetricCard'
 import {
   Users,
   DollarSign,

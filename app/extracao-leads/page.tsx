@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
-import PlanProtection from '../../components/PlanProtection'
-import SearchableMultiSelect from '../../components/SearchableMultiSelect'
-import ResultadosContagem from '../../components/ResultadosContagem'
-import ExtracaoProgress from '../../components/ExtracaoProgress'
-import HistoricoContagens from '../../components/HistoricoContagens'
-import ModalCriarExtracao from '../../components/ModalCriarExtracao'
+import { useAuth } from '../../components/shared/AuthWrapper'
+import PlanProtection from '../../components/shared/PlanProtection'
+import SearchableMultiSelect from '../../components/forms/SearchableMultiSelect'
+import ResultadosContagem from '../../components/features/extracao/ResultadosContagem'
+import ExtracaoProgress from '../../components/features/extracao/ExtracaoProgress'
+import HistoricoContagens from '../../components/features/extracao/HistoricoContagens'
+import ModalCriarExtracao from '../../components/features/extracao/ModalCriarExtracao'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
 import { 
   Target, 

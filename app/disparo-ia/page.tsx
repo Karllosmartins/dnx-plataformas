@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { supabase, AgenteIA, WhatsAppTemplate } from '../../lib/supabase'
 import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
-import PlanProtection from '../../components/PlanProtection'
+import PlanProtection from '../../components/shared/PlanProtection'
 import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X, Smartphone, Send } from 'lucide-react'
 
 interface CsvContact {

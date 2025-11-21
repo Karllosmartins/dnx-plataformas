@@ -1,8 +1,8 @@
 'use client'
 
-import { useAuth } from '../../components/AuthWrapper'
-import PlanProtection from '../../components/PlanProtection'
-import HistoricoContagens from '../../components/HistoricoContagens'
+import { useAuth } from '../../components/shared/AuthWrapper'
+import PlanProtection from '../../components/shared/PlanProtection'
+import HistoricoContagens from '../../components/features/extracao/HistoricoContagens'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 

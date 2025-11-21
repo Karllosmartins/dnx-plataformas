@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { hasFeatureAccess } from '../../lib/permissions'
 import {
   Settings,

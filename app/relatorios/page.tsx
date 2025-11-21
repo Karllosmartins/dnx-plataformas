@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 
 interface TipoNegocio {
   id: number

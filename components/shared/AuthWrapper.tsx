@@ -1,9 +1,9 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { authService, User } from '../lib/auth'
-import Sidebar from './Sidebar'
-import LoginForm from './LoginForm'
+import { authService, User } from '../../lib/auth'
+import Sidebar from '../layout/Sidebar'
+import LoginForm from '../layout/LoginForm'
 
 interface AuthContextType {
   user: User | null

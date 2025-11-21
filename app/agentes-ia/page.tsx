@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { supabase, AgenteIA, Tool, UserTool, InstanciaWhats } from '../../lib/supabase'
-import PlanProtection from '../../components/PlanProtection'
-import VectorStoreManager from '../../components/VectorStoreManager'
+import PlanProtection from '../../components/shared/PlanProtection'
+import VectorStoreManager from '../../components/features/vectorstore/VectorStoreManager'
 import {
   Plus,
   Edit2,

@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
-import PlanProtection from '../../components/PlanProtection'
-import ConsultaResultados from '../../components/ConsultaResultados'
+import { useAuth } from '../../components/shared/AuthWrapper'
+import PlanProtection from '../../components/shared/PlanProtection'
+import ConsultaResultados from '../../components/features/consulta/ConsultaResultados'
 import {
   Search,
   User,

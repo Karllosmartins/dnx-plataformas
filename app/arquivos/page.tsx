@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { UploadCloud, FileText, Image as ImageIcon, Video, Trash2, Loader2, FolderOpen } from 'lucide-react'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 
 interface Arquivo {
   id: number

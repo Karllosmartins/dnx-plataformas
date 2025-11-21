@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase, Lead } from '../../lib/supabase'
-import { useAuth } from '../../components/AuthWrapper'
+import { useAuth } from '../../components/shared/AuthWrapper'
 import { getUserPlanInfo } from '../../lib/permissions'
 import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit, Crown, Info } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import DynamicFormFields from '../../components/DynamicFormFields'
+import DynamicFormFields from '../../components/forms/DynamicFormFields'
 
 const STATUS_CONFIG = {
   // Status Limpa Nome

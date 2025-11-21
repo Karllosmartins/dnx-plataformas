@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../components/AuthWrapper'
-import PlanProtection from '../../components/PlanProtection'
+import { useAuth } from '../../components/shared/AuthWrapper'
+import PlanProtection from '../../components/shared/PlanProtection'
 import { supabase } from '../../lib/supabase'
 import { hasAvailableLeads, consumeLeads, getLeadsBalance, calculateEnriquecimentoLeadsConsumption } from '../../lib/permissions'
 import {
