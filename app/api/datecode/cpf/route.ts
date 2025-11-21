@@ -6,7 +6,6 @@ import { getDatecodeCredentials, createDatecodeAuthHeader, validateDatecodeCrede
 export async function POST(request: NextRequest) {
   try {
     const { cpf, userId } = await request.json()
-    console.log('API Datecode CPF: Recebido CPF:', cpf)
 
     if (!cpf) {
       return NextResponse.json(
@@ -24,7 +23,6 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (planError || !userPlan) {
-        console.error('Erro ao buscar plano do usuário:', planError)
         return NextResponse.json(
           { error: 'Usuário não encontrado ou sem plano ativo' },
           { status: 404 }
@@ -46,16 +44,9 @@ export async function POST(request: NextRequest) {
 
     // Remover caracteres especiais do CPF
     const cpfLimpo = cpf.replace(/[^\d]/g, '')
-    console.log('API Datecode CPF: CPF limpo:', cpfLimpo)
 
     // Obter credenciais Datecode do usuário
     const credentials = userId ? await getDatecodeCredentials(userId) : null
-
-    console.log('API Datecode CPF: Credenciais disponíveis:', {
-      userId: userId || 'não fornecido',
-      found: !!credentials,
-      valid: validateDatecodeCredentials(credentials)
-    })
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
@@ -73,8 +64,6 @@ export async function POST(request: NextRequest) {
       tipoPessoa: 'PF'
     }
 
-    console.log('API Datecode CPF: Enviando requisição:', requestBody)
-
     const response = await fetch('https://api.datecode.com.br/v2/dados/consulta', {
       method: 'POST',
       headers: {
@@ -84,13 +73,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(requestBody)
     })
 
-    console.log('API Datecode CPF: Status da resposta:', response.status)
-
     const data = await response.json()
-    console.log('API Datecode CPF: Dados recebidos:', data)
 
     if (!response.ok) {
-      console.log('API Datecode CPF: Erro na consulta:', { status: response.status, data })
       return NextResponse.json(
         { error: 'Erro na consulta Datecode', details: data },
         { status: response.status }
@@ -100,11 +85,7 @@ export async function POST(request: NextRequest) {
     // Se userId foi fornecido, consumir uma consulta
     if (userId) {
       const supabaseAdmin = getSupabaseAdmin()
-      const consumeResult = await consumeConsultas(userId, 1, supabaseAdmin)
-      if (!consumeResult.success) {
-        console.error('Erro ao consumir consulta:', consumeResult.error)
-        // Não interromper o fluxo por erro de consumo
-      }
+      await consumeConsultas(userId, 1, supabaseAdmin)
 
       // Buscar dados atualizados DIRETAMENTE da tabela users (não da view para evitar cache)
       const { data: updatedUserData } = await getSupabaseAdmin()

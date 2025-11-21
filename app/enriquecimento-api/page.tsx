@@ -94,7 +94,6 @@ export default function EnriquecimentoAPIPage() {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    console.log('Upload: Arquivo selecionado:', file?.name)
 
     if (!file) return
 
@@ -103,15 +102,12 @@ export default function EnriquecimentoAPIPage() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        console.log('Upload: Iniciando processamento do arquivo')
         const data = e.target?.result
         const workbook = XLSX.read(data, { type: 'binary' })
         const sheetName = workbook.SheetNames[0]
-        console.log('Upload: Nome da planilha:', sheetName)
 
         const worksheet = workbook.Sheets[sheetName]
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-        console.log('Upload: Dados brutos da planilha:', jsonData)
 
         // Extrair CNPJs da primeira coluna (ignorando cabeçalho)
         const cnpjsList = (jsonData as any[])
@@ -120,13 +116,9 @@ export default function EnriquecimentoAPIPage() {
           .filter(cnpj => cnpj && cnpj.toString().trim())
           .map(cnpj => cnpj.toString().replace(/\D/g, '')) // Remove formatação
 
-        console.log('Upload: CNPJs extraídos:', cnpjsList)
         setCnpjs(cnpjsList)
 
-        if (cnpjsList.length > 0) {
-          console.log('Upload: Sucesso! Encontrados', cnpjsList.length, 'CNPJs')
-        } else {
-          console.log('Upload: Nenhum CNPJ encontrado na planilha')
+        if (cnpjsList.length === 0) {
           alert('Nenhum CNPJ encontrado na planilha. Verifique se os CNPJs estão na primeira coluna.')
         }
       } catch (error) {
@@ -157,7 +149,6 @@ export default function EnriquecimentoAPIPage() {
       const data = await response.json()
       return data
     } catch (error) {
-      console.error(`Erro ao buscar dados da empresa ${cnpj}:`, error)
       return null
     }
   }
@@ -182,14 +173,11 @@ export default function EnriquecimentoAPIPage() {
       const data = await response.json()
       return data
     } catch (error) {
-      console.error(`Erro ao buscar dados do sócio ${cpf}:`, error)
       return null
     }
   }
 
   const iniciarEnriquecimento = async () => {
-    console.log('Enriquecimento: Iniciando processo com', cnpjs.length, 'CNPJs')
-
     if (cnpjs.length === 0) {
       alert('Nenhum CNPJ encontrado na planilha.')
       return
@@ -225,32 +213,19 @@ export default function EnriquecimentoAPIPage() {
     setProgressoEnriquecimento(0)
     setStatusEnriquecimento('Iniciando enriquecimento...')
 
-    console.log('Enriquecimento: Estado atualizado, iniciando loop de CNPJs')
-
     const empresasEnriquecidas: EmpresaEnriquecida[] = []
 
     for (let i = 0; i < cnpjs.length; i++) {
       const cnpj = cnpjs[i]
-      console.log(`Enriquecimento: Processando CNPJ ${i + 1}/${cnpjs.length}: ${cnpj}`)
       setStatusEnriquecimento(`Consultando empresa ${i + 1}/${cnpjs.length}: ${cnpj}`)
 
       try {
         // Buscar dados da empresa
-        console.log(`Enriquecimento: Chamando buscarDadosEmpresa para ${cnpj}`)
         const dadosEmpresa = await buscarDadosEmpresa(cnpj)
-        console.log(`Enriquecimento: Resposta para ${cnpj}:`, dadosEmpresa)
 
       // A API retorna um array, mas pode vir como {0: {...}} após JSON serialization
       // Pegar o primeiro item de diferentes formas possíveis
       const dadosEmpresaItem = dadosEmpresa[0] || dadosEmpresa['0'] || Object.values(dadosEmpresa).find((item: any) => item?.msg) || null
-      console.log(`Enriquecimento: Dados processados para ${cnpj}:`, dadosEmpresaItem)
-
-      // Debug - verificar estrutura
-      if (dadosEmpresaItem) {
-        console.log(`Enriquecimento: DEBUG - tem dados, empresa: ${!!dadosEmpresaItem.empresa}, razaoSocial: ${!!dadosEmpresaItem.razaoSocial}, receitaFederal: ${!!dadosEmpresaItem.receitaFederal}, msg: ${dadosEmpresaItem.msg}`)
-        console.log(`Enriquecimento: DEBUG - estrutura empresa:`, dadosEmpresaItem.empresa)
-        console.log(`Enriquecimento: DEBUG - estrutura receitaFederal:`, dadosEmpresaItem.receitaFederal)
-      }
 
       // Verificação simplificada - se tem dados e sucesso na consulta
       if (dadosEmpresaItem && dadosEmpresaItem.msg === 'Consulta realizada com sucesso.') {
@@ -272,12 +247,8 @@ export default function EnriquecimentoAPIPage() {
           sociosCompletos: sociosCompletos // Será preenchido abaixo
         }
 
-        console.log(`Enriquecimento: Empresa criada:`, empresa)
-        console.log(`Enriquecimento: Empresa terá ${empresa.telefones.length} telefones`)
-
         // Buscar dados dos sócios
         const sociosData = dadosEmpresaItem.receitaFederal?.socios || dadosEmpresaItem.socios || []
-        console.log(`Enriquecimento: Sócios encontrados para ${cnpj}:`, sociosData)
 
         // Calcular quantos leads serão consumidos (1 para empresa + 1 para cada sócio)
         const leadsParaConsumir = calculateEnriquecimentoLeadsConsumption(sociosData.length)
@@ -290,8 +261,6 @@ export default function EnriquecimentoAPIPage() {
           .single()
 
         if (userAtualizado.data && !hasAvailableLeads(userAtualizado.data, leadsParaConsumir)) {
-          const leadsRestantes = getLeadsBalance(userAtualizado.data)
-          console.log(`Enriquecimento: Leads insuficientes. Necessário: ${leadsParaConsumir}, Disponível: ${leadsRestantes}`)
           setStatusEnriquecimento(`Leads insuficientes para continuar. Parando no CNPJ ${cnpj}`)
           break
         }
@@ -300,7 +269,6 @@ export default function EnriquecimentoAPIPage() {
         if (sociosData.length > 0) {
           const consumeResult = await consumeLeads(parseInt(user?.id || '0'), leadsParaConsumir)
           if (!consumeResult.success) {
-            console.error('Erro ao consumir leads:', consumeResult.error)
             setStatusEnriquecimento(`Erro ao processar ${cnpj}`)
             continue
           }
@@ -313,10 +281,8 @@ export default function EnriquecimentoAPIPage() {
             if (cpfSocio && cpfSocio.toString().replace(/\D/g, '').length === 11) { // CPF tem 11 dígitos
               const nomeSocio = socio.nomeRazaoSocial || socio.nome || 'Sócio não identificado'
               setStatusEnriquecimento(`Consultando sócio: ${nomeSocio}`)
-              console.log(`Enriquecimento: Buscando dados do sócio ${nomeSocio} - CPF: ${cpfSocio}`)
 
               const dadosSocio = await buscarDadosSocio(cpfSocio)
-              console.log(`Enriquecimento: Dados do sócio ${nomeSocio}:`, dadosSocio)
 
               // A API pode retornar um array ou objeto {0: {...}} após JSON serialization
               const dadosSocioItem = dadosSocio[0] || dadosSocio['0'] || Object.values(dadosSocio).find((item: any) => item?.msg) || null
@@ -351,12 +317,9 @@ export default function EnriquecimentoAPIPage() {
 
         // Cadastrar contatos no banco
         await cadastrarContatos(empresa)
-      } else {
-        console.log(`Enriquecimento: Dados não encontrados para CNPJ ${cnpj}`)
       }
 
       } catch (error) {
-        console.error(`Enriquecimento: Erro ao processar CNPJ ${cnpj}:`, error)
         setStatusEnriquecimento(`Erro ao processar ${cnpj}`)
       }
 
@@ -380,30 +343,20 @@ export default function EnriquecimentoAPIPage() {
       .maybeSingle()
 
     if (searchError && searchError.code !== 'PGRST116') {
-      console.error(`Cadastro: Erro ao buscar lead existente (${tipo}):`, searchError)
       return
     }
 
     if (existingLead) {
       // Lead com este telefone já existe, não inserir novamente
-      console.log(`Cadastro: Telefone duplicado encontrado para ${tipo}, pulando:`, contato.numero_formatado)
       return
     } else {
       // Inserir novo lead
-      console.log(`Cadastro: Inserindo novo ${tipo}:`, contato)
-      const { data, error } = await supabase.from('leads').insert(contato)
-
-      if (error) {
-        console.error(`Cadastro: Erro ao inserir ${tipo}:`, error)
-      } else {
-        console.log(`Cadastro: ${tipo} inserido com sucesso:`, data)
-      }
+      await supabase.from('leads').insert(contato)
     }
   }
 
   const cadastrarContatos = async (empresa: EmpresaEnriquecida) => {
     try {
-      console.log('Cadastro: Iniciando cadastro de contatos para empresa:', empresa.razaoSocial)
 
       // Cadastrar contatos da empresa
       for (const telefone of empresa.telefones) {
@@ -439,7 +392,7 @@ export default function EnriquecimentoAPIPage() {
         }
       }
     } catch (error) {
-      console.error('Erro ao cadastrar contatos:', error)
+      // Silently fail - leads will be saved in the database anyway
     }
   }
 

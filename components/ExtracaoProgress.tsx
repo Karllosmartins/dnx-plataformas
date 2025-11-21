@@ -61,10 +61,7 @@ export default function ExtracaoProgress({
 
   // Função para salvar extrações no banco de dados
   const salvarExtracoesNoBanco = async () => {
-    console.log('🔍 DEBUG: salvarExtracoesNoBanco chamada, jaExtraidoRef.current =', jaExtraidoRef.current)
-
     if (jaExtraidoRef.current) {
-      console.log('⚠️ Extração já foi processada anteriormente')
       return
     }
 
@@ -73,39 +70,26 @@ export default function ExtracaoProgress({
     setMensagemSalvamento('Salvando leads no banco de dados...')
 
     try {
-      console.log('💾 Iniciando salvamento de leads para o banco de dados')
-      console.log('📋 Props recebidas:', { idExtracaoAPI, nomeArquivo, userId, apiKey: apiKey ? 'presente' : 'ausente' })
-
       // Buscar arquivo de extração
       const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
 
-      console.log('📥 Buscando arquivo de extração:', downloadUrl)
       const fileResponse = await fetch(downloadUrl)
-
-      console.log('📥 Resposta do fetch:', { status: fileResponse.status, ok: fileResponse.ok, headers: fileResponse.headers })
 
       if (!fileResponse.ok) {
         const errorText = await fileResponse.text()
-        console.error('❌ Erro response:', { status: fileResponse.status, errorText })
         throw new Error(`Erro ao buscar arquivo: ${fileResponse.status} - ${errorText}`)
       }
 
       // Obter conteúdo do arquivo
       const fileContent = await fileResponse.text()
-      console.log('📄 Arquivo recebido, tamanho:', fileContent.length, 'bytes')
-      console.log('📄 Primeiras 500 caracteres:', fileContent.substring(0, 500))
 
       // Parsing: dividir por linhas e extrair dados
       // Esperamos formato CSV com cabeçalho (ignorar primeira linha)
       const linhas = fileContent.trim().split('\n')
-      console.log(`🔍 DEBUG Parsing: Total de linhas brutas: ${linhas.length}`)
 
       if (linhas.length < 2) {
         throw new Error('Arquivo vazio ou sem dados válidos')
       }
-
-      console.log(`📋 Total de linhas encontradas: ${linhas.length}`)
-      console.log(`📋 Cabeçalho (linha 0): ${linhas[0]}`)
 
       let totalSalvos = 0
       let totalDuplicados = 0
@@ -116,32 +100,24 @@ export default function ExtracaoProgress({
         try {
           const linha = linhas[i].trim()
           if (!linha) {
-            console.log(`⏭️ Linha ${i}: vazia, pulando`)
             continue
           }
-
-          console.log(`🔍 Processando linha ${i}: "${linha.substring(0, 100)}"`)
 
           // Parsing simples: supor formato "nome,telefone" ou CSV mais complexo
           // Se for CSV, pode ter vírgulas dentro de aspas, então fazer parsing robusto
           const campos = linha.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
 
-          console.log(`🔍 Campos extraídos (${campos.length}):`, campos.slice(0, 3))
-
           if (campos.length < 2) {
-            console.log(`⏭️ Linha ${i}: menos de 2 campos, pulando`)
             continue
           }
 
           const nomeLead = campos[0]?.trim() || 'Sem nome'
           const telefoneBruto = campos[1]?.trim() || ''
-          console.log(`📝 Nome: "${nomeLead}", Telefone bruto: "${telefoneBruto}"`)
 
           // Formatar telefone: remover caracteres não numéricos
           const telefoneNumerico = telefoneBruto.replace(/\D/g, '')
 
           if (!telefoneNumerico || telefoneNumerico.length < 10) {
-            console.log(`⏭️ Linha ${i}: Telefone inválido ou incompleto`)
             totalErros++
             continue
           }
@@ -155,15 +131,11 @@ export default function ExtracaoProgress({
             // Sem 9 dígito
             numeroFormatado = `(${telefoneNumerico.slice(0, 2)}) ${telefoneNumerico.slice(2, 6)}-${telefoneNumerico.slice(6)}`
           } else {
-            console.log(`⏭️ Linha ${i}: Telefone com formato desconhecido`)
             totalErros++
             continue
           }
 
-          console.log(`📞 Processando: ${nomeLead} - ${numeroFormatado}`)
-
           // Verificar duplicata
-          console.log(`🔍 Verificando duplicata: user_id=${userId}, numero_formatado=${numeroFormatado}`)
           const { data: existingLead, error: searchError } = await supabase
             .from('leads')
             .select('id')
@@ -171,29 +143,18 @@ export default function ExtracaoProgress({
             .eq('numero_formatado', numeroFormatado)
             .maybeSingle()
 
-          console.log(`🔍 Resultado busca duplicata:`, { existingLead, searchError })
-
           if (searchError) {
-            console.error(`❌ Erro ao buscar duplicata para ${numeroFormatado}:`, searchError)
             totalErros++
             continue
           }
 
           if (existingLead) {
-            console.log(`✅ Telefone ${numeroFormatado} já existe para este usuário`)
             totalDuplicados++
             continue
           }
 
           // Salvar novo lead
-          console.log(`💾 Tentando inserir lead:`, {
-            user_id: userId,
-            nome_cliente: nomeLead,
-            numero_formatado: numeroFormatado,
-            nome_campanha: nomeArquivo
-          })
-
-          const { data: insertedLead, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('leads')
             .insert({
               user_id: userId,
@@ -210,32 +171,23 @@ export default function ExtracaoProgress({
             .select()
             .single()
 
-          console.log(`💾 Resultado insert:`, { insertedLead, insertError })
-
           if (insertError) {
-            console.error(`❌ Erro ao inserir lead ${numeroFormatado}:`, insertError)
             totalErros++
             continue
           }
 
-          console.log(`✔️ Lead salvo com sucesso: ${nomeLead} - ${numeroFormatado}`)
           totalSalvos++
         } catch (lineError) {
-          console.error(`Erro ao processar linha ${i}:`, lineError)
           totalErros++
         }
       }
 
-      const mensagem = `✅ Salvamento concluído! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
+      const mensagem = `Salvamento concluido! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
       setMensagemSalvamento(mensagem)
-      console.log('✅ Salvamento concluído:', { totalSalvos, totalDuplicados, totalErros, mensagem })
     } catch (error) {
-      console.error('💥 Erro ao salvar extrações:', error)
-      const mensagemErro = `❌ Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+      const mensagemErro = `Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
       setMensagemSalvamento(mensagemErro)
-      console.error('💥 Mensagem de erro definida:', mensagemErro)
     } finally {
-      console.log('🏁 Finalizando salvamento')
       setSalvandoNoBanco(false)
     }
   }
@@ -246,7 +198,6 @@ export default function ExtracaoProgress({
 
     try {
       pollingCountRef.current += 1
-      console.log('🔄 Verificando status da extração:', { extracaoId, idExtracaoAPI, tentativa: pollingCountRef.current })
 
       const response = await fetch('/api/extracoes', {
         method: 'PUT',
@@ -263,7 +214,6 @@ export default function ExtracaoProgress({
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Status recebido:', data.extracao)
         setStatus(data.extracao)
 
         // Parar polling se processado, com erro ou cancelado
@@ -271,7 +221,6 @@ export default function ExtracaoProgress({
             data.extracao.status === 'Finalizada' ||
             data.extracao.status === 'Erro' ||
             data.extracao.status === 'Cancelada') {
-          console.log('✅ Extração finalizada, parando polling:', data.extracao.status)
           setPolling(false)
           if (intervalRef.current) {
             clearInterval(intervalRef.current)
@@ -280,19 +229,12 @@ export default function ExtracaoProgress({
 
           // Salvar no banco quando completar com sucesso
           if (data.extracao.status === 'Processado' || data.extracao.status === 'Finalizada') {
-            console.log('💾 Iniciando salvamento automático no banco de dados...')
-            console.log('💾 DEBUG: Chamando salvarExtracoesNoBanco()')
             await salvarExtracoesNoBanco()
-            console.log('💾 DEBUG: salvarExtracoesNoBanco() concluída')
           }
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
-        console.error('❌ Erro na resposta da API:', response.status, errorData)
-
         // Se erro 404, pode ser que a extração não existe na API - parar polling
         if (response.status === 404) {
-          console.log('🚫 Extração não encontrada, parando polling')
           setPolling(false)
           setStatus(prev => ({ ...prev, status: 'Erro' }))
           if (intervalRef.current) {
@@ -302,7 +244,6 @@ export default function ExtracaoProgress({
         }
       }
     } catch (error) {
-      console.error('💥 Erro ao verificar status:', error)
       // Não parar polling em caso de erro de rede - pode ser temporário
     } finally {
       if (manual) setConsultandoManual(false)
@@ -331,7 +272,6 @@ export default function ExtracaoProgress({
         if (pollingCountRef.current < 60) {
           verificarStatus()
         } else {
-          console.log('⏰ Timeout do polling após 10 minutos')
           setPolling(false)
           if (intervalRef.current) {
             clearInterval(intervalRef.current)
