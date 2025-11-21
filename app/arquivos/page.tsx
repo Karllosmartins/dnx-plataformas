@@ -1,5 +1,8 @@
 'use client'
 
+// Forçar renderização dinâmica para evitar erro de useContext no build
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { UploadCloud, FileText, Image as ImageIcon, Video, Trash2, Loader2, FolderOpen } from 'lucide-react'
 import { useAuth } from '../../components/shared/AuthWrapper'

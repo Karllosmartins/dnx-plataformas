@@ -1,5 +1,8 @@
 'use client'
 
+// Forçar renderização dinâmica para evitar erro de useContext no build
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import { supabase, User, Tool, UserTool } from '../../lib/supabase'

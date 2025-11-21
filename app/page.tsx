@@ -1,5 +1,8 @@
 'use client'
 
+// Forçar renderização dinâmica para evitar erro de useContext no build
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../lib/supabase'
