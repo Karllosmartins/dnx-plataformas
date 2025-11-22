@@ -27,6 +27,86 @@ export interface Plano {
   updated_at: string
 }
 
+// === Workspaces (Multi-Tenancy) ===
+export interface Workspace {
+  id: string
+  name: string
+  slug: string
+  plano_id?: number
+  settings: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
+
+export interface WorkspacePermissions {
+  leads?: {
+    create?: boolean
+    read?: boolean
+    update?: boolean
+    delete?: boolean
+  }
+  whatsapp?: {
+    create?: boolean
+    read?: boolean
+    update?: boolean
+    delete?: boolean
+  }
+  members?: {
+    invite?: boolean
+    remove?: boolean
+    update_roles?: boolean
+  }
+  workspace?: {
+    update?: boolean
+    delete?: boolean
+  }
+}
+
+export interface WorkspaceMember {
+  id: string
+  workspace_id: string
+  user_id: number
+  role: WorkspaceRole
+  permissions: WorkspacePermissions
+  joined_at: string
+  invited_by?: number
+}
+
+export interface WorkspaceWithMembers extends Workspace {
+  members?: WorkspaceMember[]
+  member_count?: number
+}
+
+export interface WorkspaceInvitation {
+  id: string
+  workspace_id: string
+  email: string
+  role: WorkspaceRole
+  invited_by: number
+  created_at: string
+  expires_at: string
+  accepted_at?: string
+  token: string
+}
+
+export interface CreateWorkspaceRequest {
+  name: string
+  slug?: string
+}
+
+export interface InviteMemberRequest {
+  email: string
+  role: WorkspaceRole
+  permissions?: WorkspacePermissions
+}
+
+export interface UpdateMemberRoleRequest {
+  role: WorkspaceRole
+  permissions?: WorkspacePermissions
+}
+
 // === Usuários ===
 export interface User {
   id: number
@@ -46,6 +126,7 @@ export interface User {
   consultas_realizadas?: number
   ultimo_reset_contagem?: string
   numero_instancias?: number
+  current_workspace_id?: string  // Nova propriedade para multi-tenancy
   created_at: string
   updated_at: string
   tipos_negocio?: Array<{
@@ -76,6 +157,8 @@ export interface UsuarioComPlano extends User {
 export interface Lead {
   id: number
   user_id: number
+  workspace_id?: string  // Nova propriedade para multi-tenancy
+  created_by?: number    // Quem criou o lead
   created_at: string | null
   remotejid: string | null
   response_id: string | null
@@ -153,6 +236,7 @@ export interface Lead {
 export interface InstanciaWhatsapp {
   id: number
   user_id: number
+  workspace_id?: string  // Nova propriedade para multi-tenancy
   config_id: number
   nome_instancia: string
   instancia: string

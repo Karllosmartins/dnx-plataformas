@@ -8,6 +8,7 @@ import pino from 'pino'
 import authRoutes from './routes/auth'
 import leadsRoutes from './routes/leads'
 import healthRoutes from './routes/health'
+import workspacesRoutes from './routes/workspaces'
 
 const app = express()
 const PORT = process.env.API_PORT || 3001
@@ -33,6 +34,7 @@ app.use(pinoHttp({ logger }))
 // Rotas
 app.use('/api/health', healthRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/workspaces', workspacesRoutes)
 app.use('/api/leads', leadsRoutes)
 
 // Error handler global
