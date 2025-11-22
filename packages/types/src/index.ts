@@ -237,14 +237,13 @@ export interface InstanciaWhatsapp {
   id: number
   user_id: number
   workspace_id?: string  // Nova propriedade para multi-tenancy
-  config_id: number
-  nome_instancia: string
-  instancia: string
   apikey?: string
+  instancia?: string
   baseurl?: string
-  status_conexao: 'conectado' | 'desconectado' | 'erro'
-  ultimo_ping?: string
-  ativo: boolean
+  waba_id?: string
+  is_official_api?: boolean
+  id_telefone?: string
+  agante_id?: number
   created_at: string
   updated_at?: string
 }
