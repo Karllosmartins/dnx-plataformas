@@ -9,6 +9,7 @@ import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import { getUserPlanInfo } from '../../lib/permissions'
 import { Phone, User, Plus, DollarSign, FileText, AlertCircle, CheckCircle, Clock, Users, LayoutGrid, List, Search, Filter, X, BarChart3, TrendingUp, Calendar, FileBarChart, Target, Activity, MessageSquare, Download, Edit, Crown, Info } from 'lucide-react'
+import { DatePicker } from '@/components/ui/date-picker'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import DynamicFormFields from '../../components/forms/DynamicFormFields'
 
@@ -396,8 +397,8 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [tipoConsultaFilter, setTipoConsultaFilter] = useState('todos')
   const [showFilters, setShowFilters] = useState(false)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'leads'>('leads')
   const [userTipoNegocio, setUserTipoNegocio] = useState<any>(null)
   const [userPlanInfo, setUserPlanInfo] = useState<any>(null)
@@ -1156,12 +1157,12 @@ export default function LeadsPage() {
     let dateMatch = true
     if (startDate && lead.created_at) {
       const leadDate = new Date(lead.created_at)
-      const filterStartDate = new Date(startDate)
-      dateMatch = dateMatch && leadDate >= filterStartDate
+      dateMatch = dateMatch && leadDate >= startDate
     }
     if (endDate && lead.created_at) {
       const leadDate = new Date(lead.created_at)
-      const filterEndDate = new Date(endDate + 'T23:59:59')
+      const filterEndDate = new Date(endDate)
+      filterEndDate.setHours(23, 59, 59, 999)
       dateMatch = dateMatch && leadDate <= filterEndDate
     }
     
@@ -2522,22 +2523,22 @@ export default function LeadsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">Data início:</span>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Data início:</span>
+                    <DatePicker
+                      date={startDate}
+                      onSelect={setStartDate}
+                      placeholder="Início"
+                      className="w-[150px]"
                     />
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">Data fim:</span>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Data fim:</span>
+                    <DatePicker
+                      date={endDate}
+                      onSelect={setEndDate}
+                      placeholder="Fim"
+                      className="w-[150px]"
                     />
                   </div>
 
@@ -2546,8 +2547,8 @@ export default function LeadsPage() {
                       setSearchTerm('')
                       setStatusFilter('todos')
                       setTipoConsultaFilter('todos')
-                      setStartDate('')
-                      setEndDate('')
+                      setStartDate(undefined)
+                      setEndDate(undefined)
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800"
                   >

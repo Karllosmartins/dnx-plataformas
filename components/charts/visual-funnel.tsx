@@ -136,58 +136,150 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
         })}
       </div>
 
-      {/* Visual do Funil com Wave */}
+      {/* Visual do Funil Fluido */}
       <div className="bg-card rounded-lg shadow p-6 border dark:border-border">
         <h3 className="text-lg font-semibold text-foreground mb-6 text-center">
           Visualização do Funil
         </h3>
 
-        {/* Funil visual */}
-        <div className="relative flex flex-col items-center gap-0">
-          {normalizedStages.map((stage, index) => {
-            const colors = stageColors[index % stageColors.length]
-            const width = getFunnelWidth(index)
-            const nextWidth = index < normalizedStages.length - 1 ? getFunnelWidth(index + 1) : width
+        {/* Funil visual SVG fluido */}
+        <div className="relative w-full max-w-4xl mx-auto">
+          <svg
+            viewBox={`0 0 800 ${normalizedStages.length * 60 + 20}`}
+            className="w-full h-auto"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              {/* Gradientes para cada etapa */}
+              {normalizedStages.map((_, index) => {
+                const colors = [
+                  ['#3b82f6', '#2563eb'], // blue
+                  ['#06b6d4', '#0891b2'], // cyan
+                  ['#14b8a6', '#0d9488'], // teal
+                  ['#22c55e', '#16a34a'], // green
+                  ['#10b981', '#059669'], // emerald
+                  ['#84cc16', '#65a30d'], // lime
+                  ['#eab308', '#ca8a04'], // yellow
+                  ['#f97316', '#ea580c'], // orange
+                ]
+                const [color1, color2] = colors[index % colors.length]
+                return (
+                  <linearGradient key={`grad-${index}`} id={`funnelGradient${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={color1} />
+                    <stop offset="100%" stopColor={color2} />
+                  </linearGradient>
+                )
+              })}
+            </defs>
 
-            return (
-              <div key={stage.status} className="relative w-full flex flex-col items-center">
-                {/* Barra do funil */}
-                <div
-                  className={cn(
-                    "relative flex items-center justify-center py-3 transition-all duration-300",
-                    colors.bg,
-                    index === 0 && "rounded-t-lg",
-                    index === normalizedStages.length - 1 && "rounded-b-lg"
+            {normalizedStages.map((stage, index) => {
+              const totalStages = normalizedStages.length
+              const yOffset = index * 60 + 10
+
+              // Largura vai de 100% no topo até 30% na base
+              const topWidth = 800 - (index * (800 - 240) / (totalStages - 1 || 1))
+              const bottomWidth = index < totalStages - 1
+                ? 800 - ((index + 1) * (800 - 240) / (totalStages - 1 || 1))
+                : topWidth * 0.9
+
+              const topLeft = (800 - topWidth) / 2
+              const topRight = topLeft + topWidth
+              const bottomLeft = (800 - bottomWidth) / 2
+              const bottomRight = bottomLeft + bottomWidth
+
+              // Path com curvas suaves
+              const path = `
+                M ${topLeft} ${yOffset}
+                Q ${topLeft - 10} ${yOffset + 25}, ${bottomLeft} ${yOffset + 50}
+                L ${bottomRight} ${yOffset + 50}
+                Q ${topRight + 10} ${yOffset + 25}, ${topRight} ${yOffset}
+                Z
+              `
+
+              return (
+                <g key={stage.status}>
+                  {/* Forma do funil */}
+                  <path
+                    d={path}
+                    fill={`url(#funnelGradient${index})`}
+                    className="transition-all duration-300 hover:opacity-90"
+                  />
+
+                  {/* Texto da etapa */}
+                  <text
+                    x="400"
+                    y={yOffset + 30}
+                    textAnchor="middle"
+                    className="fill-white font-semibold text-sm"
+                    style={{ fontSize: '14px' }}
+                  >
+                    {stage.label}
+                  </text>
+
+                  {/* Badge de quantidade */}
+                  <rect
+                    x="540"
+                    y={yOffset + 18}
+                    width="35"
+                    height="22"
+                    rx="4"
+                    fill="rgba(255,255,255,0.25)"
+                  />
+                  <text
+                    x="557"
+                    y={yOffset + 33}
+                    textAnchor="middle"
+                    className="fill-white font-medium"
+                    style={{ fontSize: '12px' }}
+                  >
+                    {stage.count}
+                  </text>
+
+                  {/* Badge de porcentagem */}
+                  <rect
+                    x="585"
+                    y={yOffset + 18}
+                    width="50"
+                    height="22"
+                    rx="4"
+                    fill="rgba(255,255,255,0.35)"
+                  />
+                  <text
+                    x="610"
+                    y={yOffset + 33}
+                    textAnchor="middle"
+                    className="fill-white font-bold"
+                    style={{ fontSize: '12px' }}
+                  >
+                    {stage.percentage.toFixed(1)}%
+                  </text>
+
+                  {/* Taxa de conversão entre etapas */}
+                  {index < totalStages - 1 && stage.conversionRate !== undefined && (
+                    <>
+                      <ellipse
+                        cx="400"
+                        cy={yOffset + 55}
+                        rx="35"
+                        ry="12"
+                        className="fill-background stroke-border"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="400"
+                        y={yOffset + 59}
+                        textAnchor="middle"
+                        className="fill-foreground font-semibold"
+                        style={{ fontSize: '10px' }}
+                      >
+                        {stage.conversionRate.toFixed(1)}%
+                      </text>
+                    </>
                   )}
-                  style={{
-                    width: `${width}%`,
-                    clipPath: index < normalizedStages.length - 1
-                      ? `polygon(0 0, 100% 0, ${50 + (nextWidth/2)}% 100%, ${50 - (nextWidth/2)}% 100%)`
-                      : undefined
-                  }}
-                >
-                  <div className="flex items-center gap-4 text-white">
-                    <span className="font-semibold text-sm truncate max-w-[150px]">
-                      {stage.label}
-                    </span>
-                    <span className="bg-white/20 px-2 py-1 rounded text-xs font-medium">
-                      {stage.count}
-                    </span>
-                    <span className="bg-white/30 px-2 py-1 rounded text-xs font-bold">
-                      {stage.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Seta/Indicador de conversão entre etapas */}
-                {index < normalizedStages.length - 1 && stage.conversionRate !== undefined && (
-                  <div className="absolute -bottom-3 z-10 bg-background border border-border rounded-full px-3 py-1 text-xs font-semibold shadow">
-                    <span className={colors.text}>{stage.conversionRate.toFixed(1)}%</span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                </g>
+              )
+            })}
+          </svg>
         </div>
 
         {/* Resumo abaixo do funil */}

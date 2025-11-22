@@ -10,8 +10,8 @@ import { useAuth } from '../components/shared/AuthWrapper'
 import MetricCard from '../components/features/leads/MetricCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
@@ -46,8 +46,8 @@ export default function HomePage() {
   const { user } = useAuth()
   const [leads, setLeads] = useState<Lead[]>([])
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalLeads: 0,
     novosLeads: 0,
@@ -228,8 +228,7 @@ export default function HomePage() {
       filtered = filtered.filter(lead => {
         if (!lead.created_at) return false
         const leadDate = new Date(lead.created_at)
-        const filterStartDate = new Date(startDate)
-        return leadDate >= filterStartDate
+        return leadDate >= startDate
       })
     }
 
@@ -237,7 +236,8 @@ export default function HomePage() {
       filtered = filtered.filter(lead => {
         if (!lead.created_at) return false
         const leadDate = new Date(lead.created_at)
-        const filterEndDate = new Date(endDate + 'T23:59:59')
+        const filterEndDate = new Date(endDate)
+        filterEndDate.setHours(23, 59, 59, 999)
         return leadDate <= filterEndDate
       })
     }
@@ -247,8 +247,8 @@ export default function HomePage() {
   }
 
   const clearDateFilter = () => {
-    setStartDate('')
-    setEndDate('')
+    setStartDate(undefined)
+    setEndDate(undefined)
     setFilteredLeads(leads)
     calculateMetrics(leads)
   }
@@ -419,29 +419,27 @@ export default function HomePage() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="startDate">Data início</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+              <Label>Data início</Label>
+              <DatePicker
+                date={startDate}
+                onSelect={setStartDate}
+                placeholder="Selecione a data início"
               />
             </div>
             <div className="flex-1 space-y-2">
-              <Label htmlFor="endDate">Data fim</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+              <Label>Data fim</Label>
+              <DatePicker
+                date={endDate}
+                onSelect={setEndDate}
+                placeholder="Selecione a data fim"
               />
             </div>
           </div>
           {(startDate || endDate) && (
             <div className="mt-3 text-sm text-muted-foreground">
               Mostrando dados de {filteredLeads.length} leads
-              {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
-              {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
+              {startDate && ` a partir de ${startDate.toLocaleDateString('pt-BR')}`}
+              {endDate && ` até ${endDate.toLocaleDateString('pt-BR')}`}
             </div>
           )}
         </CardContent>
