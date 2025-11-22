@@ -8,6 +8,12 @@ import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../lib/supabase'
 import { useAuth } from '../components/shared/AuthWrapper'
 import MetricCard from '../components/features/leads/MetricCard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   Users,
   DollarSign,
@@ -18,7 +24,8 @@ import {
   FileText,
   User,
   XCircle,
-  Target
+  Target,
+  Loader2
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -364,75 +371,81 @@ export default function HomePage() {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
     }).format(value)
   }
 
   const recentLeads = filteredLeads.slice(0, 5)
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Carregando dashboard...</div>
+    return (
+      <div className="flex flex-col justify-center items-center h-64 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="text-muted-foreground">Carregando dashboard...</span>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6 p-6">
       {/* Cabeçalho */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-foreground">
           {dashboardConfig?.title || 'DNX Plataformas'}
         </h1>
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-muted-foreground">
           {dashboardConfig?.subtitle || 'Dashboard CRM'} - Bem-vindo, {user?.name}
         </p>
       </div>
 
       {/* Filtro de Data */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Filtros</CardTitle>
+            {(startDate || endDate) && (
+              <Button
+                variant="link"
+                onClick={clearDateFilter}
+                className="h-auto p-0 text-primary"
+              >
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="startDate">Data início</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="endDate">Data fim</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
           {(startDate || endDate) && (
-            <button
-              onClick={clearDateFilter}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Limpar filtros
-            </button>
+            <div className="mt-3 text-sm text-muted-foreground">
+              Mostrando dados de {filteredLeads.length} leads
+              {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
+              {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
+            </div>
           )}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data início
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data fim
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        {(startDate || endDate) && (
-          <div className="mt-3 text-sm text-gray-600">
-            Mostrando dados de {filteredLeads.length} leads
-            {startDate && ` a partir de ${new Date(startDate).toLocaleDateString('pt-BR')}`}
-            {endDate && ` até ${new Date(endDate).toLocaleDateString('pt-BR')}`}
-          </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Métricas principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -442,21 +455,21 @@ export default function HomePage() {
           description={`${metrics.novosLeads} novos leads`}
           icon={Users}
         />
-        
+
         <MetricCard
           title="Taxa de Conversão"
           value={`${metrics.taxaConversao.toFixed(1)}%`}
           description={`${metrics.clientesFechados} ${dashboardConfig?.metrics?.fechados?.toLowerCase() || 'fechados'}`}
           icon={TrendingUp}
         />
-        
+
         <MetricCard
           title="Receita Total"
           value={formatCurrency(metrics.valorTotalConsultas)}
           description={`${metrics.pagamentosRealizados} ${dashboardConfig?.metrics?.emAndamento?.toLowerCase() || 'em andamento'}`}
           icon={DollarSign}
         />
-        
+
         <MetricCard
           title="Contratos Fechados"
           value={formatCurrency(metrics.valorTotalContratos)}
@@ -466,111 +479,122 @@ export default function HomePage() {
       </div>
 
       {/* Funil de Conversão */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Funil de Conversão</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <Users className="h-8 w-8 mx-auto mb-2 text-blue-100" />
-            <div className="text-2xl font-bold">{metrics.novosLeads}</div>
-            <div className="text-xs text-blue-100 mt-1">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
-          </div>
-
-          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-100" />
-            <div className="text-2xl font-bold">{metrics.qualificados}</div>
-            <div className="text-xs text-yellow-100 mt-1">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <DollarSign className="h-8 w-8 mx-auto mb-2 text-purple-100" />
-            <div className="text-2xl font-bold">{metrics.pagamentosRealizados}</div>
-            <div className="text-xs text-purple-100 mt-1">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <FileText className="h-8 w-8 mx-auto mb-2 text-orange-100" />
-            <div className="text-2xl font-bold">{metrics.dividasEncontradas}</div>
-            <div className="text-xs text-orange-100 mt-1">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <User className="h-8 w-8 mx-auto mb-2 text-indigo-100" />
-            <div className="text-2xl font-bold">
-              {leads.filter(l => {
-                const status = l.status_generico || l.status_limpa_nome || ''
-                return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
-              }).length}
+      <Card>
+        <CardHeader>
+          <CardTitle>Funil de Conversão</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <Users className="h-8 w-8 mx-auto mb-2 text-blue-100" />
+              <div className="text-2xl font-bold">{metrics.novosLeads}</div>
+              <div className="text-xs text-blue-100 mt-1">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
             </div>
-            <div className="text-xs text-indigo-100 mt-1">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
-          </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-100" />
-            <div className="text-2xl font-bold">{metrics.clientesFechados}</div>
-            <div className="text-xs text-green-100 mt-1">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
-          </div>
+            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-600 dark:to-yellow-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-100" />
+              <div className="text-2xl font-bold">{metrics.qualificados}</div>
+              <div className="text-xs text-yellow-100 mt-1">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
+            </div>
 
-          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <XCircle className="h-8 w-8 mx-auto mb-2 text-red-100" />
-            <div className="text-2xl font-bold">{metrics.leadsPerdidos}</div>
-            <div className="text-xs text-red-100 mt-1">{dashboardConfig?.metrics?.leadsPerdidos || 'Leads Perdidos'}</div>
-          </div>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <DollarSign className="h-8 w-8 mx-auto mb-2 text-purple-100" />
+              <div className="text-2xl font-bold">{metrics.pagamentosRealizados}</div>
+              <div className="text-xs text-purple-100 mt-1">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
+            </div>
 
-          <div className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg shadow-lg p-4 text-white text-center">
-            <Target className="h-8 w-8 mx-auto mb-2 text-gray-100" />
-            <div className="text-2xl font-bold">{leads.length}</div>
-            <div className="text-xs text-gray-100 mt-1">{dashboardConfig?.metrics?.totalGeral || 'Total Geral'}</div>
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <FileText className="h-8 w-8 mx-auto mb-2 text-orange-100" />
+              <div className="text-2xl font-bold">{metrics.dividasEncontradas}</div>
+              <div className="text-xs text-orange-100 mt-1">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <User className="h-8 w-8 mx-auto mb-2 text-indigo-100" />
+              <div className="text-2xl font-bold">
+                {leads.filter(l => {
+                  const status = l.status_generico || l.status_limpa_nome || ''
+                  return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
+                }).length}
+              </div>
+              <div className="text-xs text-indigo-100 mt-1">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-100" />
+              <div className="text-2xl font-bold">{metrics.clientesFechados}</div>
+              <div className="text-xs text-green-100 mt-1">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <XCircle className="h-8 w-8 mx-auto mb-2 text-red-100" />
+              <div className="text-2xl font-bold">{metrics.leadsPerdidos}</div>
+              <div className="text-xs text-red-100 mt-1">{dashboardConfig?.metrics?.leadsPerdidos || 'Leads Perdidos'}</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 rounded-lg shadow-lg p-4 text-white text-center">
+              <Target className="h-8 w-8 mx-auto mb-2 text-gray-100" />
+              <div className="text-2xl font-bold">{leads.length}</div>
+              <div className="text-xs text-gray-100 mt-1">{dashboardConfig?.metrics?.totalGeral || 'Total Geral'}</div>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Leads Recentes */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Leads Recentes</h3>
-          </div>
-          <div className="divide-y divide-gray-200">
-            {recentLeads.length > 0 ? (
-              recentLeads.map((lead) => (
-                <div key={lead.id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {lead.nome_cliente || 'Nome não informado'}
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>Leads Recentes</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {recentLeads.length > 0 ? (
+                recentLeads.map((lead) => (
+                  <div key={lead.id} className="p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">
+                          {lead.nome_cliente || 'Nome não informado'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {lead.origem} • {lead.telefone}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {lead.origem} • {lead.telefone}
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          (() => {
+                            const status = lead.status_generico || lead.status_limpa_nome || 'novo'
+                            if (status.includes('fechado') || status.includes('finalizado') || status.includes('convertido'))
+                              return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            if (status.includes('divida') || status.includes('viavel') || status.includes('consta'))
+                              return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                            if (status.includes('qualific') || status.includes('analise'))
+                              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          })()
+                        )}
+                      >
+                        {(lead.status_generico || lead.status_limpa_nome)?.replace(/_/g, ' ') || 'novo lead'}
+                      </Badge>
                     </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(() => {
-                      const status = lead.status_generico || lead.status_limpa_nome || 'novo'
-                      if (status.includes('fechado') || status.includes('finalizado') || status.includes('convertido'))
-                        return 'bg-green-100 text-green-800'
-                      if (status.includes('divida') || status.includes('viavel') || status.includes('consta'))
-                        return 'bg-orange-100 text-orange-800'
-                      if (status.includes('qualific') || status.includes('analise'))
-                        return 'bg-yellow-100 text-yellow-800'
-                      return 'bg-blue-100 text-blue-800'
-                    })()}`}>
-                      {(lead.status_generico || lead.status_limpa_nome)?.replace(/_/g, ' ') || 'novo lead'}
-                    </span>
                   </div>
+                ))
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-foreground font-medium mb-2">Nenhum lead encontrado</p>
+                  <Link href="/leads" className="inline-flex items-center text-primary hover:text-primary/80 font-medium text-sm">
+                    Criar primeiro lead
+                  </Link>
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center">
-                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-gray-600 font-medium mb-2">Nenhum lead encontrado</p>
-                <Link href="/leads" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm">
-                  Criar primeiro lead →
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
       </div>
     </div>
