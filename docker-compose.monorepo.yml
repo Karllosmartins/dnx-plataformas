@@ -1,0 +1,117 @@
+# =====================================================
+# DOCKER COMPOSE - MONOREPO - DNX PLATAFORMAS
+# VERSÃO PARA ARQUITETURA SEPARADA (API + WEB)
+# =====================================================
+
+version: "3.8"
+
+services:
+  # API Express - Backend
+  dnx-api:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "
+      echo 'Installing git...' &&
+      apk add --no-cache git python3 make g++ &&
+      echo 'Cloning repository...' &&
+      git clone https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
+      cp -r /tmp/repo/* /app/ &&
+      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
+      rm -rf /tmp/repo &&
+      echo 'Installing dependencies...' &&
+      npm ci &&
+      echo 'Building API...' &&
+      npm run build:api &&
+      echo 'Starting API...' &&
+      npm run start:api
+      "
+    networks:
+      - dnnet
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3001
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=https://app.dnxplataformas.com.br
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+      labels:
+        - traefik.enable=1
+        - traefik.http.routers.dnx-api.rule=Host(`api.dnxplataformas.com.br`)
+        - traefik.http.routers.dnx-api.entrypoints=websecure
+        - traefik.http.routers.dnx-api.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.dnx-api.service=dnx-api
+        - traefik.http.services.dnx-api.loadbalancer.server.port=3001
+        - traefik.http.services.dnx-api.loadbalancer.passHostHeader=true
+
+  # Web Next.js - Frontend
+  dnx-web:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "
+      echo 'Installing git...' &&
+      apk add --no-cache git &&
+      echo 'Cloning repository...' &&
+      git clone https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
+      cp -r /tmp/repo/* /app/ &&
+      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
+      rm -rf /tmp/repo &&
+      echo 'Installing dependencies...' &&
+      npm ci &&
+      echo 'Building Web...' &&
+      npm run build:web &&
+      echo 'Starting Web...' &&
+      npm run start:web
+      "
+    networks:
+      - dnnet
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=https://api.dnxplataformas.com.br/api
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATECODE_USERNAME=${DATECODE_USERNAME}
+      - DATECODE_PASSWORD=${DATECODE_PASSWORD}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_SECRET=${NEXT_PUBLIC_GOOGLE_CLIENT_SECRET}
+    depends_on:
+      - dnx-api
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      labels:
+        - traefik.enable=1
+        - traefik.http.routers.dnx-web.rule=Host(`app.dnxplataformas.com.br`)
+        - traefik.http.routers.dnx-web.entrypoints=websecure
+        - traefik.http.routers.dnx-web.priority=1
+        - traefik.http.routers.dnx-web.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.dnx-web.service=dnx-web
+        - traefik.http.services.dnx-web.loadbalancer.server.port=3000
+        - traefik.http.services.dnx-web.loadbalancer.passHostHeader=true
+
+networks:
+  dnnet:
+    external: true
+    name: dnnet
