@@ -132,3 +132,154 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: hsl(0 0% 95%);
 }
+
+/* ===========================================
+   OVERRIDE: Classes hardcoded para suportar dark mode
+   Essas regras garantem que páginas legadas
+   (que usam bg-white, text-gray-900, etc.)
+   funcionem corretamente no dark mode
+   =========================================== */
+
+/* Backgrounds */
+.dark .bg-white {
+  background-color: hsl(var(--card)) !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: hsl(280 30% 15%) !important;
+}
+
+.dark .bg-purple-100 {
+  background-color: hsl(280 30% 20%) !important;
+}
+
+.dark .bg-green-50 {
+  background-color: hsl(142 30% 15%) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: hsl(220 30% 15%) !important;
+}
+
+/* Textos */
+.dark .text-gray-900 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .text-gray-800 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .text-gray-700 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .text-gray-600 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .text-gray-500 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .text-purple-800 {
+  color: hsl(280 70% 70%) !important;
+}
+
+.dark .text-purple-600 {
+  color: hsl(280 70% 65%) !important;
+}
+
+.dark .text-green-800 {
+  color: hsl(142 70% 65%) !important;
+}
+
+.dark .text-green-700 {
+  color: hsl(142 70% 60%) !important;
+}
+
+.dark .text-green-600 {
+  color: hsl(142 70% 55%) !important;
+}
+
+.dark .text-blue-800 {
+  color: hsl(220 70% 65%) !important;
+}
+
+/* Borders */
+.dark .border-gray-200 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .border-gray-300 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .border-purple-300 {
+  border-color: hsl(280 50% 40%) !important;
+}
+
+.dark .border-purple-500 {
+  border-color: hsl(280 60% 50%) !important;
+}
+
+.dark .border-green-200 {
+  border-color: hsl(142 40% 30%) !important;
+}
+
+.dark .border-green-500 {
+  border-color: hsl(142 60% 50%) !important;
+}
+
+.dark .border-blue-200 {
+  border-color: hsl(220 40% 30%) !important;
+}
+
+.dark .border-blue-300 {
+  border-color: hsl(220 50% 40%) !important;
+}
+
+/* Inputs e Selects - Corrigir fundo preto */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Focus states */
+.dark .focus\:ring-purple-500:focus {
+  --tw-ring-color: hsl(280 60% 50%) !important;
+}
+
+.dark .focus\:ring-green-500:focus {
+  --tw-ring-color: hsl(142 60% 50%) !important;
+}
+
+/* Shadows no dark mode */
+.dark .shadow,
+.dark .shadow-md,
+.dark .shadow-lg {
+  --tw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--tw-shadow) !important;
+}
+
+/* Cards com rounded-lg */
+.dark .rounded-lg.bg-white,
+.dark .rounded-md.bg-white {
+  background-color: hsl(var(--card)) !important;
+}
