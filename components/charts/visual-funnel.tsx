@@ -34,13 +34,22 @@ const stageColors = [
 export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
   if (!stages || stages.length === 0) return null
 
-  const totalValue = stages.reduce((sum, stage) => sum + (stage.value || 0), 0)
-  const totalCount = stages.reduce((sum, stage) => sum + stage.count, 0)
+  // Normalizar dados para garantir que são números
+  const normalizedStages = stages.map(stage => ({
+    ...stage,
+    count: Number(stage.count) || 0,
+    percentage: Number(stage.percentage) || 0,
+    conversionRate: stage.conversionRate !== undefined ? Number(stage.conversionRate) : undefined,
+    value: stage.value !== undefined ? Number(stage.value) : undefined,
+  }))
+
+  const totalValue = normalizedStages.reduce((sum, stage) => sum + (stage.value || 0), 0)
+  const totalCount = normalizedStages.reduce((sum, stage) => sum + stage.count, 0)
 
   // Calcular largura do funil para cada etapa (diminui progressivamente)
   const getFunnelWidth = (index: number) => {
     const baseWidth = 100
-    const reduction = (100 - 30) / (stages.length - 1 || 1) // Reduz até 30% do original
+    const reduction = (100 - 30) / (normalizedStages.length - 1 || 1) // Reduz até 30% do original
     return Math.max(baseWidth - (reduction * index), 30)
   }
 
@@ -48,7 +57,7 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
     <div className={cn("space-y-6", className)}>
       {/* Cards de cada etapa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-        {stages.map((stage, index) => {
+        {normalizedStages.map((stage, index) => {
           const colors = stageColors[index % stageColors.length]
 
           return (
@@ -135,10 +144,10 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
 
         {/* Funil visual */}
         <div className="relative flex flex-col items-center gap-0">
-          {stages.map((stage, index) => {
+          {normalizedStages.map((stage, index) => {
             const colors = stageColors[index % stageColors.length]
             const width = getFunnelWidth(index)
-            const nextWidth = index < stages.length - 1 ? getFunnelWidth(index + 1) : width
+            const nextWidth = index < normalizedStages.length - 1 ? getFunnelWidth(index + 1) : width
 
             return (
               <div key={stage.status} className="relative w-full flex flex-col items-center">
@@ -148,11 +157,11 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
                     "relative flex items-center justify-center py-3 transition-all duration-300",
                     colors.bg,
                     index === 0 && "rounded-t-lg",
-                    index === stages.length - 1 && "rounded-b-lg"
+                    index === normalizedStages.length - 1 && "rounded-b-lg"
                   )}
                   style={{
                     width: `${width}%`,
-                    clipPath: index < stages.length - 1
+                    clipPath: index < normalizedStages.length - 1
                       ? `polygon(0 0, 100% 0, ${50 + (nextWidth/2)}% 100%, ${50 - (nextWidth/2)}% 100%)`
                       : undefined
                   }}
@@ -171,7 +180,7 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
                 </div>
 
                 {/* Seta/Indicador de conversão entre etapas */}
-                {index < stages.length - 1 && stage.conversionRate !== undefined && (
+                {index < normalizedStages.length - 1 && stage.conversionRate !== undefined && (
                   <div className="absolute -bottom-3 z-10 bg-background border border-border rounded-full px-3 py-1 text-xs font-semibold shadow">
                     <span className={colors.text}>{stage.conversionRate.toFixed(1)}%</span>
                   </div>
@@ -186,20 +195,20 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-foreground">
-                {stages[0]?.count || 0}
+                {normalizedStages[0]?.count || 0}
               </div>
               <div className="text-sm text-muted-foreground">Entrada do Funil</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">
-                {stages[stages.length - 1]?.count || 0}
+                {normalizedStages[normalizedStages.length - 1]?.count || 0}
               </div>
               <div className="text-sm text-muted-foreground">Saída do Funil</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
-                {stages[0]?.count > 0
-                  ? ((stages[stages.length - 1]?.count / stages[0]?.count) * 100).toFixed(1)
+                {normalizedStages[0]?.count > 0
+                  ? ((normalizedStages[normalizedStages.length - 1]?.count / normalizedStages[0]?.count) * 100).toFixed(1)
                   : 0}%
               </div>
               <div className="text-sm text-muted-foreground">Taxa de Conversão Global</div>
