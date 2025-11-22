@@ -307,3 +307,62 @@
   --tw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   box-shadow: var(--tw-shadow) !important;
 }
+
+/* Backgrounds coloridos para dark mode - Consulta page */
+.dark .bg-orange-50 {
+  background-color: hsl(25 40% 18%) !important;
+}
+
+.dark .bg-orange-100 {
+  background-color: hsl(25 40% 22%) !important;
+}
+
+.dark .bg-teal-50 {
+  background-color: hsl(175 40% 15%) !important;
+}
+
+.dark .bg-teal-100 {
+  background-color: hsl(175 40% 20%) !important;
+}
+
+.dark .bg-red-50 {
+  background-color: hsl(0 40% 18%) !important;
+}
+
+.dark .bg-red-100 {
+  background-color: hsl(0 40% 22%) !important;
+}
+
+.dark .bg-yellow-50 {
+  background-color: hsl(45 40% 18%) !important;
+}
+
+.dark .bg-yellow-100 {
+  background-color: hsl(45 40% 22%) !important;
+}
+
+/* Borders coloridos para dark mode */
+.dark .border-orange-200 {
+  border-color: hsl(25 50% 35%) !important;
+}
+
+.dark .border-teal-200 {
+  border-color: hsl(175 50% 30%) !important;
+}
+
+.dark .border-red-200 {
+  border-color: hsl(0 50% 35%) !important;
+}
+
+.dark .border-yellow-200 {
+  border-color: hsl(45 50% 35%) !important;
+}
+
+/* Hover states para bg coloridos */
+.dark .hover\:bg-orange-100:hover {
+  background-color: hsl(25 40% 25%) !important;
+}
+
+.dark .hover\:bg-teal-100:hover {
+  background-color: hsl(175 40% 22%) !important;
+}
