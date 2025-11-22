@@ -1028,17 +1028,31 @@ export default function RelatoriosPage() {
 
       {/* Graficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Grafico de Status */}
+        {/* Grafico de Status - Pie Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Activity className="h-5 w-5 mr-2 text-primary" />
               Leads por Status
             </CardTitle>
+            <CardDescription>Distribuição de leads por status atual</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ChartContainer
+              config={statusChartData.reduce((acc, item, index) => {
+                acc[item.name] = {
+                  label: item.name,
+                  color: COLORS[index % COLORS.length]
+                }
+                return acc
+              }, {} as ChartConfig)}
+              className="mx-auto aspect-square h-[300px]"
+            >
               <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
                 <Pie
                   data={statusChartData}
                   cx="50%"
@@ -1046,80 +1060,137 @@ export default function RelatoriosPage() {
                   labelLine={false}
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
-                  fill="#8884d8"
+                  innerRadius={40}
+                  paddingAngle={2}
                   dataKey="value"
+                  nameKey="name"
                 >
                   {statusChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <ChartLegend content={<ChartLegendContent />} />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Grafico de Campanhas */}
+        {/* Grafico de Campanhas - Bar Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <TrendingUp className="h-5 w-5 mr-2 text-primary" />
               Performance por Campanha
             </CardTitle>
+            <CardDescription>Quantidade de leads por campanha</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={campanhaChartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="campanha" className="text-muted-foreground" />
-                <YAxis className="text-muted-foreground" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="leads" fill="hsl(var(--chart-1))" name="Leads" />
+            <ChartContainer
+              config={{
+                leads: {
+                  label: "Leads",
+                  color: "hsl(var(--chart-1))"
+                }
+              }}
+              className="h-[300px]"
+            >
+              <BarChart data={campanhaChartData} accessibilityLayer>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="campanha"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="leads" fill="var(--color-leads)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Grafico de Origem */}
+        {/* Grafico de Origem - Horizontal Bar Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Target className="h-5 w-5 mr-2 text-primary" />
               Leads por Origem
             </CardTitle>
+            <CardDescription>Distribuição por canal de origem</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={origemChartData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" className="text-muted-foreground" />
-                <YAxis dataKey="name" type="category" width={100} className="text-muted-foreground" />
-                <Tooltip />
-                <Bar dataKey="value" fill="hsl(var(--chart-2))" />
+            <ChartContainer
+              config={{
+                value: {
+                  label: "Leads",
+                  color: "hsl(var(--chart-2))"
+                }
+              }}
+              className="h-[300px]"
+            >
+              <BarChart data={origemChartData} layout="vertical" accessibilityLayer>
+                <CartesianGrid horizontal={false} />
+                <XAxis type="number" tickLine={false} axisLine={false} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={100}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Timeline */}
+        {/* Timeline - Area Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Calendar className="h-5 w-5 mr-2 text-primary" />
-              Evolucao de Leads
+              Evolução de Leads
             </CardTitle>
+            <CardDescription>Tendência de entrada de leads ao longo do tempo</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={timelineChartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="data" className="text-muted-foreground" />
-                <YAxis className="text-muted-foreground" />
-                <Tooltip />
-                <Area type="monotone" dataKey="leads" stroke="hsl(var(--chart-4))" fill="hsl(var(--chart-4) / 0.3)" />
+            <ChartContainer
+              config={{
+                leads: {
+                  label: "Leads",
+                  color: "hsl(var(--chart-4))"
+                }
+              }}
+              className="h-[300px]"
+            >
+              <AreaChart data={timelineChartData} accessibilityLayer>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="data"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <defs>
+                  <linearGradient id="fillLeads" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-leads)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--color-leads)" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="leads"
+                  stroke="var(--color-leads)"
+                  fill="url(#fillLeads)"
+                  strokeWidth={2}
+                />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
