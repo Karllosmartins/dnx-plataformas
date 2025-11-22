@@ -1,5 +1,12 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Webpack config para garantir path alias
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname)
+    return config
+  },
   // Configuração para deploy em VPS
   experimental: {
     serverComponentsExternalPackages: ['@supabase/supabase-js', 'bcrypt', 'pino', 'pino-pretty']
