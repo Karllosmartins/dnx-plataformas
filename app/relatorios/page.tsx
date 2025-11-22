@@ -411,7 +411,13 @@ export default function RelatoriosPage() {
 
     if (userTipoNegocio?.status_personalizados && Array.isArray(userTipoNegocio.status_personalizados)) {
       userTipoNegocio.status_personalizados.forEach((status: string, index: number) => {
-        const count = filteredLeads.filter(l => l.status_generico === status).length
+        // Contar leads pelo status_generico OU status_limpa_nome (para compatibilidade)
+        const count = filteredLeads.filter(l =>
+          (l.status_generico === status) ||
+          (l.status_limpa_nome === status) ||
+          // Se o status é o primeiro (novo_lead), incluir também leads sem status
+          (index === 0 && !l.status_generico && !l.status_limpa_nome)
+        ).length
         const label = dashboardConfig?.statusLabels?.[status] ||
                       status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 
