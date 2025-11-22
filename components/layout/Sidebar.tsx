@@ -6,6 +6,11 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { hasFeatureAccess } from '../../lib/permissions'
 import { supabase, User } from '../../lib/supabase'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   BarChart3,
   Users,
@@ -25,8 +30,11 @@ import {
   Database,
   Search,
   Plug,
-  FileText
+  FileText,
+  PanelLeftClose,
+  PanelLeft
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home, feature: 'dashboard' as const },
@@ -58,16 +66,17 @@ export default function Sidebar({ user, onLogout, onCollapseChange }: SidebarPro
   return (
     <>
       {/* Mobile menu button */}
-      <div className="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
-        <button
-          type="button"
-          className="-m-2.5 p-2.5 text-gray-400 lg:hidden"
+      <div className="sticky top-0 z-40 flex items-center gap-x-4 bg-sidebar px-4 py-3 shadow-sm lg:hidden border-b border-sidebar-border">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-sidebar-foreground hover:bg-sidebar-accent"
           onClick={() => setSidebarOpen(true)}
         >
           <span className="sr-only">Abrir sidebar</span>
-          <Menu className="h-6 w-6" aria-hidden="true" />
-        </button>
-        <div className="flex-1 text-sm font-semibold leading-6 text-white">
+          <Menu className="h-5 w-5" />
+        </Button>
+        <div className="flex-1 text-sm font-semibold text-sidebar-foreground">
           DNX Plataformas
         </div>
       </div>
@@ -75,23 +84,27 @@ export default function Sidebar({ user, onLogout, onCollapseChange }: SidebarPro
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="relative z-50 lg:hidden">
-          <div className="fixed inset-0 bg-gray-900/80" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="fixed inset-0 flex">
             <div className="relative mr-16 flex w-full max-w-xs flex-1">
               <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                <button
-                  type="button"
-                  className="-m-2.5 p-2.5"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground"
                   onClick={() => setSidebarOpen(false)}
                 >
                   <span className="sr-only">Fechar sidebar</span>
-                  <X className="h-6 w-6 text-white" aria-hidden="true" />
-                </button>
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-              <SidebarContent 
-                pathname={pathname} 
-                user={user} 
-                onLogout={onLogout} 
+              <SidebarContent
+                pathname={pathname}
+                user={user}
+                onLogout={onLogout}
                 isCollapsed={false}
                 setIsCollapsed={() => {}}
                 onCollapseChange={onCollapseChange}
@@ -102,13 +115,14 @@ export default function Sidebar({ user, onLogout, onCollapseChange }: SidebarPro
       )}
 
       {/* Desktop sidebar */}
-      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:flex-col transition-all duration-300 ${
-        isCollapsed ? 'lg:w-16' : 'lg:w-72'
-      }`}>
-        <SidebarContent 
-          pathname={pathname} 
-          user={user} 
-          onLogout={onLogout} 
+      <div className={cn(
+        "hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:flex-col transition-all duration-300 ease-in-out",
+        isCollapsed ? 'lg:w-[70px]' : 'lg:w-72'
+      )}>
+        <SidebarContent
+          pathname={pathname}
+          user={user}
+          onLogout={onLogout}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
           onCollapseChange={onCollapseChange}
@@ -149,11 +163,9 @@ function SidebarContent({
           .single()
 
         if (!error && data) {
-          // Garantir que o objeto tenha as propriedades necessárias
           const userWithPlanData = {
             ...user,
             ...data,
-            // Garantir que as propriedades de plano existam
             acesso_consulta: data.acesso_consulta || false,
             acesso_integracoes: data.acesso_integracoes || false,
             acesso_dashboard: data.acesso_dashboard || false,
@@ -169,7 +181,6 @@ function SidebarContent({
           }
           setUserWithPlan(userWithPlanData)
         } else {
-          // Fallback para user básico
           setUserWithPlan(user)
         }
       } catch (error) {
@@ -181,143 +192,148 @@ function SidebarContent({
     fetchUserWithPlan()
   }, [user?.id])
 
-  // Filtrar navegação baseada nas permissões do usuário
   const filteredNavigation = navigation.filter(item => {
     if (!userWithPlan) return false
-
-    // Se é um item apenas para admin, verificar se o usuário é admin
     if (item.adminOnly && userWithPlan.role !== 'admin') {
       return false
     }
-
     return hasFeatureAccess(userWithPlan, item.feature)
   })
+
   return (
-    <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 pb-4 transition-all duration-300 ${
-      isCollapsed ? 'px-2' : 'px-6'
-    }`}>
-      {/* Logo e Botão Collapse */}
-      <div className="flex h-16 shrink-0 items-center justify-between">
+    <div className={cn(
+      "flex h-full flex-col bg-sidebar border-r border-sidebar-border",
+      isCollapsed ? 'items-center' : ''
+    )}>
+      {/* Header com Logo */}
+      <div className={cn(
+        "flex h-16 shrink-0 items-center border-b border-sidebar-border",
+        isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+      )}>
         {!isCollapsed ? (
           <Image
-            className="h-12 w-auto"
+            className="h-10 w-auto"
             src="/logo-branca.webp"
             alt="DNX Plataformas"
-            width={240}
-            height={48}
+            width={200}
+            height={40}
             priority
           />
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <Image
-              className="h-10 w-10"
-              src="/sublogo.png"
-              alt="DNX"
-              width={40}
-              height={40}
-              priority
-            />
-          </div>
+          <Image
+            className="h-8 w-8"
+            src="/sublogo.png"
+            alt="DNX"
+            width={32}
+            height={32}
+            priority
+          />
         )}
-        
-        {/* Botão de Collapse - apenas no desktop */}
-        <button
-          onClick={() => {
-            const newCollapsed = !isCollapsed
-            setIsCollapsed(newCollapsed)
-            onCollapseChange?.(newCollapsed)
-          }}
-          className={`hidden lg:flex items-center justify-center w-6 h-6 rounded-full bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors ${
-            isCollapsed ? 'ml-0' : 'ml-4'
-          }`}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
+
+        {/* Botões de ação - Theme Toggle e Collapse */}
+        <div className={cn(
+          "flex items-center gap-1",
+          isCollapsed && 'absolute right-1 top-4 flex-col'
+        )}>
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              const newCollapsed = !isCollapsed
+              setIsCollapsed(newCollapsed)
+              onCollapseChange?.(newCollapsed)
+            }}
+            className="hidden lg:flex h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
-      
+
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col">
-        <ul className="flex flex-1 flex-col gap-y-7">
-          <li>
-            <ul className={`space-y-1 ${isCollapsed ? '-mx-1' : '-mx-2'}`}>
-              {filteredNavigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      title={isCollapsed ? item.name : undefined}
-                      className={`group flex rounded-md text-sm font-semibold leading-6 transition-colors ${
-                        isCollapsed 
-                          ? 'p-2 justify-center' 
-                          : 'gap-x-3 p-2'
-                      } ${
-                        isActive
-                          ? 'bg-gray-800 text-white'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      }`}
-                    >
-                      <item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-                      {!isCollapsed && (
-                        <span className="transition-opacity duration-300">
-                          {item.name}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </li>
-          
-          {/* User info and logout */}
-          {user && (
-            <li className="mt-auto">
-              <div className="border-t border-gray-700 pt-4">
-                {isCollapsed ? (
-                  <div className="flex flex-col items-center gap-y-2 px-2 py-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800" title={user.name}>
-                      <span className="text-sm font-medium text-white">
-                        {user.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <button
-                      onClick={onLogout}
-                      className="text-gray-400 hover:text-white"
-                      title="Sair"
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-x-4 px-2 py-3 text-sm font-semibold leading-6 text-white">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800">
-                      <span className="text-sm font-medium text-white">
-                        {user.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">{user.name}</div>
-                      <div className="text-xs text-gray-400">{user.role}</div>
-                    </div>
-                    <button
-                      onClick={onLogout}
-                      className="text-gray-400 hover:text-white"
-                      title="Sair"
-                    >
-                      <LogOut className="h-5 w-5" />
-                    </button>
-                  </div>
+      <ScrollArea className="flex-1 py-4">
+        <nav className={cn("space-y-1", isCollapsed ? 'px-2' : 'px-3')}>
+          {filteredNavigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isCollapsed ? item.name : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isCollapsed && "justify-center px-2",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
+              >
+                <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-sidebar-primary-foreground")} />
+                {!isCollapsed && (
+                  <span className="truncate">{item.name}</span>
+                )}
+              </Link>
+            )
+          })}
+        </nav>
+      </ScrollArea>
+
+      {/* User info and logout */}
+      {user && (
+        <div className={cn(
+          "border-t border-sidebar-border p-4",
+          isCollapsed && "flex flex-col items-center px-2"
+        )}>
+          {isCollapsed ? (
+            <div className="flex flex-col items-center gap-3">
+              <Avatar className="h-9 w-9 border-2 border-sidebar-border">
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-sm font-semibold">
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onLogout}
+                className="h-8 w-8 text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground"
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-sidebar-border">
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold">
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  {user.name}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                </p>
               </div>
-            </li>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onLogout}
+                className="h-9 w-9 text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground shrink-0"
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           )}
-        </ul>
-      </nav>
+        </div>
+      )}
     </div>
   )
 }

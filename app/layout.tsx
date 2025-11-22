@@ -1,5 +1,6 @@
 import './globals.css'
 import AuthWrapper from '../components/shared/AuthWrapper'
+import { ThemeProvider } from '../components/providers/theme-provider'
 
 export const metadata = {
   title: 'DNX Operações Inteligentes',
@@ -17,11 +18,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <AuthWrapper>
-          {children}
-        </AuthWrapper>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthWrapper>
+            {children}
+          </AuthWrapper>
+        </ThemeProvider>
       </body>
     </html>
   )
