@@ -283,3 +283,27 @@
 .dark .rounded-md.bg-white {
   background-color: hsl(var(--card)) !important;
 }
+
+/* Hover states - Corrigir hover branco no dark mode */
+.dark .hover\:bg-gray-50:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.dark .hover\:bg-white:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+/* Seleção ativa - bg-blue-50 no dark mode */
+.dark .bg-blue-50 {
+  background-color: hsl(220 50% 20%) !important;
+}
+
+/* Hover em itens de lista */
+.dark .hover\:shadow-md:hover {
+  --tw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--tw-shadow) !important;
+}
