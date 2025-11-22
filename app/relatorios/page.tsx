@@ -28,6 +28,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
+import { VisualFunnel } from '@/components/charts/visual-funnel'
 
 interface TipoNegocio {
   id: number
@@ -1271,108 +1272,12 @@ export default function RelatoriosPage() {
       {/* Análise de Funil de Conversão */}
       {metrics.funnel && metrics.funnel.length > 0 && (
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
             <Filter className="h-6 w-6 mr-2 text-indigo-600" />
             Funil de Conversão - {dashboardConfig?.title?.replace('Relatórios - ', '') || ''}
           </h2>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="space-y-4">
-              {metrics.funnel.map((stage: any, index: number) => {
-                const maxCount = metrics.funnel[0]?.count || 1
-                const widthPercentage = (stage.count / maxCount) * 100
-
-                // Cores gradientes para cada estágio do funil
-                const colors = [
-                  'from-blue-500 to-blue-600',
-                  'from-cyan-500 to-cyan-600',
-                  'from-teal-500 to-teal-600',
-                  'from-green-500 to-green-600',
-                  'from-emerald-500 to-emerald-600',
-                  'from-lime-500 to-lime-600',
-                ]
-
-                return (
-                  <div key={stage.status} className="relative">
-                    {/* Barra do funil */}
-                    <div className="mb-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-700 flex items-center">
-                          {index > 0 && <ArrowDownRight className="h-4 w-4 mr-1 text-gray-400" />}
-                          {stage.label}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {stage.count} leads ({stage.percentage}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-10 overflow-hidden">
-                        <div
-                          className={`bg-gradient-to-r ${colors[index % colors.length]} h-full rounded-full flex items-center justify-between px-4 text-white font-medium text-sm transition-all duration-500`}
-                          style={{ width: `${Math.max(widthPercentage, 10)}%` }}
-                        >
-                          <span>{stage.count}</span>
-                          {index > 0 && (
-                            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">
-                              {stage.conversionRate}% conversão
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Linha de conexão entre estágios */}
-                    {index < metrics.funnel.length - 1 && (
-                      <div className="flex items-center justify-center py-1">
-                        <div className="h-6 w-0.5 bg-gray-300"></div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Resumo do Funil */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-600 font-medium">Topo do Funil</span>
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-blue-900 mt-2">
-                    {metrics.funnel[0]?.count || 0}
-                  </div>
-                  <div className="text-xs text-blue-600 mt-1">{metrics.funnel[0]?.label}</div>
-                </div>
-
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-green-600 font-medium">Fundo do Funil</span>
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-green-900 mt-2">
-                    {metrics.funnel[metrics.funnel.length - 1]?.count || 0}
-                  </div>
-                  <div className="text-xs text-green-600 mt-1">
-                    {metrics.funnel[metrics.funnel.length - 1]?.label}
-                  </div>
-                </div>
-
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-purple-600 font-medium">Taxa Global</span>
-                    <Percent className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-purple-900 mt-2">
-                    {metrics.funnel[0]?.count > 0
-                      ? ((metrics.funnel[metrics.funnel.length - 1]?.count / metrics.funnel[0]?.count) * 100).toFixed(1)
-                      : 0}%
-                  </div>
-                  <div className="text-xs text-purple-600 mt-1">Conversão Total</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <VisualFunnel stages={metrics.funnel} />
         </div>
       )}
 
