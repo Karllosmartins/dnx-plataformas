@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   ChartConfig,
   ChartContainer,
@@ -117,6 +118,7 @@ export default function RelatoriosPage() {
     dataFim: '',
     cnpj: ''
   })
+  const [temporalRange, setTemporalRange] = useState('12m')
 
   useEffect(() => {
     if (user?.id) {
@@ -844,19 +846,19 @@ export default function RelatoriosPage() {
 
             <div className="space-y-2">
               <Label>Data Inicio</Label>
-              <Input
-                type="date"
-                value={filters.dataInicio}
-                onChange={(e) => setFilters(prev => ({ ...prev, dataInicio: e.target.value }))}
+              <DatePicker
+                date={filters.dataInicio ? new Date(filters.dataInicio) : undefined}
+                onSelect={(date) => setFilters(prev => ({ ...prev, dataInicio: date ? date.toISOString().split('T')[0] : '' }))}
+                placeholder="Selecione"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Data Fim</Label>
-              <Input
-                type="date"
-                value={filters.dataFim}
-                onChange={(e) => setFilters(prev => ({ ...prev, dataFim: e.target.value }))}
+              <DatePicker
+                date={filters.dataFim ? new Date(filters.dataFim) : undefined}
+                onSelect={(date) => setFilters(prev => ({ ...prev, dataFim: date ? date.toISOString().split('T')[0] : '' }))}
+                placeholder="Selecione"
               />
             </div>
 
@@ -1450,89 +1452,140 @@ export default function RelatoriosPage() {
             </div>
           </div>
 
-          {/* Gráfico de Evolução Temporal */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Evolução nos Últimos 12 Meses
-            </h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={metrics.temporal.monthlyTimeline}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="monthLabel"
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip
-                  formatter={(value: any, name: string) => {
-                    if (name === 'Receita (R$)') {
-                      return `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+          {/* Gráfico de Evolução Temporal - Interativo */}
+          <Card className="pt-0">
+            <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+              <div className="grid flex-1 gap-1">
+                <CardTitle className="flex items-center text-lg">
+                  <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+                  Evolução Temporal
+                </CardTitle>
+                <CardDescription>
+                  Acompanhamento de leads e receita ao longo do tempo
+                </CardDescription>
+              </div>
+              <Select
+                value={temporalRange}
+                onValueChange={setTemporalRange}
+              >
+                <SelectTrigger
+                  className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex"
+                  aria-label="Selecione o período"
+                >
+                  <SelectValue placeholder="Últimos 12 meses" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="12m" className="rounded-lg">
+                    Últimos 12 meses
+                  </SelectItem>
+                  <SelectItem value="6m" className="rounded-lg">
+                    Últimos 6 meses
+                  </SelectItem>
+                  <SelectItem value="3m" className="rounded-lg">
+                    Últimos 3 meses
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+              <ChartContainer
+                config={{
+                  leads: {
+                    label: "Leads",
+                    color: "hsl(var(--chart-1))"
+                  },
+                  valor: {
+                    label: "Receita (R$)",
+                    color: "hsl(var(--chart-2))"
+                  }
+                }}
+                className="aspect-auto h-[300px] w-full"
+              >
+                <AreaChart data={(() => {
+                  const data = metrics.temporal.monthlyTimeline || []
+                  const months = temporalRange === '12m' ? 12 : temporalRange === '6m' ? 6 : 3
+                  return data.slice(-months)
+                })()}>
+                  <defs>
+                    <linearGradient id="fillLeadsTemp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-leads)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--color-leads)" stopOpacity={0.1} />
+                    </linearGradient>
+                    <linearGradient id="fillValorTemp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-valor)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--color-valor)" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="monthLabel"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(value) => value}
+                        indicator="dot"
+                      />
                     }
-                    return value
-                  }}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="leads"
-                  stroke="#3B82F6"
-                  strokeWidth={2}
-                  name="Leads"
-                  dot={{ fill: '#3B82F6', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="valor"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  name="Receita (R$)"
-                  dot={{ fill: '#10B981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+                  />
+                  <Area
+                    dataKey="leads"
+                    type="natural"
+                    fill="url(#fillLeadsTemp)"
+                    stroke="var(--color-leads)"
+                    stackId="a"
+                  />
+                  <Area
+                    dataKey="valor"
+                    type="natural"
+                    fill="url(#fillValorTemp)"
+                    stroke="var(--color-valor)"
+                    stackId="b"
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </AreaChart>
+              </ChartContainer>
 
-            {/* Resumo Estatístico */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 mb-1">Maior Volume</div>
-                  <div className="text-lg font-bold text-blue-900">
-                    {Math.max(...metrics.temporal.monthlyTimeline.map((m: any) => m.leads))}
+              {/* Resumo Estatístico */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Maior Volume</div>
+                    <div className="text-lg font-bold text-primary">
+                      {Math.max(...(metrics.temporal.monthlyTimeline || []).map((m: any) => m.leads || 0))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">leads/mês</div>
                   </div>
-                  <div className="text-xs text-gray-500">leads/mês</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 mb-1">Menor Volume</div>
-                  <div className="text-lg font-bold text-blue-900">
-                    {Math.min(...metrics.temporal.monthlyTimeline.map((m: any) => m.leads))}
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Menor Volume</div>
+                    <div className="text-lg font-bold text-primary">
+                      {Math.min(...(metrics.temporal.monthlyTimeline || [{ leads: 0 }]).map((m: any) => m.leads || 0))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">leads/mês</div>
                   </div>
-                  <div className="text-xs text-gray-500">leads/mês</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 mb-1">Média Mensal</div>
-                  <div className="text-lg font-bold text-blue-900">
-                    {(metrics.temporal.monthlyTimeline.reduce((sum: number, m: any) => sum + m.leads, 0) / 12).toFixed(0)}
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Média Mensal</div>
+                    <div className="text-lg font-bold text-primary">
+                      {((metrics.temporal.monthlyTimeline || []).reduce((sum: number, m: any) => sum + (m.leads || 0), 0) / Math.max((metrics.temporal.monthlyTimeline || []).length, 1)).toFixed(0)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">leads/mês</div>
                   </div>
-                  <div className="text-xs text-gray-500">leads/mês</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 mb-1">Total 12 Meses</div>
-                  <div className="text-lg font-bold text-green-900">
-                    R$ {metrics.temporal.monthlyTimeline.reduce((sum: number, m: any) => sum + m.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Receita Total</div>
+                    <div className="text-lg font-bold text-green-600">
+                      R$ {(metrics.temporal.monthlyTimeline || []).reduce((sum: number, m: any) => sum + (m.valor || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">período selecionado</div>
                   </div>
-                  <div className="text-xs text-gray-500">receita total</div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
