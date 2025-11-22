@@ -8,7 +8,17 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "Bash(node scripts/check-user.js:*)",
+      "Bash(node scripts/migrate-password-user24.js:*)",
+      "Bash(openssl rand:*)",
+      "Bash(node scripts/migrate-all-passwords.js:*)",
+      "Bash(npm audit fix:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(claude mcp add shadcn -- npx shadcn@latest mcp)",
+      "Bash(npx shadcn@latest add:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,11 +1,32 @@
 'use client'
 
-// Forçar renderização dinâmica para evitar erro de useContext no build
+// Forcar renderizacao dinamica para evitar erro de useContext no build
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/shared/AuthWrapper'
+
+// Componentes shadcn/ui
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart'
 
 interface TipoNegocio {
   id: number
@@ -77,7 +98,7 @@ import {
   AreaChart
 } from 'recharts'
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
+const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#EC4899', '#06B6D4', '#84CC16']
 
 export default function RelatoriosPage() {
   const { user } = useAuth()
@@ -746,98 +767,111 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center mb-4">
-          <FileBarChart className="h-5 w-5 text-gray-600 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
-        </div>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center text-lg">
+            <FileBarChart className="h-5 w-5 mr-2 text-primary" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <div className="space-y-2">
+              <Label>Campanha</Label>
+              <Select
+                value={filters.campanha}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, campanha: value === 'all' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {campanhas.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Campanha</label>
-            <select
-              value={filters.campanha}
-              onChange={(e) => setFilters(prev => ({ ...prev, campanha: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todas</option>
-              {campanhas.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label>Origem</Label>
+              <Select
+                value={filters.origem}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, origem: value === 'all' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {origens.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
-            <select
-              value={filters.origem}
-              onChange={(e) => setFilters(prev => ({ ...prev, origem: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todas</option>
-              {origens.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={filters.status}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {userTipoNegocio?.status_personalizados && userTipoNegocio.status_personalizados.map((status: string) => (
+                    <SelectItem key={status} value={status}>
+                      {dashboardConfig?.statusLabels?.[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              {userTipoNegocio?.status_personalizados && userTipoNegocio.status_personalizados.map((status: string) => (
-                <option key={status} value={status}>
-                  {dashboardConfig?.statusLabels?.[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label>CNPJ</Label>
+              <Input
+                type="text"
+                value={filters.cnpj}
+                onChange={(e) => setFilters(prev => ({ ...prev, cnpj: e.target.value }))}
+                placeholder="Filtrar por CNPJ"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ</label>
-            <input
-              type="text"
-              value={filters.cnpj}
-              onChange={(e) => setFilters(prev => ({ ...prev, cnpj: e.target.value }))}
-              placeholder="Filtrar por CNPJ"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>Data Inicio</Label>
+              <Input
+                type="date"
+                value={filters.dataInicio}
+                onChange={(e) => setFilters(prev => ({ ...prev, dataInicio: e.target.value }))}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
-            <input
-              type="date"
-              value={filters.dataInicio}
-              onChange={(e) => setFilters(prev => ({ ...prev, dataInicio: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>Data Fim</Label>
+              <Input
+                type="date"
+                value={filters.dataFim}
+                onChange={(e) => setFilters(prev => ({ ...prev, dataFim: e.target.value }))}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
-            <input
-              type="date"
-              value={filters.dataFim}
-              onChange={(e) => setFilters(prev => ({ ...prev, dataFim: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="flex items-end">
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => setFilters({ campanha: '', origem: '', status: '', dataInicio: '', dataFim: '', cnpj: '' })}
+              >
+                Limpar
+              </Button>
+            </div>
           </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({ campanha: '', origem: '', status: '', dataInicio: '', dataFim: '', cnpj: '' })}
-              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-            >
-              Limpar
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -992,86 +1026,102 @@ export default function RelatoriosPage() {
         </div>
       )}
 
-      {/* Gráficos */}
+      {/* Graficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Status */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Activity className="h-5 w-5 mr-2 text-blue-600" />
-            Leads por Status
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={statusChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {statusChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Grafico de Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <Activity className="h-5 w-5 mr-2 text-primary" />
+              Leads por Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {statusChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Gráfico de Campanhas */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-            Performance por Campanha
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={campanhaChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="campanha" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="leads" fill="#3B82F6" name="Leads" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Grafico de Campanhas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+              Performance por Campanha
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={campanhaChartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="campanha" className="text-muted-foreground" />
+                <YAxis className="text-muted-foreground" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="leads" fill="hsl(var(--chart-1))" name="Leads" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Gráfico de Origem */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Target className="h-5 w-5 mr-2 text-purple-600" />
-            Leads por Origem
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={origemChartData} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" width={100} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8B5CF6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Grafico de Origem */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <Target className="h-5 w-5 mr-2 text-primary" />
+              Leads por Origem
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={origemChartData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis type="number" className="text-muted-foreground" />
+                <YAxis dataKey="name" type="category" width={100} className="text-muted-foreground" />
+                <Tooltip />
+                <Bar dataKey="value" fill="hsl(var(--chart-2))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
         {/* Timeline */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-orange-600" />
-            Evolução de Leads
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={timelineChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="data" />
-              <YAxis />
-              <Tooltip />
-              <Area type="monotone" dataKey="leads" stroke="#F59E0B" fill="#FCD34D" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <Calendar className="h-5 w-5 mr-2 text-primary" />
+              Evolucao de Leads
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={timelineChartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="data" className="text-muted-foreground" />
+                <YAxis className="text-muted-foreground" />
+                <Tooltip />
+                <Area type="monotone" dataKey="leads" stroke="hsl(var(--chart-4))" fill="hsl(var(--chart-4) / 0.3)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Gráficos de Campos Personalizados */}
