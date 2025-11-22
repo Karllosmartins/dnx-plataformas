@@ -208,7 +208,7 @@ function SidebarContent({
       {/* Header com Logo */}
       <div className={cn(
         "flex h-16 shrink-0 items-center border-b border-sidebar-border",
-        isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+        isCollapsed ? 'flex-col justify-center gap-2 px-2 py-3' : 'justify-between px-4'
       )}>
         {!isCollapsed ? (
           <>
@@ -245,7 +245,7 @@ function SidebarContent({
         {/* Botões de ação - Theme Toggle e Collapse */}
         <div className={cn(
           "flex items-center gap-1",
-          isCollapsed && 'absolute right-1 top-4 flex-col'
+          isCollapsed && 'flex-row'
         )}>
           <ThemeToggle />
           <Button

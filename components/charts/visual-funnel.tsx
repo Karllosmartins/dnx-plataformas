@@ -253,29 +253,6 @@ export function VisualFunnel({ stages, title, className }: VisualFunnelProps) {
                   >
                     {stage.percentage.toFixed(1)}%
                   </text>
-
-                  {/* Taxa de conversão entre etapas */}
-                  {index < totalStages - 1 && stage.conversionRate !== undefined && (
-                    <>
-                      <ellipse
-                        cx="400"
-                        cy={yOffset + 55}
-                        rx="35"
-                        ry="12"
-                        className="fill-background stroke-border"
-                        strokeWidth="1"
-                      />
-                      <text
-                        x="400"
-                        y={yOffset + 59}
-                        textAnchor="middle"
-                        className="fill-foreground font-semibold"
-                        style={{ fontSize: '10px' }}
-                      >
-                        {stage.conversionRate.toFixed(1)}%
-                      </text>
-                    </>
-                  )}
                 </g>
               )
             })}
