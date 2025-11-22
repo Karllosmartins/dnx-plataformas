@@ -25,12 +25,22 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
 
   return (
     <div className={`flex items-center ${className}`}>
+      {/* Logo preta para light mode */}
       <Image
-        src="/logo.png"
+        src="/logo-preta.webp"
         alt="DNX Plataformas"
         width={dimensions.width}
         height={dimensions.height}
-        className="rounded-lg"
+        className="rounded-lg dark:hidden"
+        priority
+      />
+      {/* Logo branca para dark mode */}
+      <Image
+        src="/logo-branca.webp"
+        alt="DNX Plataformas"
+        width={dimensions.width}
+        height={dimensions.height}
+        className="rounded-lg hidden dark:block"
         priority
       />
       {showText && (
@@ -62,22 +72,32 @@ export function LogoIcon({ size = 'md', className = '' }: Omit<LogoProps, 'showT
 }
 
 // Componente com texto personalizado
-export function LogoWithText({ 
-  size = 'md', 
+export function LogoWithText({
+  size = 'md',
   title = 'DNX Operações Inteligentes',
   subtitle = 'DNX Operações Inteligentes',
-  className = '' 
+  className = ''
 }: LogoProps & { title?: string; subtitle?: string }) {
   const dimensions = sizeMap[size]
 
   return (
     <div className={`flex items-center ${className}`}>
+      {/* Logo preta para light mode */}
       <Image
-        src="/logo.png"
+        src="/logo-preta.webp"
         alt="DNX Plataformas"
         width={dimensions.width}
         height={dimensions.height}
-        className="rounded-lg"
+        className="rounded-lg dark:hidden"
+        priority
+      />
+      {/* Logo branca para dark mode */}
+      <Image
+        src="/logo-branca.webp"
+        alt="DNX Plataformas"
+        width={dimensions.width}
+        height={dimensions.height}
+        className="rounded-lg hidden dark:block"
         priority
       />
       <div className="ml-3">

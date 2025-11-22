@@ -211,14 +211,26 @@ function SidebarContent({
         isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
       )}>
         {!isCollapsed ? (
-          <Image
-            className="h-10 w-auto"
-            src="/logo-branca.webp"
-            alt="DNX Plataformas"
-            width={200}
-            height={40}
-            priority
-          />
+          <>
+            {/* Logo preta para light mode */}
+            <Image
+              className="h-10 w-auto dark:hidden"
+              src="/logo-preta.webp"
+              alt="DNX Plataformas"
+              width={200}
+              height={40}
+              priority
+            />
+            {/* Logo branca para dark mode */}
+            <Image
+              className="h-10 w-auto hidden dark:block"
+              src="/logo-branca.webp"
+              alt="DNX Plataformas"
+              width={200}
+              height={40}
+              priority
+            />
+          </>
         ) : (
           <Image
             className="h-8 w-8"
