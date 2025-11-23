@@ -21,7 +21,7 @@ services:
       rm -rf /tmp/repo &&
       echo '=== 4/6 Installing dependencies ===' &&
       rm -rf /app/node_modules /app/package-lock.json &&
-      npm install &&
+      npm install --include=dev &&
       echo '=== 5/6 Building API ===' &&
       npm run build:api &&
       echo '=== 6/6 Starting API ===' &&
@@ -74,7 +74,7 @@ services:
       rm -rf /tmp/repo &&
       echo '=== 4/8 Installing dependencies ===' &&
       rm -rf /app/node_modules /app/.next /app/package-lock.json &&
-      npm install &&
+      npm install --include=dev &&
       echo '=== 5/8 Rebuilding bcrypt for Alpine ===' &&
       npm rebuild bcrypt --build-from-source &&
       echo '=== 6/8 Verifying bcrypt ===' &&
