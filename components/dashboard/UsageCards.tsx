@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { workspacesApi } from '@/lib/api-client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -35,64 +35,58 @@ export function UsageCards() {
 
   async function loadUsage() {
     try {
-      // TODO: Pegar workspace_id do contexto quando disponível
-      const workspaceId = 1
+      // Buscar workspace atual via API
+      const response = await workspacesApi.list()
 
-      // Tentar buscar workspace
-      const { data: workspace, error } = await supabase
-        .from('workspaces')
-        .select(`
-          limite_leads,
-          limite_consultas,
-          limite_instancias,
-          leads_consumidos,
-          consultas_realizadas,
-          instancias_ativas,
-          planos (
-            nome
-          )
-        `)
-        .eq('id', workspaceId)
-        .single()
+      if (response.success && response.data) {
+        const workspaces = Array.isArray(response.data) ? response.data : [response.data]
 
-      // Contar total de leads
-      const { count: leadsCount } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
+        if (workspaces.length > 0) {
+          const workspace = workspaces[0] as {
+            limite_leads?: number
+            limite_consultas?: number
+            limite_instancias?: number
+            leads_consumidos?: number
+            consultas_realizadas?: number
+            instancias_ativas?: number
+            plano_nome?: string
+          }
 
-      // Contar instâncias WhatsApp
-      const { count: instancesCount } = await supabase
-        .from('instancia_whtats')
-        .select('*', { count: 'exact', head: true })
-
-      // Se não encontrou workspace, usar valores padrão
-      if (error || !workspace) {
-        console.log('Workspace não encontrado, usando valores padrão')
-
-        setUsage({
-          limite_leads: 1000,
-          limite_consultas: 500,
-          limite_instancias: 3,
-          leads_consumidos: leadsCount || 0,
-          consultas_realizadas: 0,
-          instancias_ativas: instancesCount || 0,
-          plano_nome: 'Básico',
-        })
-        return
+          setUsage({
+            limite_leads: workspace.limite_leads || 1000,
+            limite_consultas: workspace.limite_consultas || 500,
+            limite_instancias: workspace.limite_instancias || 3,
+            leads_consumidos: workspace.leads_consumidos || 0,
+            consultas_realizadas: workspace.consultas_realizadas || 0,
+            instancias_ativas: workspace.instancias_ativas || 0,
+            plano_nome: workspace.plano_nome || 'Básico',
+          })
+          return
+        }
       }
 
-      // Limites vêm do workspace, consumo de leads e instâncias das tabelas
+      // Fallback se não encontrar workspace
       setUsage({
-        limite_leads: workspace.limite_leads || 1000,
-        limite_consultas: workspace.limite_consultas || 500,
-        limite_instancias: workspace.limite_instancias || 3,
-        leads_consumidos: leadsCount || 0,
-        consultas_realizadas: workspace.consultas_realizadas || 0,
-        instancias_ativas: instancesCount || 0,
-        plano_nome: (workspace.planos as { nome?: string })?.nome || 'Básico',
+        limite_leads: 1000,
+        limite_consultas: 500,
+        limite_instancias: 3,
+        leads_consumidos: 0,
+        consultas_realizadas: 0,
+        instancias_ativas: 0,
+        plano_nome: 'Básico',
       })
     } catch (error) {
       console.error('Erro ao carregar uso:', error)
+      // Fallback em caso de erro
+      setUsage({
+        limite_leads: 1000,
+        limite_consultas: 500,
+        limite_instancias: 3,
+        leads_consumidos: 0,
+        consultas_realizadas: 0,
+        instancias_ativas: 0,
+        plano_nome: 'Básico',
+      })
     } finally {
       setLoading(false)
     }

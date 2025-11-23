@@ -35,7 +35,16 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
           plano_id,
           settings,
           created_at,
-          updated_at
+          updated_at,
+          limite_leads,
+          limite_consultas,
+          limite_instancias,
+          leads_consumidos,
+          consultas_realizadas,
+          instancias_ativas,
+          planos (
+            nome
+          )
         )
       `)
       .eq('user_id', parseInt(userId || '0'))
@@ -46,10 +55,14 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Transformar resultado
-    const workspaces = memberships?.map(m => ({
-      ...(m.workspaces as unknown as Workspace),
-      current_user_role: m.role
-    })) || []
+    const workspaces = memberships?.map(m => {
+      const ws = m.workspaces as unknown as Workspace & { planos?: { nome: string } }
+      return {
+        ...ws,
+        plano_nome: ws?.planos?.nome || 'Básico',
+        current_user_role: m.role
+      }
+    }) || []
 
     ApiResponse.success(res, workspaces)
 
