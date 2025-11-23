@@ -10,17 +10,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import {
-  Building2,
   ChevronDown,
   Check,
-  Plus,
-  Settings,
   Loader2,
 } from 'lucide-react'
 
@@ -230,17 +225,6 @@ function WorkspaceMenuContent({
         )
       })}
 
-      <DropdownMenuSeparator />
-
-      <DropdownMenuItem className="cursor-pointer">
-        <Plus className="mr-2 h-4 w-4" />
-        <span>Criar Workspace</span>
-      </DropdownMenuItem>
-
-      <DropdownMenuItem className="cursor-pointer">
-        <Settings className="mr-2 h-4 w-4" />
-        <span>Gerenciar Workspaces</span>
-      </DropdownMenuItem>
     </>
   )
 }
