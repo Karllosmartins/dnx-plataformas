@@ -102,12 +102,31 @@ import {
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#EC4899', '#06B6D4', '#84CC16']
 
+interface Funil {
+  id: string
+  nome: string
+  cor: string
+  ordem: number
+  ativo: boolean
+  estagios?: Estagio[]
+}
+
+interface Estagio {
+  id: string
+  funil_id: string
+  nome: string
+  cor: string
+  ordem: number
+  ativo: boolean
+}
+
 export default function RelatoriosPage() {
   const { user } = useAuth()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [campanhas, setCampanhas] = useState<string[]>([])
   const [origens, setOrigens] = useState<string[]>([])
+  const [funis, setFunis] = useState<Funil[]>([])
   const [userTipoNegocio, setUserTipoNegocio] = useState<TipoNegocio | null>(null)
   const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig | null>(null)
 
@@ -117,13 +136,16 @@ export default function RelatoriosPage() {
     status: '',
     dataInicio: '',
     dataFim: '',
-    cnpj: ''
+    cnpj: '',
+    funil_id: '',
+    estagio_id: ''
   })
   const [temporalRange, setTemporalRange] = useState('12m')
 
   useEffect(() => {
     if (user?.id) {
       fetchUserTipoNegocio()
+      fetchFunis()
       fetchLeads()
     }
   }, [user])
@@ -283,6 +305,48 @@ export default function RelatoriosPage() {
     setDashboardConfig(config)
   }
 
+  const fetchFunis = async () => {
+    if (!user?.workspace_id) return
+
+    try {
+      const { data: funisData, error } = await supabase
+        .from('funis')
+        .select(`
+          id,
+          nome,
+          cor,
+          ordem,
+          ativo,
+          estagios:funil_estagios(
+            id,
+            funil_id,
+            nome,
+            cor,
+            ordem,
+            ativo
+          )
+        `)
+        .eq('workspace_id', user.workspace_id)
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+
+      if (error) throw error
+
+      if (funisData) {
+        // Ordenar estágios dentro de cada funil
+        const funisComEstagios = funisData.map((funil: any) => ({
+          ...funil,
+          estagios: (funil.estagios || [])
+            .filter((e: any) => e.ativo)
+            .sort((a: any, b: any) => a.ordem - b.ordem)
+        }))
+        setFunis(funisComEstagios as Funil[])
+      }
+    } catch (error) {
+      console.error('Erro ao buscar funis:', error)
+    }
+  }
+
   const fetchLeads = async () => {
     if (!user?.id) return
 
@@ -321,6 +385,8 @@ export default function RelatoriosPage() {
       if (filters.origem && lead.origem !== filters.origem) return false
       if (filters.status && lead.status_generico !== filters.status) return false
       if (filters.cnpj && !lead.cpf_cnpj?.includes(filters.cnpj)) return false
+      if (filters.funil_id && lead.funil_id !== filters.funil_id) return false
+      if (filters.estagio_id && lead.estagio_id !== filters.estagio_id) return false
 
       if (filters.dataInicio && lead.created_at) {
         const leadDate = new Date(lead.created_at)
@@ -406,20 +472,18 @@ export default function RelatoriosPage() {
       })
     }
 
-    // Análise de Funil de Conversão Dinâmico
+    // Análise de Funil de Conversão - Usando Funis e Estágios Reais
     const funnelData: any[] = []
 
-    if (userTipoNegocio?.status_personalizados && Array.isArray(userTipoNegocio.status_personalizados)) {
-      userTipoNegocio.status_personalizados.forEach((status: string, index: number) => {
-        // Contar leads pelo status_generico OU status_limpa_nome (para compatibilidade)
-        const count = filteredLeads.filter(l =>
-          (l.status_generico === status) ||
-          (l.status_limpa_nome === status) ||
-          // Se o status é o primeiro (novo_lead), incluir também leads sem status
-          (index === 0 && !l.status_generico && !l.status_limpa_nome)
-        ).length
-        const label = dashboardConfig?.statusLabels?.[status] ||
-                      status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    // Se há filtro de funil específico, mostrar seus estágios
+    const funilSelecionado = filters.funil_id
+      ? funis.find(f => f.id === filters.funil_id)
+      : funis[0] // Usar primeiro funil se nenhum filtro
+
+    if (funilSelecionado && funilSelecionado.estagios) {
+      funilSelecionado.estagios.forEach((estagio: Estagio, index: number) => {
+        // Contar leads neste estágio
+        const count = filteredLeads.filter(l => l.estagio_id === estagio.id).length
 
         // Calcular taxa de conversão para o próximo estágio
         let conversionRate = 0
@@ -429,13 +493,30 @@ export default function RelatoriosPage() {
         }
 
         funnelData.push({
-          status,
-          label,
+          status: estagio.id,
+          label: estagio.nome,
           count,
           conversionRate: conversionRate.toFixed(1),
-          percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0'
+          percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
+          cor: estagio.cor
         })
       })
+
+      // Adicionar leads sem estágio se houver
+      const leadsSemEstagio = filteredLeads.filter(l =>
+        l.funil_id === funilSelecionado.id && !l.estagio_id
+      ).length
+
+      if (leadsSemEstagio > 0) {
+        funnelData.unshift({
+          status: 'sem_estagio',
+          label: 'Sem Estágio',
+          count: leadsSemEstagio,
+          conversionRate: '0',
+          percentage: total > 0 ? ((leadsSemEstagio / total) * 100).toFixed(1) : '0',
+          cor: '#9CA3AF'
+        })
+      }
     }
 
     // Métricas Principais Dinâmicas (baseadas em metricas_config)
@@ -822,6 +903,59 @@ export default function RelatoriosPage() {
             </div>
 
             <div className="space-y-2">
+              <Label>Funil</Label>
+              <Select
+                value={filters.funil_id}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, funil_id: value === 'all' ? '' : value, estagio_id: '' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {funis.map((funil) => (
+                    <SelectItem key={funil.id} value={funil.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: funil.cor }}
+                        />
+                        {funil.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Estágio</Label>
+              <Select
+                value={filters.estagio_id}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, estagio_id: value === 'all' ? '' : value }))}
+                disabled={!filters.funil_id}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {filters.funil_id && funis.find(f => f.id === filters.funil_id)?.estagios?.map((estagio) => (
+                    <SelectItem key={estagio.id} value={estagio.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: estagio.cor }}
+                        />
+                        {estagio.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Status</Label>
               <Select
                 value={filters.status}
@@ -873,7 +1007,7 @@ export default function RelatoriosPage() {
               <Button
                 variant="secondary"
                 className="w-full"
-                onClick={() => setFilters({ campanha: '', origem: '', status: '', dataInicio: '', dataFim: '', cnpj: '' })}
+                onClick={() => setFilters({ campanha: '', origem: '', status: '', dataInicio: '', dataFim: '', cnpj: '', funil_id: '', estagio_id: '' })}
               >
                 Limpar
               </Button>
@@ -1280,7 +1414,11 @@ export default function RelatoriosPage() {
         <div>
           <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
             <Filter className="h-6 w-6 mr-2 text-indigo-600" />
-            Funil de Conversão - {dashboardConfig?.title?.replace('Relatórios - ', '') || ''}
+            Funil de Conversão - {
+              filters.funil_id
+                ? funis.find(f => f.id === filters.funil_id)?.nome
+                : funis[0]?.nome || 'Geral'
+            }
           </h2>
 
           <VisualFunnel stages={metrics.funnel} />
