@@ -250,7 +250,7 @@ export default function HomePage() {
               <Label>Data Início</Label>
               <DatePicker
                 date={startDate}
-                onDateChange={setStartDate}
+                onSelect={setStartDate}
               />
             </div>
 
@@ -258,7 +258,7 @@ export default function HomePage() {
               <Label>Data Fim</Label>
               <DatePicker
                 date={endDate}
-                onDateChange={setEndDate}
+                onSelect={setEndDate}
               />
             </div>
 
