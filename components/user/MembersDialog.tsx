@@ -75,18 +75,35 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
-      loadMembers()
+      loadCurrentWorkspace()
     }
   }, [open])
 
-  async function loadMembers() {
+  async function loadCurrentWorkspace() {
+    try {
+      // Buscar o workspace atual do usuário
+      const response = await workspacesApi.list()
+      if (response.success && response.data) {
+        const workspaces = Array.isArray(response.data) ? response.data : [response.data]
+        if (workspaces.length > 0) {
+          const workspaceId = (workspaces[0] as { id: string }).id
+          setCurrentWorkspaceId(workspaceId)
+          loadMembers(workspaceId)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar workspace atual:', error)
+      setLoading(false)
+    }
+  }
+
+  async function loadMembers(workspaceId: string) {
     setLoading(true)
     try {
-      // TODO: Implementar contexto de workspace quando disponível
-      const workspaceId = '1'
       const response = await workspacesApi.get(workspaceId)
 
       if (response.success && response.data) {
@@ -106,13 +123,17 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
       return
     }
 
+    if (!currentWorkspaceId) {
+      setInviteError('Workspace não identificado')
+      return
+    }
+
     setInviting(true)
     setInviteError('')
     setInviteSuccess(false)
 
     try {
-      const workspaceId = '1'
-      const response = await workspacesApi.inviteMember(workspaceId, {
+      const response = await workspacesApi.inviteMember(currentWorkspaceId, {
         email: inviteEmail,
         role: inviteRole,
       })
@@ -121,7 +142,7 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
         setInviteSuccess(true)
         setInviteEmail('')
         setInviteRole('member')
-        loadMembers()
+        loadMembers(currentWorkspaceId)
         setTimeout(() => {
           setInviteOpen(false)
           setInviteSuccess(false)
@@ -138,13 +159,13 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
 
   async function handleRemoveMember(memberId: string) {
     if (!confirm('Tem certeza que deseja remover este membro?')) return
+    if (!currentWorkspaceId) return
 
     try {
-      const workspaceId = '1'
-      const response = await workspacesApi.removeMember(workspaceId, memberId)
+      const response = await workspacesApi.removeMember(currentWorkspaceId, memberId)
 
       if (response.success) {
-        loadMembers()
+        loadMembers(currentWorkspaceId)
       }
     } catch (error) {
       console.error('Erro ao remover membro:', error)
@@ -152,12 +173,13 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
   }
 
   async function handleUpdateRole(memberId: string, newRole: string) {
+    if (!currentWorkspaceId) return
+
     try {
-      const workspaceId = '1'
-      const response = await workspacesApi.updateMemberRole(workspaceId, memberId, newRole)
+      const response = await workspacesApi.updateMemberRole(currentWorkspaceId, memberId, newRole)
 
       if (response.success) {
-        loadMembers()
+        loadMembers(currentWorkspaceId)
       }
     } catch (error) {
       console.error('Erro ao atualizar role:', error)
