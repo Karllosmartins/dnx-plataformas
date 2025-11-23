@@ -1,17 +1,19 @@
 import { Router, Response } from 'express'
 import { supabase } from '../lib/supabase'
 import { ApiError, ApiResponse, handleApiError, logger } from '../utils'
-import { authMiddleware, AuthenticatedRequest } from '../middleware/auth'
+import { authMiddleware } from '../middleware/auth'
+import { workspaceMiddleware, WorkspaceRequest } from '../middleware/workspace'
 
 const router = Router()
 
-// Aplicar middleware de autenticação em todas as rotas
+// Aplicar middlewares de autenticação e workspace
 router.use(authMiddleware)
+router.use(workspaceMiddleware)
 
-// GET /api/leads - Listar leads com paginação e filtros
-router.get('/', async (req: AuthenticatedRequest, res: Response) => {
+// GET /api/leads - Listar leads do workspace com paginação e filtros
+router.get('/', async (req: WorkspaceRequest, res: Response) => {
   try {
-    const userId = req.user?.userId
+    const workspaceId = req.workspaceId
     const {
       page = '1',
       limit = '20',
@@ -25,19 +27,20 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     const limitNum = Math.min(parseInt(limit as string), 100) // Max 100
     const offset = (pageNum - 1) * limitNum
 
-    // Query base
+    // Query base - filtrar por workspace
     let query = supabase
       .from('leads')
       .select('*', { count: 'exact' })
+      .eq('workspace_id', workspaceId)
 
     // Filtro por status
     if (status) {
-      query = query.eq('status', status)
+      query = query.eq('status_limpa_nome', status)
     }
 
     // Busca por nome, email ou telefone
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+      query = query.or(`nome_cliente.ilike.%${search}%,email_usuario.ilike.%${search}%,numero_formatado.ilike.%${search}%`)
     }
 
     // Ordenação
@@ -60,15 +63,17 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 })
 
-// GET /api/leads/:id - Buscar lead por ID
-router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
+// GET /api/leads/:id - Buscar lead por ID (dentro do workspace)
+router.get('/:id', async (req: WorkspaceRequest, res: Response) => {
   try {
     const { id } = req.params
+    const workspaceId = req.workspaceId
 
     const { data: lead, error } = await supabase
       .from('leads')
       .select('*')
       .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
       .single()
 
     if (error || !lead) {
@@ -82,27 +87,24 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 })
 
-// POST /api/leads - Criar novo lead
-router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+// POST /api/leads - Criar novo lead no workspace
+router.post('/', async (req: WorkspaceRequest, res: Response) => {
   try {
     const userId = req.user?.userId
-    const { name, email, phone, cpf, value, status = 'novo', notes } = req.body
+    const workspaceId = req.workspaceId
+    const leadData = req.body
 
-    if (!name) {
+    if (!leadData.nome_cliente && !leadData.name) {
       throw ApiError.badRequest('Nome e obrigatorio', 'MISSING_NAME')
     }
 
     const { data: lead, error } = await supabase
       .from('leads')
       .insert({
-        name,
-        email,
-        phone,
-        cpf,
-        value: value ? parseFloat(value) : null,
-        status,
-        notes,
-        created_by: parseInt(userId || '0')
+        ...leadData,
+        workspace_id: workspaceId,
+        user_id: parseInt(userId || '0'), // Mantém para compatibilidade
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -112,7 +114,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.internal('Erro ao criar lead', 'CREATE_LEAD_ERROR')
     }
 
-    logger.info({ leadId: lead.id, userId }, 'Lead created')
+    logger.info({ leadId: lead.id, workspaceId, userId }, 'Lead created')
     ApiResponse.created(res, lead)
 
   } catch (error) {
@@ -120,40 +122,38 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 })
 
-// PUT /api/leads/:id - Atualizar lead
-router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
+// PUT /api/leads/:id - Atualizar lead (dentro do workspace)
+router.put('/:id', async (req: WorkspaceRequest, res: Response) => {
   try {
     const { id } = req.params
+    const workspaceId = req.workspaceId
     const userId = req.user?.userId
-    const { name, email, phone, cpf, value, status, notes } = req.body
+    const updateData = req.body
 
-    // Verificar se lead existe
+    // Verificar se lead existe e pertence ao workspace
     const { data: existing, error: existError } = await supabase
       .from('leads')
       .select('id')
       .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
       .single()
 
     if (existError || !existing) {
       throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
     }
 
-    const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString()
-    }
+    // Não permitir alterar workspace_id
+    delete updateData.workspace_id
+    delete updateData.user_id
 
-    if (name !== undefined) updateData.name = name
-    if (email !== undefined) updateData.email = email
-    if (phone !== undefined) updateData.phone = phone
-    if (cpf !== undefined) updateData.cpf = cpf
-    if (value !== undefined) updateData.value = parseFloat(value)
-    if (status !== undefined) updateData.status = status
-    if (notes !== undefined) updateData.notes = notes
-
-    const { data: lead, error } = await supabase
+    const { data: lead, error} = await supabase
       .from('leads')
-      .update(updateData)
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
       .select()
       .single()
 
@@ -162,7 +162,7 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.internal('Erro ao atualizar lead', 'UPDATE_LEAD_ERROR')
     }
 
-    logger.info({ leadId: id, userId }, 'Lead updated')
+    logger.info({ leadId: id, workspaceId, userId }, 'Lead updated')
     ApiResponse.success(res, lead)
 
   } catch (error) {
@@ -170,23 +170,37 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 })
 
-// DELETE /api/leads/:id - Deletar lead
-router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
+// DELETE /api/leads/:id - Deletar lead (dentro do workspace)
+router.delete('/:id', async (req: WorkspaceRequest, res: Response) => {
   try {
     const { id } = req.params
+    const workspaceId = req.workspaceId
     const userId = req.user?.userId
+
+    // Verificar se lead pertence ao workspace antes de deletar
+    const { data: existing } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!existing) {
+      throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
+    }
 
     const { error } = await supabase
       .from('leads')
       .delete()
       .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
 
     if (error) {
       logger.error({ error }, 'Failed to delete lead')
       throw ApiError.internal('Erro ao deletar lead', 'DELETE_LEAD_ERROR')
     }
 
-    logger.info({ leadId: id, userId }, 'Lead deleted')
+    logger.info({ leadId: id, workspaceId, userId }, 'Lead deleted')
     ApiResponse.noContent(res)
 
   } catch (error) {
@@ -194,29 +208,38 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 })
 
-// PUT /api/leads/:id/status - Atualizar status do lead
-router.put('/:id/status', async (req: AuthenticatedRequest, res: Response) => {
+// PUT /api/leads/:id/status - Atualizar status do lead (dentro do workspace)
+router.put('/:id/status', async (req: WorkspaceRequest, res: Response) => {
   try {
     const { id } = req.params
     const { status } = req.body
+    const workspaceId = req.workspaceId
     const userId = req.user?.userId
 
     if (!status) {
       throw ApiError.badRequest('Status e obrigatorio', 'MISSING_STATUS')
     }
 
-    const validStatuses = ['novo', 'em_negociacao', 'proposta_enviada', 'fechado', 'perdido']
-    if (!validStatuses.includes(status)) {
-      throw ApiError.badRequest(`Status invalido. Use: ${validStatuses.join(', ')}`, 'INVALID_STATUS')
+    // Verificar se lead pertence ao workspace
+    const { data: existing } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!existing) {
+      throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
     }
 
     const { data: lead, error } = await supabase
       .from('leads')
       .update({
-        status,
+        status_limpa_nome: status,
         updated_at: new Date().toISOString()
       })
       .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
       .select()
       .single()
 
@@ -225,7 +248,7 @@ router.put('/:id/status', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.internal('Erro ao atualizar status', 'UPDATE_STATUS_ERROR')
     }
 
-    logger.info({ leadId: id, status, userId }, 'Lead status updated')
+    logger.info({ leadId: id, status, workspaceId, userId }, 'Lead status updated')
     ApiResponse.success(res, lead)
 
   } catch (error) {

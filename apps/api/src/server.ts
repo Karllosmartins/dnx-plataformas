@@ -9,6 +9,9 @@ import authRoutes from './routes/auth'
 import leadsRoutes from './routes/leads'
 import healthRoutes from './routes/health'
 import workspacesRoutes from './routes/workspaces'
+import whatsappRoutes from './routes/whatsapp'
+import arquivosRoutes from './routes/arquivos'
+import agentesIARoutes from './routes/agentes-ia'
 
 const app = express()
 const PORT = process.env.API_PORT || 3001
@@ -36,6 +39,9 @@ app.use('/api/health', healthRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/workspaces', workspacesRoutes)
 app.use('/api/leads', leadsRoutes)
+app.use('/api/whatsapp', whatsappRoutes)
+app.use('/api/arquivos', arquivosRoutes)
+app.use('/api/agentes-ia', agentesIARoutes)
 
 // Error handler global
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

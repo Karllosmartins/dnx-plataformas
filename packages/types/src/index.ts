@@ -256,6 +256,125 @@ export interface AgenteIA {
   prompt: string
   estagio: string
   user_id: number
+  workspace_id?: string  // Para multi-tenancy
+}
+
+export interface WhatsappTemplate {
+  id: number
+  instancia_id: number
+  template_name: string
+  template_language: string
+  template_category: string
+  template_status: string
+  template_components?: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface TipoNegocio {
+  id: number
+  nome: string
+  nome_exibicao: string
+  descricao?: string
+  icone?: string
+  cor?: string
+  campos_personalizados?: Record<string, unknown>[]
+  status_personalizados?: Record<string, unknown>[]
+  metricas_config?: {
+    campos_receita?: string[]
+    campos_conversao?: string[]
+    metricas_principais?: string[]
+  }
+  ativo: boolean
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+export interface UserTipoNegocio {
+  id: number
+  user_id: number
+  tipo_negocio_id: number
+  configuracoes_usuario?: Record<string, unknown>
+  ativo: boolean
+  data_atribuicao: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Tool {
+  id: number
+  type: string
+  nome: string
+  descricao?: string
+  tool: Record<string, unknown>
+  created_at: string
+}
+
+export interface UserTool {
+  id: number
+  user_id: number
+  tool_id: number
+  agente_id?: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface UserAgentVectorstore {
+  id: number
+  user_id: number
+  agent_id: number
+  vectorstore_id: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CredenciasDiversas {
+  id: number
+  user_id: number
+  google_calendar?: {
+    email?: string
+    refresh_token?: string
+  }
+  asaas?: {
+    access_token?: string
+  }
+  zapsign?: {
+    token?: string
+    modelos?: string
+  }
+  datecode?: Record<string, unknown>
+  created_at: string
+}
+
+export interface Arquivo {
+  id: number
+  nome?: string
+  mimetype?: string
+  mediatype?: string
+  arquivo?: string
+  descricao?: string
+  produto?: string
+  user_id?: number
+  workspace_id?: string
+}
+
+export interface AdsLead {
+  id: number
+  created_at: string
+  remoteJid?: string
+  id2?: string
+  pushName?: string
+  conversation?: string
+  conversionSource?: string
+  title?: string
+  mediaType?: string
+  thumbnailUrl?: string
+  sourceType?: string
+  sourceId?: string
+  sourceUrl?: string
+  source?: string
 }
 
 // === API Responses ===
