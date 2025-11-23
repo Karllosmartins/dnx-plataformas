@@ -96,7 +96,7 @@ export default function LeadsPage() {
 
   // Estados de filtros
   const [selectedFunilId, setSelectedFunilId] = useState<string>('')
-  const [selectedEstagioId, setSelectedEstagioId] = useState<string>('')
+  const [selectedEstagioId, setSelectedEstagioId] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Estados de UI
@@ -147,7 +147,7 @@ export default function LeadsPage() {
 
       const params: Record<string, string> = {}
       if (selectedFunilId) params.funilId = selectedFunilId
-      if (selectedEstagioId) params.estagioId = selectedEstagioId
+      if (selectedEstagioId && selectedEstagioId !== 'all') params.estagioId = selectedEstagioId
       if (searchQuery) params.search = searchQuery
 
       const response = await leadsApi.list(params)
@@ -232,7 +232,7 @@ export default function LeadsPage() {
   }
 
   const clearFilters = () => {
-    setSelectedEstagioId('')
+    setSelectedEstagioId('all')
     setSearchQuery('')
   }
 
@@ -360,7 +360,7 @@ export default function LeadsPage() {
                 <SelectValue placeholder="Todos os estagios" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os estagios</SelectItem>
+                <SelectItem value="all">Todos os estagios</SelectItem>
                 {estagios.map((estagio) => (
                   <SelectItem key={estagio.id} value={estagio.id}>
                     <div className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export default function LeadsPage() {
 
           {/* Botoes de acao */}
           <div className="flex items-center gap-2">
-            {(selectedEstagioId || searchQuery) && (
+            {((selectedEstagioId && selectedEstagioId !== 'all') || searchQuery) && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="mr-1 h-4 w-4" />
                 Limpar

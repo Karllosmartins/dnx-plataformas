@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import PlanProtection from '../../components/shared/PlanProtection'
-import { supabase } from '../../lib/supabase'
+import { authApi, leadsApi } from '../../lib/api-client'
 import { hasAvailableLeads, consumeLeads, getLeadsBalance, calculateEnriquecimentoLeadsConsumption } from '../../lib/permissions'
 import {
   Upload,
@@ -81,14 +81,10 @@ export default function EnriquecimentoAPIPage() {
 
   const carregarDadosUsuario = async () => {
     try {
-      const { data, error } = await supabase
-        .from('view_usuarios_planos')
-        .select('*')
-        .eq('id', user?.id)
-        .single()
+      const response = await authApi.me()
 
-      if (error) throw error
-      setUserPlan(data)
+      if (!response.success) throw new Error(response.error)
+      setUserPlan(response.data)
     } catch (error) {
       console.error('Erro ao carregar dados do usuário:', error)
     }
@@ -257,11 +253,7 @@ export default function EnriquecimentoAPIPage() {
         const leadsParaConsumir = calculateEnriquecimentoLeadsConsumption(sociosData.length)
 
         // Verificar se ainda tem leads suficientes
-        const userAtualizado = await supabase
-          .from('view_usuarios_planos')
-          .select('*')
-          .eq('id', user?.id)
-          .single()
+        const userAtualizado = await authApi.me()
 
         if (userAtualizado.data && !hasAvailableLeads(userAtualizado.data, leadsParaConsumir)) {
           setStatusEnriquecimento(`Leads insuficientes para continuar. Parando no CNPJ ${cnpj}`)
@@ -335,26 +327,22 @@ export default function EnriquecimentoAPIPage() {
   }
 
   const upsertContato = async (contato: any, tipo: string) => {
-    const userId = parseInt(user?.id || '0')
+    // Verificar se já existe um lead com este numero_formatado (para evitar duplicatas)
+    // A API já filtra pelo workspace do usuário autenticado
+    const searchResponse = await leadsApi.list({ search: contato.numero_formatado })
 
-    // Verificar se já existe um lead com este user_id e numero_formatado (para evitar duplicatas)
-    const { data: existingLead, error: searchError } = await supabase
-      .from('leads')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('numero_formatado', contato.numero_formatado)
-      .maybeSingle()
-
-    if (searchError && searchError.code !== 'PGRST116') {
+    if (!searchResponse.success) {
       return
     }
 
-    if (existingLead) {
+    const existingLeads = searchResponse.data as any[]
+    if (existingLeads && existingLeads.length > 0) {
       // Lead com este telefone já existe, não inserir novamente
       return
     } else {
-      // Inserir novo lead
-      await supabase.from('leads').insert(contato)
+      // Inserir novo lead (remover user_id pois a API usa workspace implícito)
+      const { user_id, ...contatoSemUserId } = contato
+      await leadsApi.create(contatoSemUserId)
     }
   }
 
