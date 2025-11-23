@@ -133,7 +133,6 @@ export default function RelatoriosPage() {
   const [filters, setFilters] = useState({
     campanha: '',
     origem: '',
-    status: '',
     dataInicio: '',
     dataFim: '',
     cnpj: '',
@@ -382,7 +381,6 @@ export default function RelatoriosPage() {
     return leads.filter(lead => {
       if (filters.campanha && lead.nome_campanha !== filters.campanha) return false
       if (filters.origem && lead.origem !== filters.origem) return false
-      if (filters.status && lead.status_generico !== filters.status) return false
       if (filters.cnpj && !lead.cpf_cnpj?.includes(filters.cnpj)) return false
       if (filters.funil_id && lead.funil_id !== filters.funil_id) return false
       if (filters.estagio_id && lead.estagio_id !== filters.estagio_id) return false
@@ -955,26 +953,6 @@ export default function RelatoriosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={filters.status}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {userTipoNegocio?.status_personalizados && userTipoNegocio.status_personalizados.map((status: string) => (
-                    <SelectItem key={status} value={status}>
-                      {dashboardConfig?.statusLabels?.[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label>CNPJ</Label>
               <Input
                 type="text"
@@ -1006,7 +984,7 @@ export default function RelatoriosPage() {
               <Button
                 variant="secondary"
                 className="w-full"
-                onClick={() => setFilters({ campanha: '', origem: '', status: '', dataInicio: '', dataFim: '', cnpj: '', funil_id: '', estagio_id: '' })}
+                onClick={() => setFilters({ campanha: '', origem: '', dataInicio: '', dataFim: '', cnpj: '', funil_id: '', estagio_id: '' })}
               >
                 Limpar
               </Button>
