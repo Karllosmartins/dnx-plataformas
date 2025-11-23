@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, UsuarioComPlano, Plano } from '../../../lib/supabase'
+import { workspacesApi } from '../../../lib/api-client'
 import { Users, Edit, Save, X, Shield, UserX, Plus, Settings, Lock, Bot, Mic, Globe, Database, Building, Clock, Zap, Wrench } from 'lucide-react'
 
 export default function UsuariosSection() {
@@ -109,32 +110,25 @@ export default function UsuariosSection() {
 
   const fetchWorkspaces = async () => {
     try {
-      const { data, error } = await supabase
-        .from('workspaces')
-        .select(`
-          id,
-          name,
-          slug,
-          created_at,
-          leads_consumidos,
-          instancias_ativas,
-          planos (nome)
-        `)
-        .order('created_at', { ascending: false })
+      const response = await workspacesApi.list()
 
-      if (error) throw error
+      if (response.success && response.data) {
+        const workspacesData = Array.isArray(response.data)
+          ? response.data
+          : [response.data]
 
-      const workspacesFormatted = (data || []).map((ws: any) => ({
-        id: ws.id,
-        name: ws.name,
-        slug: ws.slug,
-        created_at: ws.created_at,
-        leads_consumidos: ws.leads_consumidos || 0,
-        instancias_ativas: ws.instancias_ativas || 0,
-        plano_nome: ws.planos?.nome || 'Sem plano'
-      }))
+        const workspacesFormatted = workspacesData.map((ws: any) => ({
+          id: ws.id,
+          name: ws.name,
+          slug: ws.slug,
+          created_at: ws.created_at,
+          leads_consumidos: ws.leads_consumidos || 0,
+          instancias_ativas: ws.instancias_ativas || 0,
+          plano_nome: ws.plano_nome || 'Sem plano'
+        }))
 
-      setWorkspaces(workspacesFormatted)
+        setWorkspaces(workspacesFormatted)
+      }
     } catch (error) {
       console.error('Erro ao buscar workspaces:', error)
     }
