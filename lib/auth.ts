@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase'
+import { authApi, tokenManager } from './api-client'
 
 export interface User {
   id: string
@@ -19,29 +20,16 @@ export const authService = {
     try {
       console.log('Tentativa de login:', email)
 
-      // Chamar API de login (bcrypt roda no servidor)
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      })
+      // Usar nova API Express
+      const result = await authApi.login(email, password)
 
-      const result = await response.json()
-
-      if (!result.success) {
+      if (!result.success || !result.data) {
         throw new Error(result.error || 'Erro ao fazer login')
       }
 
-      const user: User = result.data.user
+      const user: User = result.data.user as User
 
       console.log('Login bem-sucedido!')
-
-      // Salvar no localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_user', JSON.stringify(user))
-      }
 
       return { user, error: null }
     } catch (error) {
@@ -51,9 +39,7 @@ export const authService = {
   },
 
   async signOut() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_user')
-    }
+    authApi.logout()
   },
 
   getCurrentUser(): User | null {
@@ -61,11 +47,9 @@ export const authService = {
       console.log('Window undefined - SSR')
       return null
     }
-    
+
     try {
-      const userStr = localStorage.getItem('auth_user')
-      console.log('User string from localStorage:', userStr)
-      return userStr ? JSON.parse(userStr) : null
+      return tokenManager.getUser<User>()
     } catch (error) {
       console.error('Erro ao recuperar usuário:', error)
       return null
@@ -79,16 +63,8 @@ export const authService = {
     role: 'admin' | 'user'
   }) {
     try {
-      // Chamar API de registro (bcrypt roda no servidor)
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      })
-
-      const result = await response.json()
+      // Usar nova API Express
+      const result = await authApi.register(userData)
 
       if (!result.success) {
         throw new Error(result.error || 'Erro ao criar usuario')
