@@ -283,7 +283,7 @@ export default function HomePage() {
         <MetricCard
           title="Total de Leads"
           value={metrics.totalLeads}
-          icon={<Users className="h-6 w-6 text-blue-600" />}
+          icon={Users}
           trend={null}
           color="blue"
         />
@@ -291,7 +291,7 @@ export default function HomePage() {
         <MetricCard
           title="Funis Ativos"
           value={metrics.totalFunis}
-          icon={<Layers className="h-6 w-6 text-purple-600" />}
+          icon={Layers}
           trend={null}
           color="purple"
         />
@@ -299,7 +299,7 @@ export default function HomePage() {
         <MetricCard
           title="Novos Leads"
           value={metrics.leadsNovos}
-          icon={<Target className="h-6 w-6 text-green-600" />}
+          icon={Target}
           trend={null}
           color="green"
         />
@@ -307,7 +307,7 @@ export default function HomePage() {
         <MetricCard
           title="Em Andamento"
           value={metrics.leadsEmAndamento}
-          icon={<Clock className="h-6 w-6 text-yellow-600" />}
+          icon={Clock}
           trend={null}
           color="yellow"
         />
@@ -318,7 +318,7 @@ export default function HomePage() {
         <MetricCard
           title="Leads Convertidos"
           value={metrics.leadsConvertidos}
-          icon={<CheckCircle className="h-6 w-6 text-green-600" />}
+          icon={CheckCircle}
           trend={null}
           color="green"
         />
@@ -326,7 +326,7 @@ export default function HomePage() {
         <MetricCard
           title="Leads Perdidos"
           value={metrics.leadsPerdidos}
-          icon={<XCircle className="h-6 w-6 text-red-600" />}
+          icon={XCircle}
           trend={null}
           color="red"
         />
