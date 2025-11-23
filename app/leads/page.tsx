@@ -98,6 +98,8 @@ export default function LeadsPage() {
   const [selectedFunilId, setSelectedFunilId] = useState<string>('')
   const [selectedEstagioId, setSelectedEstagioId] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState<string>('')
+  const [dateTo, setDateTo] = useState<string>('')
 
   // Estados de UI
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -161,6 +163,8 @@ export default function LeadsPage() {
       if (selectedFunilId) params.funil_id = selectedFunilId
       if (selectedEstagioId && selectedEstagioId !== 'all') params.estagio_id = selectedEstagioId
       if (searchQuery) params.search = searchQuery
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
 
       const response = await leadsApi.list(params)
 
@@ -180,7 +184,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedFunilId, selectedEstagioId, searchQuery, currentPage])
+  }, [selectedFunilId, selectedEstagioId, searchQuery, dateFrom, dateTo, currentPage])
 
   useEffect(() => {
     fetchFunis()
@@ -194,7 +198,7 @@ export default function LeadsPage() {
   // Resetar pagina quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedFunilId, selectedEstagioId, searchQuery])
+  }, [selectedFunilId, selectedEstagioId, searchQuery, dateFrom, dateTo])
 
   // =============================================================================
   // HANDLERS
@@ -270,6 +274,8 @@ export default function LeadsPage() {
   const clearFilters = () => {
     setSelectedEstagioId('all')
     setSearchQuery('')
+    setDateFrom('')
+    setDateTo('')
     setCurrentPage(1) // Resetar pagina ao limpar filtros
   }
 
@@ -413,6 +419,25 @@ export default function LeadsPage() {
             </Select>
           </div>
 
+          {/* Filtro de Data */}
+          <div className="w-full md:w-36">
+            <Label className="mb-2 block text-sm">Data Inicio</Label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+
+          <div className="w-full md:w-36">
+            <Label className="mb-2 block text-sm">Data Fim</Label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+
           {/* Busca */}
           <div className="flex-1">
             <Label className="mb-2 block text-sm">Buscar</Label>
@@ -429,7 +454,7 @@ export default function LeadsPage() {
 
           {/* Botoes de acao */}
           <div className="flex items-center gap-2">
-            {((selectedEstagioId && selectedEstagioId !== 'all') || searchQuery) && (
+            {((selectedEstagioId && selectedEstagioId !== 'all') || searchQuery || dateFrom || dateTo) && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="mr-1 h-4 w-4" />
                 Limpar

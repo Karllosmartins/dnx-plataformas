@@ -119,7 +119,9 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
       sort = 'created_at',
       order = 'desc',
       funil_id,
-      estagio_id
+      estagio_id,
+      date_from,
+      date_to
     } = req.query
 
     const pageNum = parseInt(page as string)
@@ -151,6 +153,17 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
     // Busca por nome, email ou telefone
     if (search) {
       query = query.or(`nome_cliente.ilike.%${search}%,email_usuario.ilike.%${search}%,numero_formatado.ilike.%${search}%`)
+    }
+
+    // Filtro por data
+    if (date_from) {
+      query = query.gte('created_at', date_from)
+    }
+    if (date_to) {
+      // Adicionar 23:59:59 para incluir todo o dia
+      const endDate = new Date(date_to as string)
+      endDate.setHours(23, 59, 59, 999)
+      query = query.lte('created_at', endDate.toISOString())
     }
 
     // Ordenação
