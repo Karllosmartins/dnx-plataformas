@@ -98,6 +98,11 @@ class ApiClient {
         headers,
       })
 
+      // Se for 204 No Content, retornar sucesso sem body
+      if (response.status === 204) {
+        return { success: true }
+      }
+
       const data = await response.json()
 
       // Se token expirou, tentar refresh
@@ -290,7 +295,7 @@ export const leadsApi = {
   },
 
   update(id: string, data: Record<string, unknown>) {
-    return apiClient.patch(`/leads/${id}`, data)
+    return apiClient.put(`/leads/${id}`, data)
   },
 
   delete(id: string) {
@@ -317,7 +322,7 @@ export const funisApi = {
   },
 
   update(id: string, data: { nome?: string; descricao?: string; cor?: string; ativo?: boolean }) {
-    return apiClient.patch(`/funis/${id}`, data)
+    return apiClient.put(`/funis/${id}`, data)
   },
 
   delete(id: string) {
@@ -418,7 +423,7 @@ export const camposApi = {
   },
 
   update(id: string, data: Record<string, unknown>) {
-    return apiClient.patch(`/campos/${id}`, data)
+    return apiClient.put(`/campos/${id}`, data)
   },
 
   delete(id: string) {

@@ -84,7 +84,7 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
     }
 
     // Validar tipo
-    const tiposValidos = ['text', 'number', 'date', 'select', 'checkbox', 'email', 'phone', 'currency', 'url']
+    const tiposValidos = ['text', 'number', 'date', 'select', 'checkbox', 'email', 'phone', 'currency', 'url', 'textarea', 'boolean']
     if (!tiposValidos.includes(campoData.tipo)) {
       throw ApiError.badRequest('Tipo de campo invalido', 'INVALID_TIPO')
     }
@@ -109,14 +109,20 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
     }
 
     // Buscar próxima ordem
-    const { data: maxOrdem } = await supabase
+    let ordemQuery = supabase
       .from('campos_personalizados')
       .select('ordem')
       .eq('workspace_id', workspaceId)
-      .eq('funil_id', campoData.funil_id || null)
       .order('ordem', { ascending: false })
       .limit(1)
-      .single()
+
+    if (campoData.funil_id) {
+      ordemQuery = ordemQuery.eq('funil_id', campoData.funil_id)
+    } else {
+      ordemQuery = ordemQuery.is('funil_id', null)
+    }
+
+    const { data: maxOrdem } = await ordemQuery.single()
 
     const novaOrdem = maxOrdem ? maxOrdem.ordem + 1 : 1
 
@@ -171,7 +177,7 @@ router.put('/:id', async (req: WorkspaceRequest, res: Response) => {
 
     // Validar tipo se fornecido
     if (updateData.tipo) {
-      const tiposValidos = ['text', 'number', 'date', 'select', 'checkbox', 'email', 'phone', 'currency', 'url']
+      const tiposValidos = ['text', 'number', 'date', 'select', 'checkbox', 'email', 'phone', 'currency', 'url', 'textarea', 'boolean']
       if (!tiposValidos.includes(updateData.tipo)) {
         throw ApiError.badRequest('Tipo de campo invalido', 'INVALID_TIPO')
       }
