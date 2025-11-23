@@ -235,7 +235,7 @@ export default function CamposPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl py-6">
+    <div className="w-full px-6 py-6">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -311,16 +311,16 @@ export default function CamposPage() {
               <div>
                 <Label>Funil (opcional)</Label>
                 <Select
-                  value={formData.funil_id}
+                  value={formData.funil_id || 'global'}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, funil_id: value }))
+                    setFormData((prev) => ({ ...prev, funil_id: value === 'global' ? '' : value }))
                   }
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Global (todos os funis)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Global (todos os funis)</SelectItem>
+                    <SelectItem value="global">Global (todos os funis)</SelectItem>
                     {funis.map((funil) => (
                       <SelectItem key={funil.id} value={funil.id}>
                         <div className="flex items-center gap-2">

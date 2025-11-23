@@ -109,6 +109,9 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
 
+  // Estado do drawer de visualizacao
+  const [viewingLead, setViewingLead] = useState<Lead | null>(null)
+
   // =============================================================================
   // FETCH DATA
   // =============================================================================
@@ -185,7 +188,16 @@ export default function LeadsPage() {
 
   const handleEditLead = (lead: Lead) => {
     setEditingLead(lead)
+    setViewingLead(null)
     setIsModalOpen(true)
+  }
+
+  const handleViewLead = (lead: Lead) => {
+    setViewingLead(lead)
+  }
+
+  const handleCloseViewLead = () => {
+    setViewingLead(null)
   }
 
   const handleDeleteLead = async (leadId: string) => {
@@ -475,7 +487,8 @@ export default function LeadsPage() {
                   leads.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => handleViewLead(lead)}
                     >
                       <td className="whitespace-nowrap px-6 py-4">
                         <div className="flex items-center">
@@ -528,14 +541,20 @@ export default function LeadsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEditLead(lead)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditLead(lead)
+                            }}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteLead(lead.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteLead(lead.id)
+                            }}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
@@ -607,6 +626,7 @@ export default function LeadsPage() {
                     onEdit={handleEditLead}
                     onDelete={handleDeleteLead}
                     onMove={handleMoveToStage}
+                    onView={handleViewLead}
                     formatPhone={formatPhone}
                     formatDate={formatDate}
                   />
@@ -644,6 +664,7 @@ export default function LeadsPage() {
                       onEdit={handleEditLead}
                       onDelete={handleDeleteLead}
                       onMove={handleMoveToStage}
+                      onView={handleViewLead}
                       formatPhone={formatPhone}
                       formatDate={formatDate}
                     />
@@ -675,7 +696,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl py-6">
+    <div className="w-full px-6 py-6">
       {renderHeader()}
       {renderFilters()}
 
@@ -698,6 +719,24 @@ export default function LeadsPage() {
           campos={campos}
         />
       )}
+
+      {/* Drawer de visualizacao */}
+      {viewingLead && (
+        <LeadViewDrawer
+          lead={viewingLead}
+          onClose={handleCloseViewLead}
+          onEdit={() => handleEditLead(viewingLead)}
+          onDelete={() => handleDeleteLead(viewingLead.id)}
+          onMoveToStage={handleMoveToStage}
+          estagios={estagios}
+          funis={funis}
+          campos={campos}
+          formatPhone={formatPhone}
+          formatDate={formatDate}
+          getEstagioName={getEstagioName}
+          getEstagioColor={getEstagioColor}
+        />
+      )}
     </div>
   )
 }
@@ -712,6 +751,7 @@ interface KanbanCardProps {
   onEdit: (lead: Lead) => void
   onDelete: (id: string) => void
   onMove: (leadId: string, estagioId: string) => void
+  onView: (lead: Lead) => void
   formatPhone: (phone: string) => string
   formatDate: (date: string) => string
 }
@@ -722,6 +762,7 @@ function KanbanCard({
   onEdit,
   onDelete,
   onMove,
+  onView,
   formatPhone,
   formatDate,
 }: KanbanCardProps) {
@@ -729,7 +770,10 @@ function KanbanCard({
   const [showMoveMenu, setShowMoveMenu] = useState(false)
 
   return (
-    <Card className="cursor-pointer transition-shadow hover:shadow-md">
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
+      onClick={() => onView(lead)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -1146,6 +1190,246 @@ function LeadModal({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// COMPONENTE - DRAWER DE VISUALIZACAO
+// =============================================================================
+
+interface LeadViewDrawerProps {
+  lead: Lead
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onMoveToStage: (leadId: string, estagioId: string) => void
+  estagios: Estagio[]
+  funis: Funil[]
+  campos: CampoPersonalizado[]
+  formatPhone: (phone: string) => string
+  formatDate: (date: string) => string
+  getEstagioName: (estagioId?: string) => string
+  getEstagioColor: (estagioId?: string) => string
+}
+
+function LeadViewDrawer({
+  lead,
+  onClose,
+  onEdit,
+  onDelete,
+  onMoveToStage,
+  estagios,
+  funis,
+  campos,
+  formatPhone,
+  formatDate,
+  getEstagioName,
+  getEstagioColor,
+}: LeadViewDrawerProps) {
+  const [showMoveMenu, setShowMoveMenu] = useState(false)
+
+  const getFunilName = (funilId?: string) => {
+    if (!funilId) return 'Sem funil'
+    const funil = funis.find((f) => f.id === funilId)
+    return funil?.nome || 'Desconhecido'
+  }
+
+  const getCampoLabel = (campoId: string) => {
+    const campo = campos.find((c) => c.id === campoId)
+    return campo?.nome || campoId
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+
+      {/* Drawer */}
+      <div className="relative z-10 h-full w-full max-w-md overflow-y-auto bg-white shadow-xl dark:bg-gray-900">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4 dark:bg-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Detalhes do Lead
+          </h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Nome e avatar */}
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+              <User className="h-8 w-8 text-gray-500" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {lead.nome_cliente}
+              </h3>
+              <Badge
+                variant="outline"
+                className="mt-1 border-0"
+                style={{
+                  backgroundColor: `${getEstagioColor(lead.estagio_id)}20`,
+                  color: getEstagioColor(lead.estagio_id),
+                }}
+              >
+                {getEstagioName(lead.estagio_id)}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Informacoes de contato */}
+          <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h4 className="text-sm font-semibold uppercase text-gray-500">Contato</h4>
+            {lead.telefone && (
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-900 dark:text-white">
+                  {formatPhone(lead.telefone)}
+                </span>
+              </div>
+            )}
+            {lead.email_usuario && (
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-900 dark:text-white">
+                  {lead.email_usuario}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Informacoes do funil */}
+          <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h4 className="text-sm font-semibold uppercase text-gray-500">Funil</h4>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 dark:text-gray-300">Funil:</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {getFunilName(lead.funil_id)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 dark:text-gray-300">Estagio:</span>
+              <Badge
+                variant="outline"
+                className="border-0"
+                style={{
+                  backgroundColor: `${getEstagioColor(lead.estagio_id)}20`,
+                  color: getEstagioColor(lead.estagio_id),
+                }}
+              >
+                {getEstagioName(lead.estagio_id)}
+              </Badge>
+            </div>
+
+            {/* Mover para outro estagio */}
+            {estagios.length > 0 && (
+              <div className="relative pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowMoveMenu(!showMoveMenu)}
+                >
+                  <ChevronRight className="mr-2 h-4 w-4" />
+                  Mover para outro estagio
+                </Button>
+                {showMoveMenu && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-md border bg-white py-1 shadow-lg dark:bg-gray-800">
+                    {estagios.map((estagio) => (
+                      <button
+                        key={estagio.id}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        disabled={lead.estagio_id === estagio.id}
+                        onClick={() => {
+                          onMoveToStage(lead.id, estagio.id)
+                          setShowMoveMenu(false)
+                        }}
+                      >
+                        <div
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: estagio.cor }}
+                        />
+                        <span className={lead.estagio_id === estagio.id ? 'text-gray-400' : ''}>
+                          {estagio.nome}
+                        </span>
+                        {lead.estagio_id === estagio.id && (
+                          <span className="ml-auto text-xs text-gray-400">(atual)</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Datas */}
+          <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h4 className="text-sm font-semibold uppercase text-gray-500">Datas</h4>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 dark:text-gray-300">Criado em:</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {formatDate(lead.created_at)}
+                </span>
+              </div>
+            </div>
+            {lead.updated_at && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700 dark:text-gray-300">Atualizado em:</span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {formatDate(lead.updated_at)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Campos personalizados */}
+          {lead.campos_personalizados &&
+            Object.keys(lead.campos_personalizados).length > 0 && (
+              <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                <h4 className="text-sm font-semibold uppercase text-gray-500">
+                  Campos Personalizados
+                </h4>
+                {Object.entries(lead.campos_personalizados).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {getCampoLabel(key)}:
+                    </span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {String(value) || '-'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 border-t bg-white px-6 py-4 dark:bg-gray-900">
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onEdit}>
+              <Edit className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -19,7 +19,8 @@ export default function LoginPage() {
 
     try {
       const response = await authApi.login(email, password)
-      const { token, user } = response.data
+      const data = response.data as { token: string; user: { id: string; email: string; name: string; role: string } }
+      const { token, user } = data
 
       // Salvar token
       localStorage.setItem('token', token)

@@ -200,6 +200,55 @@ router.put('/bulk/estagio', async (req: WorkspaceRequest, res: Response) => {
   }
 })
 
+// PATCH /api/leads/:id/stage - Mover lead para outro estágio
+router.patch('/:id/stage', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const { estagioId } = req.body
+    const workspaceId = req.workspaceId
+    const userId = req.user?.userId
+
+    if (!estagioId) {
+      throw ApiError.badRequest('ID do estagio e obrigatorio', 'MISSING_ESTAGIO_ID')
+    }
+
+    // Verificar se lead pertence ao workspace
+    const { data: existingLead, error: checkError } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (checkError || !existingLead) {
+      throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
+    }
+
+    // Atualizar estágio do lead
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .update({
+        estagio_id: estagioId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .select()
+      .single()
+
+    if (error) {
+      logger.error({ error }, 'Failed to update lead stage')
+      throw ApiError.internal('Erro ao mover lead', 'UPDATE_STAGE_ERROR')
+    }
+
+    logger.info({ leadId: id, estagioId, workspaceId, userId }, 'Lead moved to new stage')
+    ApiResponse.success(res, lead)
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
 // GET /api/leads/:id - Buscar lead por ID (dentro do workspace)
 router.get('/:id', async (req: WorkspaceRequest, res: Response) => {
   try {

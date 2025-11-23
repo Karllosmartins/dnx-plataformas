@@ -47,7 +47,9 @@ export default function FunisPage() {
     try {
       setLoading(true)
       const response = await funisApi.list(true)
-      setFunis(response.data.data || [])
+      const responseData = response.data as { data?: Funil[]; success?: boolean } | Funil[]
+      const data = Array.isArray(responseData) ? responseData : (responseData.data || [])
+      setFunis(data as Funil[])
     } catch (err) {
       console.error('Erro ao carregar funis:', err)
     } finally {

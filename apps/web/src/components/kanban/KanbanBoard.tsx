@@ -82,7 +82,9 @@ export function KanbanBoard({ funilId, onLeadClick }: KanbanBoardProps) {
       setLoading(true)
       setError(null)
       const response = await leadsApi.kanban(funilId)
-      setData(response.data.data)
+      const responseData = response.data as { data?: KanbanData; success?: boolean } | KanbanData
+      const data = 'data' in responseData && responseData.data ? responseData.data : responseData as KanbanData
+      setData(data)
     } catch (err) {
       setError('Erro ao carregar kanban')
       console.error(err)

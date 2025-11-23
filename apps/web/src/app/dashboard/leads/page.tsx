@@ -28,8 +28,11 @@ export default function LeadsPage() {
     try {
       setLoading(true)
       const response = await leadsApi.list({ page, limit: 20, search: search || undefined })
-      setLeads(response.data.data || [])
-      setTotalPages(response.data.totalPages || 1)
+      const responseData = response.data as { data?: Lead[]; totalPages?: number; success?: boolean } | Lead[]
+      const data = Array.isArray(responseData) ? responseData : (responseData.data || [])
+      const pages = Array.isArray(responseData) ? 1 : (responseData.totalPages || 1)
+      setLeads(data as Lead[])
+      setTotalPages(pages)
     } catch (err) {
       console.error('Erro ao carregar leads:', err)
     } finally {
