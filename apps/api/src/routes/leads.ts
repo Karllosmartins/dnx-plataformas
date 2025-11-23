@@ -376,10 +376,24 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
   try {
     const userId = req.user?.userId
     const workspaceId = req.workspaceId
-    const leadData = req.body
+    const leadData = { ...req.body }
 
     if (!leadData.nome_cliente && !leadData.name) {
       throw ApiError.badRequest('Nome e obrigatorio', 'MISSING_NAME')
+    }
+
+    // Renomear campos_personalizados para dados_personalizados
+    if (leadData.campos_personalizados !== undefined) {
+      leadData.dados_personalizados = leadData.campos_personalizados
+      delete leadData.campos_personalizados
+    }
+
+    // Garantir que funil_id e estagio_id sejam null se vazios
+    if (leadData.funil_id === '' || leadData.funil_id === 'none') {
+      leadData.funil_id = null
+    }
+    if (leadData.estagio_id === '' || leadData.estagio_id === 'none') {
+      leadData.estagio_id = null
     }
 
     const { data: lead, error } = await supabase
@@ -394,7 +408,7 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
       .single()
 
     if (error) {
-      logger.error({ error }, 'Failed to create lead')
+      logger.error({ error, leadData }, 'Failed to create lead')
       throw ApiError.internal('Erro ao criar lead', 'CREATE_LEAD_ERROR')
     }
 
@@ -412,7 +426,7 @@ router.put('/:id', async (req: WorkspaceRequest, res: Response) => {
     const { id } = req.params
     const workspaceId = req.workspaceId
     const userId = req.user?.userId
-    const updateData = req.body
+    const updateData = { ...req.body }
 
     // Verificar se lead existe e pertence ao workspace
     const { data: existing, error: existError } = await supabase
@@ -426,9 +440,25 @@ router.put('/:id', async (req: WorkspaceRequest, res: Response) => {
       throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
     }
 
-    // Não permitir alterar workspace_id
+    // Não permitir alterar campos protegidos
     delete updateData.workspace_id
     delete updateData.user_id
+    delete updateData.id
+    delete updateData.created_at
+
+    // Renomear campos_personalizados para dados_personalizados
+    if (updateData.campos_personalizados !== undefined) {
+      updateData.dados_personalizados = updateData.campos_personalizados
+      delete updateData.campos_personalizados
+    }
+
+    // Garantir que funil_id e estagio_id sejam null se vazios
+    if (updateData.funil_id === '' || updateData.funil_id === 'none') {
+      updateData.funil_id = null
+    }
+    if (updateData.estagio_id === '' || updateData.estagio_id === 'none') {
+      updateData.estagio_id = null
+    }
 
     const { data: lead, error} = await supabase
       .from('leads')
@@ -442,7 +472,7 @@ router.put('/:id', async (req: WorkspaceRequest, res: Response) => {
       .single()
 
     if (error) {
-      logger.error({ error }, 'Failed to update lead')
+      logger.error({ error, updateData }, 'Failed to update lead')
       throw ApiError.internal('Erro ao atualizar lead', 'UPDATE_LEAD_ERROR')
     }
 
