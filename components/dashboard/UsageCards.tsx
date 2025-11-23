@@ -38,6 +38,7 @@ export function UsageCards() {
       // TODO: Pegar workspace_id do contexto quando disponível
       const workspaceId = 1
 
+      // Tentar buscar workspace
       const { data: workspace, error } = await supabase
         .from('workspaces')
         .select(`
@@ -54,30 +55,49 @@ export function UsageCards() {
         .eq('id', workspaceId)
         .single()
 
-      if (!error && workspace) {
-        // Contar leads reais do workspace
+      // Se não encontrou workspace, usar valores padrão
+      if (error || !workspace) {
+        console.log('Workspace não encontrado, usando valores padrão')
+
+        // Contar total de leads
         const { count: leadsCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspaceId)
-
-        // Contar instâncias ativas
-        const { count: instancesCount } = await supabase
-          .from('whatsapp_instances')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspaceId)
-          .eq('status', 'connected')
 
         setUsage({
-          limite_leads: workspace.limite_leads || 1000,
-          limite_consultas: workspace.limite_consultas || 500,
-          limite_instancias: workspace.limite_instancias || 3,
-          leads_consumidos: leadsCount || workspace.leads_consumidos || 0,
-          consultas_realizadas: workspace.consultas_realizadas || 0,
-          instancias_ativas: instancesCount || workspace.instancias_ativas || 0,
-          plano_nome: (workspace.planos as { nome?: string })?.nome || 'Básico',
+          limite_leads: 1000,
+          limite_consultas: 500,
+          limite_instancias: 3,
+          leads_consumidos: leadsCount || 0,
+          consultas_realizadas: 0,
+          instancias_ativas: 0,
+          plano_nome: 'Básico',
         })
+        return
       }
+
+      // Contar leads reais do workspace
+      const { count: leadsCount } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+
+      // Contar instâncias ativas
+      const { count: instancesCount } = await supabase
+        .from('whatsapp_instances')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'connected')
+
+      setUsage({
+        limite_leads: workspace.limite_leads || 1000,
+        limite_consultas: workspace.limite_consultas || 500,
+        limite_instancias: workspace.limite_instancias || 3,
+        leads_consumidos: leadsCount || workspace.leads_consumidos || 0,
+        consultas_realizadas: workspace.consultas_realizadas || 0,
+        instancias_ativas: instancesCount || workspace.instancias_ativas || 0,
+        plano_nome: (workspace.planos as { nome?: string })?.nome || 'Básico',
+      })
     } catch (error) {
       console.error('Erro ao carregar uso:', error)
     } finally {
