@@ -226,10 +226,14 @@ export interface Lead {
   data_ultima_atividade?: string
   updated_at?: string
 
-  // Campos do sistema multi-negócios
+  // Campos do sistema de funis personalizáveis
+  funil_id?: string
+  estagio_id?: string
+  dados_personalizados?: Record<string, unknown>
+
+  // DEPRECATED: campos antigos (manter para retrocompatibilidade)
   tipo_negocio_id?: number
   status_generico?: string
-  dados_personalizados?: Record<string, unknown>
 }
 
 // === WhatsApp ===
@@ -271,35 +275,80 @@ export interface WhatsappTemplate {
   updated_at: string
 }
 
-export interface TipoNegocio {
-  id: number
+// === Funis Personalizáveis ===
+export interface Funil {
+  id: string
+  workspace_id: string
   nome: string
-  nome_exibicao: string
   descricao?: string
-  icone?: string
-  cor?: string
-  campos_personalizados?: Record<string, unknown>[]
-  status_personalizados?: Record<string, unknown>[]
-  metricas_config?: {
-    campos_receita?: string[]
-    campos_conversao?: string[]
-    metricas_principais?: string[]
-  }
+  icone: string
+  cor: string
   ativo: boolean
   ordem: number
   created_at: string
   updated_at: string
 }
 
-export interface UserTipoNegocio {
-  id: number
-  user_id: number
-  tipo_negocio_id: number
-  configuracoes_usuario?: Record<string, unknown>
+export interface FunilEstagio {
+  id: string
+  funil_id: string
+  nome: string
+  descricao?: string
+  cor: string
+  ordem: number
   ativo: boolean
-  data_atribuicao: string
   created_at: string
-  updated_at: string
+}
+
+export type CampoPersonalizadoTipo =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'checkbox'
+  | 'email'
+  | 'phone'
+  | 'currency'
+  | 'url'
+
+export interface CampoPersonalizado {
+  id: string
+  workspace_id: string
+  funil_id?: string  // NULL = campo global
+  nome: string
+  tipo: CampoPersonalizadoTipo
+  opcoes?: string[]  // Para tipo 'select'
+  obrigatorio: boolean
+  ordem: number
+  ativo: boolean
+  created_at: string
+}
+
+export interface FunilComEstagios extends Funil {
+  estagios?: FunilEstagio[]
+  total_estagios?: number
+}
+
+export interface CreateFunilRequest {
+  nome: string
+  descricao?: string
+  icone?: string
+  cor?: string
+}
+
+export interface CreateEstagioRequest {
+  nome: string
+  descricao?: string
+  cor?: string
+  ordem: number
+}
+
+export interface CreateCampoRequest {
+  funil_id?: string
+  nome: string
+  tipo: CampoPersonalizadoTipo
+  opcoes?: string[]
+  obrigatorio?: boolean
 }
 
 export interface Tool {

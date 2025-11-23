@@ -12,6 +12,9 @@ import workspacesRoutes from './routes/workspaces'
 import whatsappRoutes from './routes/whatsapp'
 import arquivosRoutes from './routes/arquivos'
 import agentesIARoutes from './routes/agentes-ia'
+import funisRoutes from './routes/funis'
+import funisEstagiosRoutes from './routes/funis-estagios'
+import camposPersonalizadosRoutes from './routes/campos-personalizados'
 
 const app = express()
 const PORT = process.env.API_PORT || 3001
@@ -42,6 +45,9 @@ app.use('/api/leads', leadsRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
 app.use('/api/arquivos', arquivosRoutes)
 app.use('/api/agentes-ia', agentesIARoutes)
+app.use('/api/funis', funisRoutes)
+app.use('/api/funis', funisEstagiosRoutes)  // Rotas aninhadas /:funilId/estagios
+app.use('/api/campos', camposPersonalizadosRoutes)
 
 // Error handler global
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
