@@ -211,19 +211,19 @@ export default function HomePage() {
   }
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="w-full px-6 py-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Dashboard - Gestão de Funis
         </h1>
-        <p className="text-gray-600">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Bem-vindo(a), {user?.name}! Aqui está uma visão geral do seu pipeline de vendas.
         </p>
       </div>
 
       {/* Filtros */}
-      <Card className="mb-8">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
@@ -233,7 +233,7 @@ export default function HomePage() {
               <Label htmlFor="funil-filter">Funil</Label>
               <select
                 id="funil-filter"
-                className="w-full mt-1 p-2 border rounded"
+                className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                 value={selectedFunil || ''}
                 onChange={(e) => setSelectedFunil(e.target.value || null)}
               >
@@ -279,7 +279,7 @@ export default function HomePage() {
       </Card>
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Total de Leads"
           value={metrics.totalLeads}
@@ -306,7 +306,7 @@ export default function HomePage() {
       </div>
 
       {/* Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <MetricCard
           title="Leads Convertidos"
           value={metrics.leadsConvertidos}
@@ -321,36 +321,36 @@ export default function HomePage() {
       </div>
 
       {/* Visão por Funis */}
-      <Card className="mb-8">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle>Distribuição por Funis</CardTitle>
         </CardHeader>
         <CardContent>
           {funis.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Layers className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-              <p className="text-lg font-medium mb-2">Nenhum funil cadastrado</p>
-              <p className="mb-4">Crie seu primeiro funil para começar a organizar seus leads</p>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <Layers className="mx-auto h-12 w-12 mb-4 text-gray-300 dark:text-gray-600" />
+              <p className="text-lg font-medium mb-2 dark:text-gray-300">Nenhum funil cadastrado</p>
+              <p className="mb-4 text-sm">Crie seu primeiro funil para começar a organizar seus leads</p>
               <Link href="/funis">
                 <Button>Criar Funil</Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {funis
                 .filter(f => !selectedFunil || f.id === selectedFunil)
                 .map(funil => {
                   const funilLeads = getLeadsByFunil(funil.id)
 
                   return (
-                    <div key={funil.id} className="border rounded-lg p-4">
+                    <div key={funil.id} className="border rounded-lg p-4 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div
                             className="w-4 h-4 rounded-full"
                             style={{ backgroundColor: funil.cor || '#3b82f6' }}
                           />
-                          <h3 className="text-lg font-semibold">{funil.nome}</h3>
+                          <h3 className="text-lg font-semibold dark:text-white">{funil.nome}</h3>
                           <Badge variant="outline">{funilLeads.length} leads</Badge>
                         </div>
                         <Link href={`/leads?funilId=${funil.id}`}>
@@ -360,32 +360,32 @@ export default function HomePage() {
 
                       {/* Estágios do funil */}
                       {funil.estagios && funil.estagios.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
                           {funil.estagios.map(estagio => {
                             const estagioLeads = getLeadsByEstagio(estagio.id)
 
                             return (
                               <div
                                 key={estagio.id}
-                                className="border rounded-lg p-3 bg-white"
+                                className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700"
                               >
                                 <div className="flex items-center gap-2 mb-2">
                                   <div
                                     className="w-3 h-3 rounded-full"
                                     style={{ backgroundColor: estagio.cor || '#gray' }}
                                   />
-                                  <span className="text-sm font-medium">{estagio.nome}</span>
+                                  <span className="text-sm font-medium dark:text-white">{estagio.nome}</span>
                                 </div>
-                                <div className="text-2xl font-bold text-gray-900">
+                                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {estagioLeads.length}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">leads</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">leads</p>
                               </div>
                             )
                           })}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">Nenhum estágio configurado para este funil</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum estágio configurado para este funil</p>
                       )}
                     </div>
                   )

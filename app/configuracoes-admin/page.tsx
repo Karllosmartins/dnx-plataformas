@@ -9,19 +9,17 @@ import { hasFeatureAccess } from '../../lib/permissions'
 import {
   Settings,
   Crown,
-  Building,
   Users,
   Cog
 } from 'lucide-react'
 
 // Importar componentes das páginas existentes
 import PlanosSection from './components/PlanosSection'
-import TiposNegocioSection from './components/TiposNegocioSection'
 import UsuariosSection from './components/UsuariosSection'
 
 export default function ConfiguracoesAdminPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<'planos' | 'tipos' | 'usuarios'>('planos')
+  const [activeTab, setActiveTab] = useState<'planos' | 'usuarios'>('planos')
 
   // Verificar se o usuário tem acesso
   if (!user || !hasFeatureAccess(user as any, 'usuarios')) {
@@ -46,16 +44,10 @@ export default function ConfiguracoesAdminPage() {
       description: 'Gerencie planos e permissões'
     },
     {
-      id: 'tipos' as const,
-      name: 'Tipos de Negócio',
-      icon: Building,
-      description: 'Configure tipos de negócio'
-    },
-    {
       id: 'usuarios' as const,
-      name: 'Usuários',
+      name: 'Usuários e Workspaces',
       icon: Users,
-      description: 'Administre usuários'
+      description: 'Administre usuários e workspaces'
     }
   ]
 
@@ -71,7 +63,7 @@ export default function ConfiguracoesAdminPage() {
                 Configurações Administrativas
               </h1>
               <p className="mt-2 text-gray-600">
-                Gerencie planos, tipos de negócio e usuários do sistema
+                Gerencie planos, usuários e workspaces do sistema
               </p>
             </div>
           </div>
@@ -112,7 +104,6 @@ export default function ConfiguracoesAdminPage() {
         {/* Content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {activeTab === 'planos' && <PlanosSection />}
-          {activeTab === 'tipos' && <TiposNegocioSection />}
           {activeTab === 'usuarios' && <UsuariosSection />}
         </div>
       </div>

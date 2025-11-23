@@ -8,6 +8,7 @@ export default function UsuariosSection() {
   const [usuarios, setUsuarios] = useState<UsuarioComPlano[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
   const [tiposNegocio, setTiposNegocio] = useState<Array<{id: number, nome: string, nome_exibicao: string}>>([])
+  const [workspaces, setWorkspaces] = useState<Array<{id: string, name: string, slug: string, plano_nome: string, leads_consumidos: number, instancias_ativas: number, created_at: string}>>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<number | null>(null)
   const [showNewUser, setShowNewUser] = useState(false)
@@ -21,6 +22,7 @@ export default function UsuariosSection() {
     fetchPlanos()
     fetchTiposNegocio()
     fetchTools()
+    fetchWorkspaces()
   }, [])
 
   const fetchUsuarios = async () => {
@@ -102,6 +104,39 @@ export default function UsuariosSection() {
       setTools(data || [])
     } catch (error) {
       console.error('Erro ao buscar tools:', error)
+    }
+  }
+
+  const fetchWorkspaces = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select(`
+          id,
+          name,
+          slug,
+          created_at,
+          leads_consumidos,
+          instancias_ativas,
+          planos (nome)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const workspacesFormatted = (data || []).map((ws: any) => ({
+        id: ws.id,
+        name: ws.name,
+        slug: ws.slug,
+        created_at: ws.created_at,
+        leads_consumidos: ws.leads_consumidos || 0,
+        instancias_ativas: ws.instancias_ativas || 0,
+        plano_nome: ws.planos?.nome || 'Sem plano'
+      }))
+
+      setWorkspaces(workspacesFormatted)
+    } catch (error) {
+      console.error('Erro ao buscar workspaces:', error)
     }
   }
 
@@ -578,6 +613,62 @@ export default function UsuariosSection() {
           }}
         />
       )}
+
+      {/* Seção de Workspaces */}
+      <div className="mt-12">
+        <div className="flex items-center mb-6">
+          <Building className="h-5 w-5 mr-2 text-gray-600" />
+          <h2 className="text-xl font-semibold text-gray-900">
+            Workspaces
+          </h2>
+          <span className="ml-3 text-sm text-gray-500">
+            ({workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''})
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {workspaces.map((workspace) => (
+            <div
+              key={workspace.id}
+              className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">{workspace.name}</h3>
+                  <p className="text-xs text-gray-500 mt-1">/{workspace.slug}</p>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                  {workspace.plano_nome}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Leads:</span>
+                  <span className="font-medium">{workspace.leads_consumidos}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Instâncias:</span>
+                  <span className="font-medium">{workspace.instancias_ativas}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Criado em:</span>
+                  <span className="font-medium">
+                    {new Date(workspace.created_at).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {workspaces.length === 0 && (
+          <div className="text-center py-12 border border-gray-200 rounded-lg bg-gray-50">
+            <Building className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+            <p className="text-gray-500">Nenhum workspace encontrado</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

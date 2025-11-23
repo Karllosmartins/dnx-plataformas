@@ -444,9 +444,9 @@ export default function DisparoSimplesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="w-full px-6 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Disparo Simples</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Disparo Simples</h1>
         <p className="mt-2 text-sm text-gray-700">
           Envie mensagens em massa para sua lista de contatos
         </p>
