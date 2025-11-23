@@ -80,9 +80,9 @@ services:
       echo '=== 6/8 Verifying bcrypt ===' &&
       node -e \"const bcrypt = require('bcrypt'); bcrypt.hash('test', 10).then(hash => console.log('Bcrypt OK'))\" &&
       echo '=== 7/8 Building Web ===' &&
-      npm run build &&
+      npx next build &&
       echo '=== 8/8 Starting Web ===' &&
-      npm start
+      npx next start
       "
     networks:
       - dnnet

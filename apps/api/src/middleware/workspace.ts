@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express'
-import { supabase } from '../lib/supabase'
-import { ApiError } from '../utils'
-import { AuthenticatedRequest } from './auth'
+import { supabase } from '../lib/supabase.js'
+import { ApiError } from '../utils/index.js'
+import { AuthenticatedRequest } from './auth.js'
 
 export interface WorkspaceRequest extends AuthenticatedRequest {
   workspaceId?: string

@@ -5,16 +5,16 @@ import { pinoHttp } from 'pino-http'
 import pino from 'pino'
 
 // Rotas
-import authRoutes from './routes/auth'
-import leadsRoutes from './routes/leads'
-import healthRoutes from './routes/health'
-import workspacesRoutes from './routes/workspaces'
-import whatsappRoutes from './routes/whatsapp'
-import arquivosRoutes from './routes/arquivos'
-import agentesIARoutes from './routes/agentes-ia'
-import funisRoutes from './routes/funis'
-import funisEstagiosRoutes from './routes/funis-estagios'
-import camposPersonalizadosRoutes from './routes/campos-personalizados'
+import authRoutes from './routes/auth.js'
+import leadsRoutes from './routes/leads.js'
+import healthRoutes from './routes/health.js'
+import workspacesRoutes from './routes/workspaces.js'
+import whatsappRoutes from './routes/whatsapp.js'
+import arquivosRoutes from './routes/arquivos.js'
+import agentesIARoutes from './routes/agentes-ia.js'
+import funisRoutes from './routes/funis.js'
+import funisEstagiosRoutes from './routes/funis-estagios.js'
+import camposPersonalizadosRoutes from './routes/campos-personalizados.js'
 
 const app = express()
 const PORT = process.env.API_PORT || 3001

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { jwtVerify, SignJWT } from 'jose'
-import { ApiError } from '../utils'
-import { logger } from '../utils/logger'
+import { ApiError } from '../utils/index.js'
+import { logger } from '../utils/logger.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dnx-secret-key-change-in-production'
 const JWT_ISSUER = 'dnx-plataformas'

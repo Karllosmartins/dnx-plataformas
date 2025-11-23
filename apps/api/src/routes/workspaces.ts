@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
-import { supabase } from '../lib/supabase'
-import { ApiError, ApiResponse, handleApiError, logger } from '../utils'
-import { authMiddleware, AuthenticatedRequest } from '../middleware/auth'
+import { supabase } from '../lib/supabase.js'
+import { ApiError, ApiResponse, handleApiError, logger } from '../utils/index.js'
+import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js'
 import type {
   Workspace,
   WorkspaceWithMembers,

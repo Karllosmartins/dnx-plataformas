@@ -1,8 +1,8 @@
 import { Router, Response } from 'express'
-import { supabase } from '../lib/supabase'
-import { ApiError, ApiResponse, handleApiError, logger } from '../utils'
-import { authMiddleware } from '../middleware/auth'
-import { workspaceMiddleware, WorkspaceRequest } from '../middleware/workspace'
+import { supabase } from '../lib/supabase.js'
+import { ApiError, ApiResponse, handleApiError, logger } from '../utils/index.js'
+import { authMiddleware } from '../middleware/auth.js'
+import { workspaceMiddleware, WorkspaceRequest } from '../middleware/workspace.js'
 
 const router = Router()
 
