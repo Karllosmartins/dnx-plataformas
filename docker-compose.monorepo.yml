@@ -1,6 +1,7 @@
 # =====================================================
 # DOCKER COMPOSE - MONOREPO - DNX PLATAFORMAS
 # VERSÃO PARA ARQUITETURA SEPARADA (API + WEB)
+# USA VARIÁVEIS DE AMBIENTE - SEGURO PARA VERSIONAMENTO
 # =====================================================
 
 version: "3.8"
@@ -8,21 +9,22 @@ version: "3.8"
 services:
   # API Express - Backend
   dnx-api:
-    image: node:18-alpine
+    image: node:20-alpine
     working_dir: /app
     command: sh -c "
-      echo 'Installing git...' &&
+      echo '=== 1/6 Installing git and build tools ===' &&
       apk add --no-cache git python3 make g++ &&
-      echo 'Cloning repository...' &&
-      git clone https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
-      cp -r /tmp/repo/* /app/ &&
-      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
+      echo '=== 2/6 Cloning repository ===' &&
+      git clone --depth 1 https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
+      echo '=== 3/6 Copying files ===' &&
+      cp -rT /tmp/repo /app &&
       rm -rf /tmp/repo &&
-      echo 'Installing dependencies...' &&
-      npm ci &&
-      echo 'Building API...' &&
+      echo '=== 4/6 Installing dependencies ===' &&
+      rm -rf /app/node_modules /app/package-lock.json &&
+      npm install &&
+      echo '=== 5/6 Building API ===' &&
       npm run build:api &&
-      echo 'Starting API...' &&
+      echo '=== 6/6 Starting API ===' &&
       npm run start:api
       "
     networks:
@@ -32,65 +34,13 @@ services:
       - API_PORT=3001
       - LOG_LEVEL=info
       - CORS_ORIGIN=https://app.dnxplataformas.com.br
+      # JWT
       - JWT_SECRET=${JWT_SECRET}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-      labels:
-        - traefik.enable=1
-        - traefik.http.routers.dnx-api.rule=Host(`api.dnxplataformas.com.br`)
-        - traefik.http.routers.dnx-api.entrypoints=websecure
-        - traefik.http.routers.dnx-api.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.dnx-api.service=dnx-api
-        - traefik.http.services.dnx-api.loadbalancer.server.port=3001
-        - traefik.http.services.dnx-api.loadbalancer.passHostHeader=true
-
-  # Web Next.js - Frontend
-  dnx-web:
-    image: node:18-alpine
-    working_dir: /app
-    command: sh -c "
-      echo 'Installing git...' &&
-      apk add --no-cache git &&
-      echo 'Cloning repository...' &&
-      git clone https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
-      cp -r /tmp/repo/* /app/ &&
-      cp -r /tmp/repo/.* /app/ 2>/dev/null || true &&
-      rm -rf /tmp/repo &&
-      echo 'Installing dependencies...' &&
-      npm ci &&
-      echo 'Building Web...' &&
-      npm run build:web &&
-      echo 'Starting Web...' &&
-      npm run start:web
-      "
-    networks:
-      - dnnet
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_URL=https://api.dnxplataformas.com.br/api
+      # Supabase
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DATABASE_URL=${DATABASE_URL}
-      - DATECODE_USERNAME=${DATECODE_USERNAME}
-      - DATECODE_PASSWORD=${DATECODE_PASSWORD}
-      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
-      - NEXT_PUBLIC_GOOGLE_CLIENT_SECRET=${NEXT_PUBLIC_GOOGLE_CLIENT_SECRET}
-    depends_on:
-      - dnx-api
     deploy:
       mode: replicated
       replicas: 1
@@ -101,6 +51,79 @@ services:
         limits:
           cpus: "1"
           memory: 1024M
+      labels:
+        - traefik.enable=1
+        - traefik.http.routers.dnx-api.rule=Host(`api.dnxplataformas.com.br`)
+        - traefik.http.routers.dnx-api.entrypoints=websecure
+        - traefik.http.routers.dnx-api.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.dnx-api.service=dnx-api
+        - traefik.http.services.dnx-api.loadbalancer.server.port=3001
+        - traefik.http.services.dnx-api.loadbalancer.passHostHeader=true
+
+  # Web Next.js - Frontend (usa projeto legado na raiz)
+  dnx-web:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "
+      echo '=== 1/8 Installing git and build tools ===' &&
+      apk add --no-cache git python3 make g++ &&
+      echo '=== 2/8 Cloning repository ===' &&
+      git clone --depth 1 https://github.com/Karllosmartins/dnx-plataformas.git /tmp/repo &&
+      echo '=== 3/8 Copying files ===' &&
+      cp -rT /tmp/repo /app &&
+      rm -rf /tmp/repo &&
+      echo '=== 4/8 Installing dependencies ===' &&
+      rm -rf /app/node_modules /app/.next /app/package-lock.json &&
+      npm install &&
+      echo '=== 5/8 Rebuilding bcrypt for Alpine ===' &&
+      npm rebuild bcrypt --build-from-source &&
+      echo '=== 6/8 Verifying bcrypt ===' &&
+      node -e \"const bcrypt = require('bcrypt'); bcrypt.hash('test', 10).then(hash => console.log('Bcrypt OK'))\" &&
+      echo '=== 7/8 Building Web ===' &&
+      npm run build &&
+      echo '=== 8/8 Starting Web ===' &&
+      npm start
+      "
+    networks:
+      - dnnet
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # API URL
+      - NEXT_PUBLIC_API_URL=https://api.dnxplataformas.com.br/api
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      # Supabase
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      # Datecode
+      - DATECODE_USERNAME=${DATECODE_USERNAME}
+      - DATECODE_PASSWORD=${DATECODE_PASSWORD}
+      # Google OAuth2
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_SECRET=${NEXT_PUBLIC_GOOGLE_CLIENT_SECRET}
+      # Backblaze B2 Storage
+      - B2_ENDPOINT=${B2_ENDPOINT}
+      - B2_REGION=${B2_REGION}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME}
+      - B2_KEY_ID=${B2_KEY_ID}
+      - B2_BUCKET_ID=${B2_BUCKET_ID}
+      - B2_APPLICATION_KEY=${B2_APPLICATION_KEY}
+    depends_on:
+      - dnx-api
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
       labels:
         - traefik.enable=1
         - traefik.http.routers.dnx-web.rule=Host(`app.dnxplataformas.com.br`)
