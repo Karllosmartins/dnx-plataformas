@@ -60,7 +60,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     ApiResponse.success(res, {
       user,
-      accessToken,
+      token: accessToken,
       refreshToken
     })
 
