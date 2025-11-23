@@ -381,6 +381,10 @@ export interface Lead {
   tipo_negocio_id?: number
   status_generico?: string
   dados_personalizados?: Record<string, any>
+
+  // Sistema de funis e estágios
+  funil_id?: string
+  estagio_id?: string
 }
 
 // Interfaces para contagens da API Profile

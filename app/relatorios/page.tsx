@@ -306,7 +306,7 @@ export default function RelatoriosPage() {
   }
 
   const fetchFunis = async () => {
-    if (!user?.workspace_id) return
+    if (!user) return
 
     try {
       const { data: funisData, error } = await supabase
@@ -326,7 +326,6 @@ export default function RelatoriosPage() {
             ativo
           )
         `)
-        .eq('workspace_id', user.workspace_id)
         .eq('ativo', true)
         .order('ordem', { ascending: true })
 
