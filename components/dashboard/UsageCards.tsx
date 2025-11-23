@@ -55,21 +55,15 @@ export function UsageCards() {
         .eq('id', workspaceId)
         .single()
 
-      // Contar total de leads (sem filtro de workspace por enquanto)
+      // Contar total de leads
       const { count: leadsCount } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
 
-      // Contar instâncias WhatsApp - tabela real é instancia_whtats
+      // Contar instâncias WhatsApp
       const { count: instancesCount } = await supabase
         .from('instancia_whtats')
         .select('*', { count: 'exact', head: true })
-
-      // Contar consultas realizadas (leads com valor_pago_consulta não nulo)
-      const { count: consultasCount } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .not('valor_pago_consulta', 'is', null)
 
       // Se não encontrou workspace, usar valores padrão
       if (error || !workspace) {
@@ -80,20 +74,21 @@ export function UsageCards() {
           limite_consultas: 500,
           limite_instancias: 3,
           leads_consumidos: leadsCount || 0,
-          consultas_realizadas: consultasCount || 0,
+          consultas_realizadas: 0,
           instancias_ativas: instancesCount || 0,
           plano_nome: 'Básico',
         })
         return
       }
 
+      // Limites vêm do workspace, consumo de leads e instâncias das tabelas
       setUsage({
         limite_leads: workspace.limite_leads || 1000,
         limite_consultas: workspace.limite_consultas || 500,
         limite_instancias: workspace.limite_instancias || 3,
-        leads_consumidos: leadsCount || workspace.leads_consumidos || 0,
-        consultas_realizadas: consultasCount || workspace.consultas_realizadas || 0,
-        instancias_ativas: instancesCount || workspace.instancias_ativas || 0,
+        leads_consumidos: leadsCount || 0,
+        consultas_realizadas: workspace.consultas_realizadas || 0,
+        instancias_ativas: instancesCount || 0,
         plano_nome: (workspace.planos as { nome?: string })?.nome || 'Básico',
       })
     } catch (error) {
