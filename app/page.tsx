@@ -284,32 +284,24 @@ export default function HomePage() {
           title="Total de Leads"
           value={metrics.totalLeads}
           icon={Users}
-          trend={null}
-          color="blue"
         />
 
         <MetricCard
           title="Funis Ativos"
           value={metrics.totalFunis}
           icon={Layers}
-          trend={null}
-          color="purple"
         />
 
         <MetricCard
           title="Novos Leads"
           value={metrics.leadsNovos}
           icon={Target}
-          trend={null}
-          color="green"
         />
 
         <MetricCard
           title="Em Andamento"
           value={metrics.leadsEmAndamento}
           icon={Clock}
-          trend={null}
-          color="yellow"
         />
       </div>
 
@@ -319,16 +311,12 @@ export default function HomePage() {
           title="Leads Convertidos"
           value={metrics.leadsConvertidos}
           icon={CheckCircle}
-          trend={null}
-          color="green"
         />
 
         <MetricCard
           title="Leads Perdidos"
           value={metrics.leadsPerdidos}
           icon={XCircle}
-          trend={null}
-          color="red"
         />
       </div>
 
