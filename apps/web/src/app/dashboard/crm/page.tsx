@@ -26,13 +26,19 @@ export default function CRMPage() {
       setLoading(true)
       setError(null)
       const response = await funisApi.list()
-      const responseData = response.data as { data?: Funil[]; success?: boolean } | Funil[]
-      const data = Array.isArray(responseData) ? responseData : (responseData.data || [])
-      setFunis(data as Funil[])
+
+      // Extrair dados da resposta - pode vir como array direto ou objeto com data
+      let data: Funil[] = []
+      if (response.success && response.data) {
+        data = response.data as Funil[]
+      } else if (Array.isArray(response.data)) {
+        data = response.data
+      }
+      setFunis(data)
 
       // Selecionar primeiro funil por padrão
       if (data.length > 0 && !selectedFunil) {
-        setSelectedFunil((data as Funil[])[0].id)
+        setSelectedFunil(data[0].id)
       }
     } catch (err) {
       setError('Erro ao carregar funis')

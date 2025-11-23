@@ -68,7 +68,7 @@ interface Lead {
   estagio_id?: string
   created_at: string
   updated_at?: string
-  campos_personalizados?: Record<string, unknown>
+  dados_personalizados?: Record<string, unknown>
 }
 
 interface CampoPersonalizado {
@@ -158,8 +158,8 @@ export default function LeadsPage() {
         limit: String(ITEMS_PER_PAGE),
         page: String(page)
       }
-      if (selectedFunilId) params.funilId = selectedFunilId
-      if (selectedEstagioId && selectedEstagioId !== 'all') params.estagioId = selectedEstagioId
+      if (selectedFunilId) params.funil_id = selectedFunilId
+      if (selectedEstagioId && selectedEstagioId !== 'all') params.estagio_id = selectedEstagioId
       if (searchQuery) params.search = searchQuery
 
       const response = await leadsApi.list(params)
@@ -1065,7 +1065,7 @@ function LeadModal({
     estagio_id: lead?.estagio_id || '',
   })
   const [camposValues, setCamposValues] = useState<Record<string, unknown>>(
-    lead?.campos_personalizados || {}
+    lead?.dados_personalizados || {}
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1558,13 +1558,13 @@ function LeadViewDrawer({
           </div>
 
           {/* Campos personalizados */}
-          {lead.campos_personalizados &&
-            Object.keys(lead.campos_personalizados).length > 0 && (
+          {lead.dados_personalizados &&
+            Object.keys(lead.dados_personalizados).length > 0 && (
               <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
                 <h4 className="text-sm font-semibold uppercase text-gray-500">
                   Campos Personalizados
                 </h4>
-                {Object.entries(lead.campos_personalizados).map(([key, value]) => (
+                {Object.entries(lead.dados_personalizados).map(([key, value]) => (
                   <div key={key} className="flex items-center justify-between">
                     <span className="text-gray-700 dark:text-gray-300">
                       {getCampoLabel(key)}:
