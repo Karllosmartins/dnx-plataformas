@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { UserMenu } from '@/components/user/UserMenu'
+import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home, feature: 'dashboard' as const },
@@ -259,6 +260,14 @@ function SidebarContent({
             )}
           </Button>
         </div>
+      </div>
+
+      {/* Workspace Switcher */}
+      <div className={cn(
+        "border-b border-sidebar-border p-3",
+        isCollapsed && "flex justify-center px-2"
+      )}>
+        <WorkspaceSwitcher isCollapsed={isCollapsed} />
       </div>
 
       {/* Navigation */}
