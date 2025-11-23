@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { supabase, Lead } from '../lib/supabase'
 import { useAuth } from '../components/shared/AuthWrapper'
+import { funisApi, leadsApi } from '../lib/api-client'
 import MetricCard from '../components/features/leads/MetricCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,44 +25,64 @@ import {
   User,
   XCircle,
   Target,
-  Loader2
+  Loader2,
+  Layers
 } from 'lucide-react'
-import Image from 'next/image'
+
+interface Funil {
+  id: string
+  nome: string
+  cor: string
+  ordem: number
+  ativo: boolean
+  estagios?: Estagio[]
+}
+
+interface Estagio {
+  id: string
+  funil_id: string
+  nome: string
+  cor: string
+  ordem: number
+  leads_count?: number
+}
+
+interface Lead {
+  id: string
+  nome_cliente: string
+  telefone: string
+  status_generico?: string
+  funil_id?: string
+  estagio_id?: string
+  created_at: string
+}
 
 interface DashboardMetrics {
   totalLeads: number
-  novosLeads: number
-  qualificados: number
-  pagamentosRealizados: number
-  dividasEncontradas: number
-  clientesFechados: number
+  totalFunis: number
+  leadsNovos: number
+  leadsEmAndamento: number
+  leadsConvertidos: number
   leadsPerdidos: number
-  valorTotalConsultas: number
-  valorTotalContratos: number
-  taxaConversao: number
 }
 
 export default function HomePage() {
   const { user } = useAuth()
+  const [funis, setFunis] = useState<Funil[]>([])
   const [leads, setLeads] = useState<Lead[]>([])
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
+  const [selectedFunil, setSelectedFunil] = useState<string | null>(null)
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalLeads: 0,
-    novosLeads: 0,
-    qualificados: 0,
-    pagamentosRealizados: 0,
-    dividasEncontradas: 0,
-    clientesFechados: 0,
-    leadsPerdidos: 0,
-    valorTotalConsultas: 0,
-    valorTotalContratos: 0,
-    taxaConversao: 0
+    totalFunis: 0,
+    leadsNovos: 0,
+    leadsEmAndamento: 0,
+    leadsConvertidos: 0,
+    leadsPerdidos: 0
   })
   const [loading, setLoading] = useState(true)
-  const [userBusinessTypes, setUserBusinessTypes] = useState<any[]>([])
-  const [dashboardConfig, setDashboardConfig] = useState<any>(null)
 
   useEffect(() => {
     if (user) {
@@ -74,67 +94,44 @@ export default function HomePage() {
     filterLeadsByDate()
   }, [leads, startDate, endDate])
 
+  useEffect(() => {
+    calculateMetrics()
+  }, [filteredLeads, funis])
+
   const fetchDashboardData = async () => {
     if (!user) return
 
     try {
-      // Carregar tipos de negócio do usuário PRIMEIRO
-      const { data: userTypesData, error: typesError } = await supabase
-        .from('user_tipos_negocio')
-        .select(`
-          tipos_negocio (
-            id, nome, nome_exibicao, cor,
-            campos_personalizados, status_personalizados
-          )
-        `)
-        .eq('user_id', parseInt(user.id || '0'))
-        .eq('ativo', true)
+      setLoading(true)
 
-      if (typesError) throw typesError
+      // Carregar funis com estágios
+      const funisResponse = await funisApi.list(true)
 
-      const businessTypes = userTypesData?.map(item => {
-        const tipo = item.tipos_negocio as any;
-        if (tipo) {
-          return {
-            ...tipo,
-            campos_personalizados: typeof tipo.campos_personalizados === 'string'
-              ? JSON.parse(tipo.campos_personalizados)
-              : tipo.campos_personalizados || [],
-            status_personalizados: typeof tipo.status_personalizados === 'string'
-              ? JSON.parse(tipo.status_personalizados)
-              : tipo.status_personalizados || []
-          };
+      if (funisResponse.success && funisResponse.data) {
+        const funisData = Array.isArray(funisResponse.data)
+          ? funisResponse.data
+          : [funisResponse.data]
+
+        setFunis(funisData as Funil[])
+
+        // Selecionar primeiro funil por padrão
+        if (funisData.length > 0) {
+          setSelectedFunil(funisData[0].id)
         }
-        return null;
-      }).filter(Boolean) || [];
-
-      setUserBusinessTypes(businessTypes)
-
-      // Carregar leads FILTRADOS pelo tipo de negócio ativo do usuário
-      let leadsQuery = supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', parseInt(user.id || '0'))
-
-      // Se o usuário tem tipo de negócio definido, filtrar apenas leads desse tipo
-      if (businessTypes.length > 0 && businessTypes[0].id) {
-        leadsQuery = leadsQuery.eq('tipo_negocio_id', businessTypes[0].id)
-        console.log('[Dashboard] Filtrando leads por tipo_negocio_id:', businessTypes[0].id, businessTypes[0].nome)
       }
 
-      const { data: leadsData, error: leadsError } = await leadsQuery
+      // Carregar todos os leads
+      const leadsResponse = await leadsApi.list({ limit: '1000' })
 
-      if (leadsError) throw leadsError
+      if (leadsResponse.success && leadsResponse.data) {
+        const leadsData = Array.isArray(leadsResponse.data)
+          ? leadsResponse.data
+          : []
 
-      console.log('[Dashboard] Leads carregados:', leadsData?.length || 0)
-
-      setLeads(leadsData || [])
-      setFilteredLeads(leadsData || [])
-
-      // Configurar dashboard baseado no primeiro tipo de negócio do usuário
-      if (businessTypes.length > 0) {
-        configureDashboard(businessTypes[0])
+        setLeads(leadsData as Lead[])
+        setFilteredLeads(leadsData as Lead[])
       }
+
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error)
     } finally {
@@ -142,459 +139,304 @@ export default function HomePage() {
     }
   }
 
-  const configureDashboard = (businessType: any) => {
-    const config: any = {}
-
-    // Usar configuração de métricas do banco se disponível
-    if (businessType.metricas_config && typeof businessType.metricas_config === 'object') {
-      const metricasConfig = businessType.metricas_config
-      config.title = `Dashboard ${businessType.nome_exibicao}`
-      config.subtitle = businessType.descricao || 'Gestão de leads'
-      config.metrics = {
-        novosLeads: metricasConfig.label_novos || 'Novos',
-        qualificados: metricasConfig.label_qualificados || 'Qualificados',
-        emAndamento: metricasConfig.label_em_andamento || 'Em Andamento',
-        casosViaveis: metricasConfig.label_casos_viaveis || 'Casos Viáveis',
-        fechados: metricasConfig.label_fechados || 'Fechados',
-        negociacao: metricasConfig.label_negociacao || 'Em Negociação',
-        leadsPerdidos: metricasConfig.label_perdidos || 'Perdidos',
-        totalGeral: metricasConfig.label_total || 'Total Geral'
-      }
-    } else {
-      // Fallback baseado no nome do tipo
-      if (businessType.nome === 'limpa_nome') {
-        config.title = 'Dashboard Limpa Nome'
-        config.subtitle = 'Recuperação de crédito'
-        config.metrics = {
-          novosLeads: 'Novos Leads',
-          qualificados: 'Qualificados',
-          emAndamento: 'Pagou Consulta',
-          casosViaveis: 'Dívidas Encontradas',
-          fechados: 'Clientes Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Leads Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      } else if (businessType.nome === 'previdenciario') {
-        config.title = 'Dashboard Previdenciário'
-        config.subtitle = 'Casos previdenciários'
-        config.metrics = {
-          novosLeads: 'Novos Casos',
-          qualificados: 'Análise Viabilidade',
-          emAndamento: 'Contratos Enviados',
-          casosViaveis: 'Casos Viáveis',
-          fechados: 'Casos Finalizados',
-          negociacao: 'Processos Iniciados',
-          leadsPerdidos: 'Casos Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      } else if (businessType.nome === 'b2b') {
-        config.title = 'Dashboard B2B'
-        config.subtitle = 'Prospecção empresarial'
-        config.metrics = {
-          novosLeads: 'Novos Contatos',
-          qualificados: 'Qualificação',
-          emAndamento: 'Apresentações',
-          casosViaveis: 'Propostas Enviadas',
-          fechados: 'Deals Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Contatos Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      } else {
-        // Fallback genérico
-        config.title = `Dashboard ${businessType.nome_exibicao || 'CRM'}`
-        config.subtitle = businessType.descricao || 'Gestão de leads'
-        config.metrics = {
-          novosLeads: 'Novos Leads',
-          qualificados: 'Qualificados',
-          emAndamento: 'Em Andamento',
-          casosViaveis: 'Casos Viáveis',
-          fechados: 'Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Leads Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      }
-    }
-
-    setDashboardConfig(config)
-  }
-
   const filterLeadsByDate = () => {
-    let filtered = leads
+    if (!startDate && !endDate) {
+      setFilteredLeads(leads)
+      return
+    }
 
-    if (startDate) {
-      filtered = filtered.filter(lead => {
-        if (!lead.created_at) return false
-        const leadDate = new Date(lead.created_at)
+    const filtered = leads.filter(lead => {
+      const leadDate = new Date(lead.created_at)
+
+      if (startDate && endDate) {
+        return leadDate >= startDate && leadDate <= endDate
+      } else if (startDate) {
         return leadDate >= startDate
-      })
-    }
+      } else if (endDate) {
+        return leadDate <= endDate
+      }
 
-    if (endDate) {
-      filtered = filtered.filter(lead => {
-        if (!lead.created_at) return false
-        const leadDate = new Date(lead.created_at)
-        const filterEndDate = new Date(endDate)
-        filterEndDate.setHours(23, 59, 59, 999)
-        return leadDate <= filterEndDate
-      })
-    }
+      return true
+    })
 
     setFilteredLeads(filtered)
-    calculateMetrics(filtered)
   }
 
-  const clearDateFilter = () => {
-    setStartDate(undefined)
-    setEndDate(undefined)
-    setFilteredLeads(leads)
-    calculateMetrics(leads)
-  }
+  const calculateMetrics = () => {
+    const totalLeads = filteredLeads.length
+    const totalFunis = funis.length
 
-  const calculateMetrics = (leadsData: Lead[]) => {
-    const totalLeads = leadsData.length
+    // Contar leads por status genérico
+    const leadsNovos = filteredLeads.filter(l =>
+      l.status_generico === 'novo_lead' || !l.status_generico
+    ).length
 
-    if (userBusinessTypes.length === 0) {
-      // Fallback se não conseguir carregar tipos de negócio
-      return setMetrics({
-        totalLeads,
-        novosLeads: 0,
-        qualificados: 0,
-        pagamentosRealizados: 0,
-        dividasEncontradas: 0,
-        clientesFechados: 0,
-        leadsPerdidos: 0,
-        valorTotalConsultas: 0,
-        valorTotalContratos: 0,
-        taxaConversao: 0
-      })
-    }
+    const leadsEmAndamento = filteredLeads.filter(l =>
+      l.status_generico &&
+      !['novo_lead', 'cliente_fechado', 'desqualificado'].includes(l.status_generico)
+    ).length
 
-    const businessType = userBusinessTypes[0] // Usar primeiro tipo do usuário
-    const statusPersonalizados = businessType.status_personalizados || []
+    const leadsConvertidos = filteredLeads.filter(l =>
+      l.status_generico === 'cliente_fechado'
+    ).length
 
-    console.log('Tipo de negócio:', businessType.nome)
-    console.log('Status personalizados:', statusPersonalizados)
-
-    // Usar status_generico (novo sistema) ou status_limpa_nome (fallback para limpa nome)
-    const getStatus = (lead: Lead) => {
-      if (businessType.nome === 'limpa_nome') {
-        return lead.status_limpa_nome || 'novo_lead'
-      }
-      return lead.status_generico || 'novo_lead'
-    }
-
-    // Debug: ver todos os status existentes nos leads
-    const allStatus = [...new Set(leadsData.map(l => getStatus(l)))]
-    console.log('Status encontrados nos leads:', allStatus)
-
-    // Calcular métricas baseado nos status específicos do tipo de negócio
-    let novosLeads = 0, qualificados = 0, emAndamento = 0, casosViaveis = 0, fechados = 0, perdidos = 0
-
-    // Se há status personalizados, usar mapeamento dinâmico
-    if (statusPersonalizados.length > 0) {
-      // Mapear status baseado na posição e nomenclatura comum
-      const primeiroStatus = statusPersonalizados[0] // Geralmente 'novo_*'
-      const segundoStatus = statusPersonalizados[1] // Geralmente qualificação/análise
-
-      // Encontrar status que indicam progresso
-      const statusAndamento = statusPersonalizados.find((s: string) =>
-        s.includes('contrato') || s.includes('pagamento') || s.includes('apresentacao')
-      )
-      const statusViavel = statusPersonalizados.find((s: string) =>
-        s.includes('viavel') || s.includes('divida') || s.includes('proposta')
-      )
-      const statusFechado = statusPersonalizados.find((s: string) =>
-        s.includes('finalizado') || s.includes('fechado') || s.includes('deal')
-      )
-      const statusPerdido = statusPersonalizados.find((s: string) =>
-        s.includes('inviavel') || s.includes('desqualificado') || s.includes('perdido')
-      )
-
-      novosLeads = leadsData.filter(l => getStatus(l) === primeiroStatus).length
-      qualificados = segundoStatus ? leadsData.filter(l => getStatus(l) === segundoStatus).length : 0
-      emAndamento = statusAndamento ? leadsData.filter(l => getStatus(l) === statusAndamento).length : 0
-      casosViaveis = statusViavel ? leadsData.filter(l => getStatus(l) === statusViavel).length : 0
-      fechados = statusFechado ? leadsData.filter(l => getStatus(l) === statusFechado).length : 0
-      perdidos = statusPerdido ? leadsData.filter(l => getStatus(l) === statusPerdido).length : 0
-
-    } else {
-      // Fallback para tipos conhecidos
-      if (businessType.nome === 'limpa_nome') {
-        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_lead').length
-        qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao').length
-        emAndamento = leadsData.filter(l => getStatus(l) === 'pagamento_consulta').length
-        casosViaveis = leadsData.filter(l => getStatus(l) === 'consta_divida').length
-        fechados = leadsData.filter(l => getStatus(l) === 'cliente_fechado').length
-        perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
-      } else if (businessType.nome === 'previdenciario') {
-        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_caso').length
-        qualificados = leadsData.filter(l => getStatus(l) === 'analise_viabilidade').length
-        emAndamento = leadsData.filter(l => getStatus(l) === 'contrato_enviado').length
-        casosViaveis = leadsData.filter(l => getStatus(l) === 'caso_viavel').length
-        fechados = leadsData.filter(l => getStatus(l) === 'caso_finalizado').length
-        perdidos = leadsData.filter(l => getStatus(l) === 'caso_inviavel').length
-      } else if (businessType.nome === 'b2b') {
-        novosLeads = leadsData.filter(l => getStatus(l) === 'novo_contato').length
-        qualificados = leadsData.filter(l => getStatus(l) === 'qualificacao_inicial').length
-        emAndamento = leadsData.filter(l => getStatus(l) === 'apresentacao_realizada').length
-        casosViaveis = leadsData.filter(l => getStatus(l) === 'proposta_enviada').length
-        fechados = leadsData.filter(l => getStatus(l) === 'deal_fechado').length
-        perdidos = leadsData.filter(l => getStatus(l) === 'desqualificado').length
-      }
-    }
-
-    const valorTotalConsultas = leadsData.reduce((sum, lead) => {
-      return sum + (lead.valor_pago_consulta || 0)
-    }, 0)
-
-    const valorTotalContratos = leadsData.reduce((sum, lead) => {
-      return sum + (lead.valor_contrato || 0)
-    }, 0)
-
-    const taxaConversao = totalLeads > 0 ? (fechados / totalLeads) * 100 : 0
+    const leadsPerdidos = filteredLeads.filter(l =>
+      l.status_generico === 'desqualificado'
+    ).length
 
     setMetrics({
       totalLeads,
-      novosLeads,
-      qualificados,
-      pagamentosRealizados: emAndamento,
-      dividasEncontradas: casosViaveis,
-      clientesFechados: fechados,
-      leadsPerdidos: perdidos,
-      valorTotalConsultas,
-      valorTotalContratos,
-      taxaConversao
+      totalFunis,
+      leadsNovos,
+      leadsEmAndamento,
+      leadsConvertidos,
+      leadsPerdidos
     })
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
+  const getLeadsByFunil = (funilId: string) => {
+    return filteredLeads.filter(l => l.funil_id === funilId)
   }
 
-  const recentLeads = filteredLeads.slice(0, 5)
+  const getLeadsByEstagio = (estagioId: string) => {
+    return filteredLeads.filter(l => l.estagio_id === estagioId)
+  }
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-64 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="text-muted-foreground">Carregando dashboard...</span>
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {dashboardConfig?.title || 'DNX Plataformas'}
+    <div className="p-8 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Dashboard - Gestão de Funis
         </h1>
-        <p className="mt-2 text-muted-foreground">
-          {dashboardConfig?.subtitle || 'Dashboard CRM'} - Bem-vindo, {user?.name}
+        <p className="text-gray-600">
+          Bem-vindo(a), {user?.name}! Aqui está uma visão geral do seu pipeline de vendas.
         </p>
       </div>
 
-      {/* Filtro de Data */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Filtros</CardTitle>
-            {(startDate || endDate) && (
-              <Button
-                variant="link"
-                onClick={clearDateFilter}
-                className="h-auto p-0 text-primary"
-              >
-                Limpar filtros
-              </Button>
-            )}
-          </div>
+      {/* Filtros */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-2">
-              <Label>Data início</Label>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="funil-filter">Funil</Label>
+              <select
+                id="funil-filter"
+                className="w-full mt-1 p-2 border rounded"
+                value={selectedFunil || ''}
+                onChange={(e) => setSelectedFunil(e.target.value || null)}
+              >
+                <option value="">Todos os funis</option>
+                {funis.map(funil => (
+                  <option key={funil.id} value={funil.id}>
+                    {funil.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <Label>Data Início</Label>
               <DatePicker
                 date={startDate}
-                onSelect={setStartDate}
-                placeholder="Selecione a data início"
+                onDateChange={setStartDate}
               />
             </div>
-            <div className="flex-1 space-y-2">
-              <Label>Data fim</Label>
+
+            <div className="flex-1 min-w-[200px]">
+              <Label>Data Fim</Label>
               <DatePicker
                 date={endDate}
-                onSelect={setEndDate}
-                placeholder="Selecione a data fim"
+                onDateChange={setEndDate}
               />
             </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStartDate(undefined)
+                  setEndDate(undefined)
+                  setSelectedFunil(null)
+                }}
+              >
+                Limpar Filtros
+              </Button>
+            </div>
           </div>
-          {(startDate || endDate) && (
-            <div className="mt-3 text-sm text-muted-foreground">
-              Mostrando dados de {filteredLeads.length} leads
-              {startDate && ` a partir de ${startDate.toLocaleDateString('pt-BR')}`}
-              {endDate && ` até ${endDate.toLocaleDateString('pt-BR')}`}
+        </CardContent>
+      </Card>
+
+      {/* Métricas Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <MetricCard
+          title="Total de Leads"
+          value={metrics.totalLeads}
+          icon={<Users className="h-6 w-6 text-blue-600" />}
+          trend={null}
+          color="blue"
+        />
+
+        <MetricCard
+          title="Funis Ativos"
+          value={metrics.totalFunis}
+          icon={<Layers className="h-6 w-6 text-purple-600" />}
+          trend={null}
+          color="purple"
+        />
+
+        <MetricCard
+          title="Novos Leads"
+          value={metrics.leadsNovos}
+          icon={<Target className="h-6 w-6 text-green-600" />}
+          trend={null}
+          color="green"
+        />
+
+        <MetricCard
+          title="Em Andamento"
+          value={metrics.leadsEmAndamento}
+          icon={<Clock className="h-6 w-6 text-yellow-600" />}
+          trend={null}
+          color="yellow"
+        />
+      </div>
+
+      {/* Métricas Secundárias */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <MetricCard
+          title="Leads Convertidos"
+          value={metrics.leadsConvertidos}
+          icon={<CheckCircle className="h-6 w-6 text-green-600" />}
+          trend={null}
+          color="green"
+        />
+
+        <MetricCard
+          title="Leads Perdidos"
+          value={metrics.leadsPerdidos}
+          icon={<XCircle className="h-6 w-6 text-red-600" />}
+          trend={null}
+          color="red"
+        />
+      </div>
+
+      {/* Visão por Funis */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Distribuição por Funis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {funis.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Layers className="mx-auto h-12 w-12 mb-4 text-gray-400" />
+              <p className="text-lg font-medium mb-2">Nenhum funil cadastrado</p>
+              <p className="mb-4">Crie seu primeiro funil para começar a organizar seus leads</p>
+              <Link href="/funis">
+                <Button>Criar Funil</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {funis
+                .filter(f => !selectedFunil || f.id === selectedFunil)
+                .map(funil => {
+                  const funilLeads = getLeadsByFunil(funil.id)
+
+                  return (
+                    <div key={funil.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: funil.cor || '#3b82f6' }}
+                          />
+                          <h3 className="text-lg font-semibold">{funil.nome}</h3>
+                          <Badge variant="outline">{funilLeads.length} leads</Badge>
+                        </div>
+                        <Link href={`/leads?funilId=${funil.id}`}>
+                          <Button variant="ghost" size="sm">Ver todos</Button>
+                        </Link>
+                      </div>
+
+                      {/* Estágios do funil */}
+                      {funil.estagios && funil.estagios.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                          {funil.estagios.map(estagio => {
+                            const estagioLeads = getLeadsByEstagio(estagio.id)
+
+                            return (
+                              <div
+                                key={estagio.id}
+                                className="border rounded-lg p-3 bg-white"
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: estagio.cor || '#gray' }}
+                                  />
+                                  <span className="text-sm font-medium">{estagio.nome}</span>
+                                </div>
+                                <div className="text-2xl font-bold text-gray-900">
+                                  {estagioLeads.length}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">leads</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">Nenhum estágio configurado para este funil</p>
+                      )}
+                    </div>
+                  )
+                })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Total de Leads"
-          value={metrics.totalLeads.toString()}
-          description={`${metrics.novosLeads} novos leads`}
-          icon={Users}
-        />
-
-        <MetricCard
-          title="Taxa de Conversão"
-          value={`${metrics.taxaConversao.toFixed(1)}%`}
-          description={`${metrics.clientesFechados} ${dashboardConfig?.metrics?.fechados?.toLowerCase() || 'fechados'}`}
-          icon={TrendingUp}
-        />
-
-        <MetricCard
-          title="Receita Total"
-          value={formatCurrency(metrics.valorTotalConsultas)}
-          description={`${metrics.pagamentosRealizados} ${dashboardConfig?.metrics?.emAndamento?.toLowerCase() || 'em andamento'}`}
-          icon={DollarSign}
-        />
-
-        <MetricCard
-          title="Contratos Fechados"
-          value={formatCurrency(metrics.valorTotalContratos)}
-          description={`${metrics.clientesFechados} contratos`}
-          icon={CheckCircle}
-        />
-      </div>
-
-      {/* Funil de Conversão */}
+      {/* Ações Rápidas */}
       <Card>
         <CardHeader>
-          <CardTitle>Funil de Conversão</CardTitle>
+          <CardTitle>Ações Rápidas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <Users className="h-8 w-8 mx-auto mb-2 text-blue-100" />
-              <div className="text-2xl font-bold">{metrics.novosLeads}</div>
-              <div className="text-xs text-blue-100 mt-1">{dashboardConfig?.metrics?.novosLeads || 'Novos Leads'}</div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link href="/leads" className="block">
+              <Button className="w-full" variant="outline">
+                <Users className="mr-2 h-4 w-4" />
+                Ver Todos os Leads
+              </Button>
+            </Link>
 
-            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-600 dark:to-yellow-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-100" />
-              <div className="text-2xl font-bold">{metrics.qualificados}</div>
-              <div className="text-xs text-yellow-100 mt-1">{dashboardConfig?.metrics?.qualificados || 'Qualificados'}</div>
-            </div>
+            <Link href="/leads?novo=true" className="block">
+              <Button className="w-full" variant="outline">
+                <Target className="mr-2 h-4 w-4" />
+                Adicionar Novo Lead
+              </Button>
+            </Link>
 
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <DollarSign className="h-8 w-8 mx-auto mb-2 text-purple-100" />
-              <div className="text-2xl font-bold">{metrics.pagamentosRealizados}</div>
-              <div className="text-xs text-purple-100 mt-1">{dashboardConfig?.metrics?.emAndamento || 'Em Andamento'}</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <FileText className="h-8 w-8 mx-auto mb-2 text-orange-100" />
-              <div className="text-2xl font-bold">{metrics.dividasEncontradas}</div>
-              <div className="text-xs text-orange-100 mt-1">{dashboardConfig?.metrics?.casosViaveis || 'Casos Viáveis'}</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <User className="h-8 w-8 mx-auto mb-2 text-indigo-100" />
-              <div className="text-2xl font-bold">
-                {leads.filter(l => {
-                  const status = l.status_generico || l.status_limpa_nome || ''
-                  return status.includes('negociacao') || status.includes('apresentacao') || status.includes('proposta')
-                }).length}
-              </div>
-              <div className="text-xs text-indigo-100 mt-1">{dashboardConfig?.metrics?.negociacao || 'Em Negociação'}</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-100" />
-              <div className="text-2xl font-bold">{metrics.clientesFechados}</div>
-              <div className="text-xs text-green-100 mt-1">{dashboardConfig?.metrics?.fechados || 'Fechados'}</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <XCircle className="h-8 w-8 mx-auto mb-2 text-red-100" />
-              <div className="text-2xl font-bold">{metrics.leadsPerdidos}</div>
-              <div className="text-xs text-red-100 mt-1">{dashboardConfig?.metrics?.leadsPerdidos || 'Leads Perdidos'}</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 rounded-lg shadow-lg p-4 text-white text-center">
-              <Target className="h-8 w-8 mx-auto mb-2 text-gray-100" />
-              <div className="text-2xl font-bold">{leads.length}</div>
-              <div className="text-xs text-gray-100 mt-1">{dashboardConfig?.metrics?.totalGeral || 'Total Geral'}</div>
-            </div>
+            <Link href="/configuracoes" className="block">
+              <Button className="w-full" variant="outline">
+                <Layers className="mr-2 h-4 w-4" />
+                Gerenciar Funis
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Leads Recentes */}
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>Leads Recentes</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {recentLeads.length > 0 ? (
-                recentLeads.map((lead) => (
-                  <div key={lead.id} className="p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">
-                          {lead.nome_cliente || 'Nome não informado'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {lead.origem} • {lead.telefone}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          (() => {
-                            const status = lead.status_generico || lead.status_limpa_nome || 'novo'
-                            if (status.includes('fechado') || status.includes('finalizado') || status.includes('convertido'))
-                              return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            if (status.includes('divida') || status.includes('viavel') || status.includes('consta'))
-                              return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                            if (status.includes('qualific') || status.includes('analise'))
-                              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                            return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                          })()
-                        )}
-                      >
-                        {(lead.status_generico || lead.status_limpa_nome)?.replace(/_/g, ' ') || 'novo lead'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-foreground font-medium mb-2">Nenhum lead encontrado</p>
-                  <Link href="/leads" className="inline-flex items-center text-primary hover:text-primary/80 font-medium text-sm">
-                    Criar primeiro lead
-                  </Link>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
     </div>
   )
 }
