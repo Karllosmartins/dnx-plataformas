@@ -407,6 +407,25 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
       throw ApiError.badRequest('Nome e obrigatorio', 'MISSING_NAME')
     }
 
+    // Verificar limite de leads do workspace
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspaces')
+      .select('limite_leads, leads_consumidos')
+      .eq('id', workspaceId)
+      .single()
+
+    if (workspaceError) {
+      logger.error({ workspaceError }, 'Failed to fetch workspace limits')
+      throw ApiError.internal('Erro ao verificar limites do workspace', 'WORKSPACE_LIMIT_CHECK_ERROR')
+    }
+
+    if (workspace.leads_consumidos >= workspace.limite_leads) {
+      throw ApiError.forbidden(
+        `Limite de leads atingido (${workspace.limite_leads}). Faça upgrade do plano.`,
+        'LEADS_LIMIT_EXCEEDED'
+      )
+    }
+
     // Renomear campos_personalizados para dados_personalizados
     if (leadData.campos_personalizados !== undefined) {
       leadData.dados_personalizados = leadData.campos_personalizados
@@ -435,6 +454,17 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
     if (error) {
       logger.error({ error, leadData }, 'Failed to create lead')
       throw ApiError.internal('Erro ao criar lead', 'CREATE_LEAD_ERROR')
+    }
+
+    // Incrementar contador de leads do workspace
+    const { error: updateError } = await supabase
+      .from('workspaces')
+      .update({ leads_consumidos: workspace.leads_consumidos + 1 })
+      .eq('id', workspaceId)
+
+    if (updateError) {
+      logger.error({ updateError }, 'Failed to increment workspace leads counter')
+      // Não bloquear a criação por erro de contador, apenas logar
     }
 
     logger.info({ leadId: lead.id, workspaceId, userId }, 'Lead created')

@@ -76,10 +76,28 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.forbidden('Voce nao tem acesso a este workspace', 'WORKSPACE_ACCESS_DENIED')
     }
 
-    // Buscar workspace
+    // Buscar workspace com informações de limite e consumo
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
-      .select('*')
+      .select(`
+        *,
+        planos (
+          nome,
+          descricao,
+          acesso_dashboard,
+          acesso_crm,
+          acesso_whatsapp,
+          acesso_disparo_simples,
+          acesso_disparo_ia,
+          acesso_agentes_ia,
+          acesso_extracao_leads,
+          acesso_enriquecimento,
+          acesso_usuarios,
+          acesso_consulta,
+          acesso_integracoes,
+          acesso_arquivos
+        )
+      `)
       .eq('id', id)
       .single()
 

@@ -112,6 +112,43 @@ export interface UsuarioComPlano extends User {
   acesso_arquivos?: boolean
 }
 
+export interface Workspace {
+  id: string
+  name: string
+  slug: string
+  plano_id?: number
+  settings?: Record<string, any>
+
+  // Limites do workspace (compartilhados por todos os usuários)
+  limite_leads: number
+  limite_consultas: number
+  limite_instancias: number
+
+  // Consumo atual do workspace
+  leads_consumidos: number
+  consultas_realizadas: number
+  instancias_ativas: number
+
+  // Controle de reset de contadores
+  ultimo_reset_contagem: string
+
+  // Overrides customizados para este workspace
+  plano_customizado?: Record<string, any>
+
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkspaceMember {
+  id: string
+  workspace_id: string
+  user_id: number
+  role: 'owner' | 'admin' | 'member' | 'viewer'
+  permissions?: Record<string, any>
+  joined_at: string
+  invited_by?: number
+}
+
 export interface ConfiguracaoCredenciais {
   id: number
   user_id: number
