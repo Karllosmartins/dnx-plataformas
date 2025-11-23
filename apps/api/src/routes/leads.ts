@@ -20,7 +20,9 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
       status,
       search,
       sort = 'created_at',
-      order = 'desc'
+      order = 'desc',
+      funil_id,
+      estagio_id
     } = req.query
 
     const pageNum = parseInt(page as string)
@@ -33,7 +35,17 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
       .select('*', { count: 'exact' })
       .eq('workspace_id', workspaceId)
 
-    // Filtro por status
+    // Filtro por funil
+    if (funil_id) {
+      query = query.eq('funil_id', funil_id)
+    }
+
+    // Filtro por estágio
+    if (estagio_id) {
+      query = query.eq('estagio_id', estagio_id)
+    }
+
+    // Filtro por status (legado)
     if (status) {
       query = query.eq('status_limpa_nome', status)
     }
@@ -57,6 +69,131 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
     }
 
     ApiResponse.paginated(res, leads || [], pageNum, limitNum, count || 0)
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
+// GET /api/leads/kanban/:funilId - Listar leads agrupados por estágio (para Kanban)
+// IMPORTANTE: Esta rota deve vir ANTES de /:id para não conflitar
+router.get('/kanban/:funilId', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const { funilId } = req.params
+    const workspaceId = req.workspaceId
+
+    // Verificar se funil pertence ao workspace
+    const { data: funil } = await supabase
+      .from('funis')
+      .select('id, nome')
+      .eq('id', funilId)
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!funil) {
+      throw ApiError.notFound('Funil nao encontrado', 'FUNIL_NOT_FOUND')
+    }
+
+    // Buscar estágios do funil
+    const { data: estagios, error: estagiosError } = await supabase
+      .from('funil_estagios')
+      .select('id, nome, cor, ordem')
+      .eq('funil_id', funilId)
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+
+    if (estagiosError) {
+      throw ApiError.internal('Erro ao buscar estagios', 'FETCH_ESTAGIOS_ERROR')
+    }
+
+    // Buscar leads do funil
+    const { data: leads, error: leadsError } = await supabase
+      .from('leads')
+      .select('id, nome_cliente, email_usuario, numero_formatado, estagio_id, created_at, updated_at, dados_personalizados')
+      .eq('workspace_id', workspaceId)
+      .eq('funil_id', funilId)
+      .order('created_at', { ascending: false })
+
+    if (leadsError) {
+      throw ApiError.internal('Erro ao buscar leads', 'FETCH_LEADS_ERROR')
+    }
+
+    // Agrupar leads por estágio
+    const kanban = estagios?.map(estagio => ({
+      ...estagio,
+      leads: leads?.filter(lead => lead.estagio_id === estagio.id) || [],
+      total: leads?.filter(lead => lead.estagio_id === estagio.id).length || 0
+    })) || []
+
+    // Adicionar coluna para leads sem estágio
+    const leadsWithoutStage = leads?.filter(lead => !lead.estagio_id) || []
+    if (leadsWithoutStage.length > 0) {
+      kanban.unshift({
+        id: 'sem-estagio',
+        nome: 'Sem Estágio',
+        cor: '#9CA3AF',
+        ordem: 0,
+        leads: leadsWithoutStage,
+        total: leadsWithoutStage.length
+      })
+    }
+
+    ApiResponse.success(res, {
+      funil,
+      kanban,
+      total_leads: leads?.length || 0
+    })
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
+// PUT /api/leads/bulk/estagio - Mover múltiplos leads para outro estágio
+// IMPORTANTE: Esta rota deve vir ANTES de /:id para não conflitar
+router.put('/bulk/estagio', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const { lead_ids, estagio_id } = req.body
+    const workspaceId = req.workspaceId
+    const userId = req.user?.userId
+
+    if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
+      throw ApiError.badRequest('IDs dos leads sao obrigatorios', 'MISSING_LEAD_IDS')
+    }
+
+    if (!estagio_id) {
+      throw ApiError.badRequest('ID do estagio e obrigatorio', 'MISSING_ESTAGIO_ID')
+    }
+
+    // Verificar se todos os leads pertencem ao workspace
+    const { data: existingLeads, error: checkError } = await supabase
+      .from('leads')
+      .select('id')
+      .in('id', lead_ids)
+      .eq('workspace_id', workspaceId)
+
+    if (checkError || !existingLeads || existingLeads.length !== lead_ids.length) {
+      throw ApiError.badRequest('Alguns leads nao foram encontrados ou nao pertencem ao workspace', 'INVALID_LEADS')
+    }
+
+    // Atualizar leads
+    const { data: leads, error } = await supabase
+      .from('leads')
+      .update({
+        estagio_id,
+        updated_at: new Date().toISOString()
+      })
+      .in('id', lead_ids)
+      .eq('workspace_id', workspaceId)
+      .select()
+
+    if (error) {
+      logger.error({ error }, 'Failed to bulk update leads estagio')
+      throw ApiError.internal('Erro ao mover leads', 'BULK_UPDATE_ERROR')
+    }
+
+    logger.info({ leadIds: lead_ids, estagioId: estagio_id, workspaceId, userId }, 'Bulk leads moved to new stage')
+    ApiResponse.success(res, { updated: leads?.length || 0, leads })
 
   } catch (error) {
     handleApiError(error, res)
@@ -208,7 +345,7 @@ router.delete('/:id', async (req: WorkspaceRequest, res: Response) => {
   }
 })
 
-// PUT /api/leads/:id/status - Atualizar status do lead (dentro do workspace)
+// PUT /api/leads/:id/status - Atualizar status do lead (legado)
 router.put('/:id/status', async (req: WorkspaceRequest, res: Response) => {
   try {
     const { id } = req.params
@@ -249,6 +386,92 @@ router.put('/:id/status', async (req: WorkspaceRequest, res: Response) => {
     }
 
     logger.info({ leadId: id, status, workspaceId, userId }, 'Lead status updated')
+    ApiResponse.success(res, lead)
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
+// PUT /api/leads/:id/estagio - Mover lead para outro estágio (para Kanban)
+router.put('/:id/estagio', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const { estagio_id, funil_id } = req.body
+    const workspaceId = req.workspaceId
+    const userId = req.user?.userId
+
+    if (!estagio_id) {
+      throw ApiError.badRequest('ID do estagio e obrigatorio', 'MISSING_ESTAGIO_ID')
+    }
+
+    // Verificar se lead pertence ao workspace
+    const { data: existingLead } = await supabase
+      .from('leads')
+      .select('id, funil_id')
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!existingLead) {
+      throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
+    }
+
+    // Verificar se o estágio existe e pertence ao funil correto
+    const targetFunilId = funil_id || existingLead.funil_id
+
+    if (!targetFunilId) {
+      throw ApiError.badRequest('Lead nao esta vinculado a nenhum funil', 'LEAD_NO_FUNIL')
+    }
+
+    const { data: estagio } = await supabase
+      .from('funil_estagios')
+      .select('id, funil_id, nome')
+      .eq('id', estagio_id)
+      .eq('funil_id', targetFunilId)
+      .single()
+
+    if (!estagio) {
+      throw ApiError.notFound('Estagio nao encontrado neste funil', 'ESTAGIO_NOT_FOUND')
+    }
+
+    // Verificar se o funil pertence ao workspace
+    const { data: funil } = await supabase
+      .from('funis')
+      .select('id')
+      .eq('id', targetFunilId)
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!funil) {
+      throw ApiError.forbidden('Funil nao pertence ao workspace', 'FUNIL_NOT_IN_WORKSPACE')
+    }
+
+    // Atualizar lead
+    const updateData: Record<string, unknown> = {
+      estagio_id,
+      updated_at: new Date().toISOString()
+    }
+
+    // Se mudou de funil, atualizar também
+    if (funil_id && funil_id !== existingLead.funil_id) {
+      updateData.funil_id = funil_id
+    }
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .eq('workspace_id', workspaceId)
+      .select()
+      .single()
+
+    if (error) {
+      logger.error({ error }, 'Failed to update lead estagio')
+      throw ApiError.internal('Erro ao mover lead', 'UPDATE_ESTAGIO_ERROR')
+    }
+
+    logger.info({ leadId: id, estagioId: estagio_id, estagioNome: estagio.nome, workspaceId, userId }, 'Lead moved to new stage')
     ApiResponse.success(res, lead)
 
   } catch (error) {
