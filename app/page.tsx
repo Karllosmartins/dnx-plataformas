@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../components/shared/AuthWrapper'
 import { funisApi, leadsApi } from '../lib/api-client'
 import MetricCard from '../components/features/leads/MetricCard'
-import { UsageCards } from '@/components/dashboard/UsageCards'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -221,11 +220,6 @@ export default function HomePage() {
         <p className="text-gray-600">
           Bem-vindo(a), {user?.name}! Aqui está uma visão geral do seu pipeline de vendas.
         </p>
-      </div>
-
-      {/* Uso do Workspace */}
-      <div className="mb-8">
-        <UsageCards />
       </div>
 
       {/* Filtros */}

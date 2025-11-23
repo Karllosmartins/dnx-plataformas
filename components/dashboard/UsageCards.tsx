@@ -55,46 +55,44 @@ export function UsageCards() {
         .eq('id', workspaceId)
         .single()
 
+      // Contar total de leads (sem filtro de workspace por enquanto)
+      const { count: leadsCount } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+
+      // Contar instâncias WhatsApp - tabela real é instancia_whtats
+      const { count: instancesCount } = await supabase
+        .from('instancia_whtats')
+        .select('*', { count: 'exact', head: true })
+
+      // Contar consultas realizadas (leads com valor_pago_consulta não nulo)
+      const { count: consultasCount } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .not('valor_pago_consulta', 'is', null)
+
       // Se não encontrou workspace, usar valores padrão
       if (error || !workspace) {
         console.log('Workspace não encontrado, usando valores padrão')
-
-        // Contar total de leads
-        const { count: leadsCount } = await supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true })
 
         setUsage({
           limite_leads: 1000,
           limite_consultas: 500,
           limite_instancias: 3,
           leads_consumidos: leadsCount || 0,
-          consultas_realizadas: 0,
-          instancias_ativas: 0,
+          consultas_realizadas: consultasCount || 0,
+          instancias_ativas: instancesCount || 0,
           plano_nome: 'Básico',
         })
         return
       }
-
-      // Contar leads reais do workspace
-      const { count: leadsCount } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-
-      // Contar instâncias ativas
-      const { count: instancesCount } = await supabase
-        .from('whatsapp_instances')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'connected')
 
       setUsage({
         limite_leads: workspace.limite_leads || 1000,
         limite_consultas: workspace.limite_consultas || 500,
         limite_instancias: workspace.limite_instancias || 3,
         leads_consumidos: leadsCount || workspace.leads_consumidos || 0,
-        consultas_realizadas: workspace.consultas_realizadas || 0,
+        consultas_realizadas: consultasCount || workspace.consultas_realizadas || 0,
         instancias_ativas: instancesCount || workspace.instancias_ativas || 0,
         plano_nome: (workspace.planos as { nome?: string })?.nome || 'Básico',
       })

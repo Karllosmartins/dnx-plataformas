@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { User } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -34,6 +35,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps) {
+  const router = useRouter()
   const [membersOpen, setMembersOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
 
@@ -69,6 +71,7 @@ export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps)
               onLogout={onLogout}
               onOpenMembers={() => setMembersOpen(true)}
               onOpenUsage={() => setUsageOpen(true)}
+              onOpenAccount={() => router.push('/minha-conta')}
             />
           </DropdownMenuContent>
         </DropdownMenu>
@@ -110,6 +113,7 @@ export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps)
             onLogout={onLogout}
             onOpenMembers={() => setMembersOpen(true)}
             onOpenUsage={() => setUsageOpen(true)}
+            onOpenAccount={() => router.push('/minha-conta')}
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -126,12 +130,14 @@ function UserMenuContent({
   onLogout,
   onOpenMembers,
   onOpenUsage,
+  onOpenAccount,
 }: {
   user: User
   roleLabel: string
   onLogout: () => void
   onOpenMembers: () => void
   onOpenUsage: () => void
+  onOpenAccount: () => void
 }) {
   const canManageMembers = user.role === 'admin'
 
@@ -148,7 +154,7 @@ function UserMenuContent({
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer" onClick={onOpenAccount}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Minha Conta</span>
         </DropdownMenuItem>
