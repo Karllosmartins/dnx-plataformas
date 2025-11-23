@@ -5,7 +5,7 @@ import { useState } from 'react'
 interface CampoPersonalizado {
   nome: string
   label: string
-  tipo: 'text' | 'select' | 'multiselect' | 'number' | 'date' | 'textarea' | 'email' | 'tel' | 'cpf' | 'cnpj'
+  tipo: 'text' | 'select' | 'multiselect' | 'number' | 'date' | 'textarea' | 'email' | 'tel' | 'cpf' | 'cnpj' | 'boolean'
   opcoes?: string[]
   obrigatorio?: boolean
   ajuda?: string
@@ -161,6 +161,27 @@ export default function DynamicFormFields({ campos, valores, onChange, className
                 </span>
               </label>
             ))}
+          </div>
+        )
+
+      case 'boolean':
+        // Converter valor para boolean
+        const valorBoolean = valor === true || valor === 'true' || valor === 1 || valor === '1'
+
+        return (
+          <div className="flex items-center space-x-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={valorBoolean}
+                onChange={(e) => onChange(campo.nome, e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {valorBoolean ? 'Sim' : 'Não'}
+              </span>
+            </label>
           </div>
         )
 
