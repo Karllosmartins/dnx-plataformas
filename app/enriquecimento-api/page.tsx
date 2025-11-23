@@ -8,6 +8,7 @@ import { useAuth } from '../../components/shared/AuthWrapper'
 import PlanProtection from '../../components/shared/PlanProtection'
 import { authApi, leadsApi } from '../../lib/api-client'
 import { hasAvailableLeads, consumeLeads, getLeadsBalance, calculateEnriquecimentoLeadsConsumption } from '../../lib/permissions'
+import { UsuarioComPlano } from '../../lib/supabase'
 import {
   Upload,
   Database,
@@ -255,7 +256,7 @@ export default function EnriquecimentoAPIPage() {
         // Verificar se ainda tem leads suficientes
         const userAtualizado = await authApi.me()
 
-        if (userAtualizado.data && !hasAvailableLeads(userAtualizado.data, leadsParaConsumir)) {
+        if (userAtualizado.data && !hasAvailableLeads(userAtualizado.data as UsuarioComPlano, leadsParaConsumir)) {
           setStatusEnriquecimento(`Leads insuficientes para continuar. Parando no CNPJ ${cnpj}`)
           break
         }
