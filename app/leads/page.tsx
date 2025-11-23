@@ -1001,13 +1001,17 @@ function LeadModal({
 
     try {
       const payload = {
-        ...formData,
+        nome_cliente: formData.nome_cliente,
+        telefone: formData.telefone,
+        email_usuario: formData.email_usuario || null,
+        funil_id: formData.funil_id || null,
+        estagio_id: formData.estagio_id || null,
         campos_personalizados: camposValues,
       }
 
       let response
       if (isEditing && lead) {
-        response = await leadsApi.update(lead.id, payload)
+        response = await leadsApi.update(String(lead.id), payload)
       } else {
         response = await leadsApi.create(payload)
       }

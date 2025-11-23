@@ -122,7 +122,8 @@ router.post('/', async (req: WorkspaceRequest, res: Response) => {
       ordemQuery = ordemQuery.is('funil_id', null)
     }
 
-    const { data: maxOrdem } = await ordemQuery.single()
+    // Usar maybeSingle() para não lançar erro quando não existem campos
+    const { data: maxOrdem } = await ordemQuery.maybeSingle()
 
     const novaOrdem = maxOrdem ? maxOrdem.ordem + 1 : 1
 
