@@ -82,7 +82,9 @@ services:
       echo '=== 7/8 Building Web ===' &&
       npx next build &&
       echo '=== 8/8 Starting Web ===' &&
-      npx next start
+      cp -r public .next/standalone/public &&
+      cp -r .next/static .next/standalone/.next/static &&
+      node .next/standalone/server.js
       "
     networks:
       - dnnet
