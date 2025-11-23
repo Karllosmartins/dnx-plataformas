@@ -27,7 +27,7 @@ export default function LeadsPage() {
   const loadLeads = async () => {
     try {
       setLoading(true)
-      const response = await leadsApi.list({ page, limit: 20, search: search || undefined })
+      const response = await leadsApi.list({ page, limit: 50, search: search || undefined })
       const responseData = response.data as { data?: Lead[]; totalPages?: number; success?: boolean } | Lead[]
       const data = Array.isArray(responseData) ? responseData : (responseData.data || [])
       const pages = Array.isArray(responseData) ? 1 : (responseData.totalPages || 1)

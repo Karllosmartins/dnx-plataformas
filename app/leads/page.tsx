@@ -104,6 +104,12 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Estados de paginacao
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalLeads, setTotalLeads] = useState(0)
+  const ITEMS_PER_PAGE = 50
+
   // Estados do modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
@@ -143,12 +149,15 @@ export default function LeadsPage() {
     }
   }, [])
 
-  const fetchLeads = useCallback(async () => {
+  const fetchLeads = useCallback(async (page: number = currentPage) => {
     try {
       setLoading(true)
       setError(null)
 
-      const params: Record<string, string> = {}
+      const params: Record<string, string> = {
+        limit: String(ITEMS_PER_PAGE),
+        page: String(page)
+      }
       if (selectedFunilId) params.funilId = selectedFunilId
       if (selectedEstagioId && selectedEstagioId !== 'all') params.estagioId = selectedEstagioId
       if (searchQuery) params.search = searchQuery
@@ -157,6 +166,11 @@ export default function LeadsPage() {
 
       if (response.success && response.data) {
         setLeads(response.data as Lead[])
+        // Atualizar informacoes de paginacao da resposta
+        if (response.pagination) {
+          setTotalPages(response.pagination.totalPages || 1)
+          setTotalLeads(response.pagination.total || 0)
+        }
       } else {
         setError(response.error || 'Erro ao carregar leads')
       }
@@ -166,7 +180,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedFunilId, selectedEstagioId, searchQuery])
+  }, [selectedFunilId, selectedEstagioId, searchQuery, currentPage])
 
   useEffect(() => {
     fetchFunis()
@@ -177,9 +191,19 @@ export default function LeadsPage() {
     fetchLeads()
   }, [fetchLeads])
 
+  // Resetar pagina quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedFunilId, selectedEstagioId, searchQuery])
+
   // =============================================================================
   // HANDLERS
   // =============================================================================
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    fetchLeads(page)
+  }
 
   const handleCreateLead = () => {
     setEditingLead(null)
@@ -246,6 +270,7 @@ export default function LeadsPage() {
   const clearFilters = () => {
     setSelectedEstagioId('all')
     setSearchQuery('')
+    setCurrentPage(1) // Resetar pagina ao limpar filtros
   }
 
   // =============================================================================
@@ -568,6 +593,67 @@ export default function LeadsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Paginacao */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between rounded-lg border bg-white p-4">
+          <div className="text-sm text-gray-500">
+            Mostrando {leads.length} de {totalLeads} leads (Pagina {currentPage} de {totalPages})
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+            >
+              Primeira
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1">
+              {/* Mostrar paginas proximas */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i
+                if (pageNum < 1 || pageNum > totalPages) return null
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === currentPage ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                    className="min-w-[40px]"
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Proxima
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              Ultima
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 

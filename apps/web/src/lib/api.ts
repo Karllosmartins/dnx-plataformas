@@ -282,16 +282,35 @@ export const workspacesApi = {
   }
 }
 
+export interface LeadStats {
+  total: number
+  leads_sem_funil: number
+  leads_com_funil: number
+  leads_recentes_30d: number
+  leads_mes_atual: number
+  distribuicao_funis: Array<{
+    funil_id: string
+    nome: string
+    total: number
+  }>
+  funis_total: number
+}
+
 export const leadsApi = {
   list(params?: {
     page?: number
-    limit?: number
+    limit?: number | string
     status?: string
     funilId?: string
     estagioId?: string
     search?: string
   }) {
-    return apiClient.get('/leads', params)
+    return apiClient.get('/leads', params as Record<string, string>)
+  },
+
+  // Estatísticas para o dashboard (não traz os dados, apenas contagens)
+  stats() {
+    return apiClient.get<LeadStats>('/leads/stats')
   },
 
   get(id: string) {
@@ -462,7 +481,7 @@ export const camposApi = {
   },
 
   update(id: string, data: Record<string, unknown>) {
-    return apiClient.patch(`/campos/${id}`, data)
+    return apiClient.put(`/campos/${id}`, data)
   },
 
   delete(id: string) {

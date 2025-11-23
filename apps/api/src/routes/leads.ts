@@ -10,6 +10,103 @@ const router = Router()
 router.use(authMiddleware)
 router.use(workspaceMiddleware)
 
+// GET /api/leads/stats - Estatísticas de leads para dashboard (SEM paginação)
+// IMPORTANTE: Esta rota deve vir ANTES de / para não conflitar
+router.get('/stats', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId
+
+    // Contagem total de leads
+    const { count: totalLeads, error: countError } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+
+    if (countError) {
+      logger.error({ error: countError }, 'Failed to count leads')
+      throw ApiError.internal('Erro ao contar leads', 'COUNT_LEADS_ERROR')
+    }
+
+    // Buscar leads com funil_id para distribuição por funis
+    const { data: leadsWithFunil, error: funilError } = await supabase
+      .from('leads')
+      .select('funil_id')
+      .eq('workspace_id', workspaceId)
+      .not('funil_id', 'is', null)
+
+    if (funilError) {
+      logger.error({ error: funilError }, 'Failed to fetch leads with funil')
+      throw ApiError.internal('Erro ao buscar leads por funil', 'FETCH_LEADS_FUNIL_ERROR')
+    }
+
+    // Contar leads por funil
+    const distribuicaoFunis: Record<string, number> = {}
+    leadsWithFunil?.forEach(lead => {
+      if (lead.funil_id) {
+        distribuicaoFunis[lead.funil_id] = (distribuicaoFunis[lead.funil_id] || 0) + 1
+      }
+    })
+
+    // Buscar nomes dos funis
+    const funilIds = Object.keys(distribuicaoFunis)
+    let funisData: Array<{ id: string; nome: string }> = []
+
+    if (funilIds.length > 0) {
+      const { data: funis } = await supabase
+        .from('funis')
+        .select('id, nome')
+        .in('id', funilIds)
+        .eq('workspace_id', workspaceId)
+
+      funisData = funis || []
+    }
+
+    // Montar resposta de distribuição com nomes
+    const distribuicaoComNomes = funisData.map(funil => ({
+      funil_id: funil.id,
+      nome: funil.nome,
+      total: distribuicaoFunis[funil.id] || 0
+    }))
+
+    // Leads sem funil
+    const leadsSemFunil = (totalLeads || 0) - (leadsWithFunil?.length || 0)
+
+    // Buscar leads recentes (últimos 30 dias) para métricas
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { count: leadsRecentes } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    // Leads do mês atual
+    const inicioMes = new Date()
+    inicioMes.setDate(1)
+    inicioMes.setHours(0, 0, 0, 0)
+
+    const { count: leadsMesAtual } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', inicioMes.toISOString())
+
+    ApiResponse.success(res, {
+      total: totalLeads || 0,
+      leads_sem_funil: leadsSemFunil,
+      leads_com_funil: leadsWithFunil?.length || 0,
+      leads_recentes_30d: leadsRecentes || 0,
+      leads_mes_atual: leadsMesAtual || 0,
+      distribuicao_funis: distribuicaoComNomes,
+      funis_total: funisData.length
+    })
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
 // GET /api/leads - Listar leads do workspace com paginação e filtros
 router.get('/', async (req: WorkspaceRequest, res: Response) => {
   try {
@@ -26,7 +123,8 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
     } = req.query
 
     const pageNum = parseInt(page as string)
-    const limitNum = Math.min(parseInt(limit as string), 100) // Max 100
+    // Aumentado limite máximo para 500 para permitir consultas maiores
+    const limitNum = Math.min(parseInt(limit as string), 500)
     const offset = (pageNum - 1) * limitNum
 
     // Query base - filtrar por workspace
