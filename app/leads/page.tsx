@@ -572,6 +572,56 @@ export default function LeadsPage() {
   )
 
   // =============================================================================
+  // DRAG AND DROP HANDLERS
+  // =============================================================================
+
+  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, lead: Lead) => {
+    setDraggedLead(lead)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', lead.id)
+    // Adicionar classe de opacity ao elemento sendo arrastado
+    const target = e.target as HTMLElement
+    setTimeout(() => {
+      target.style.opacity = '0.5'
+    }, 0)
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedLead(null)
+    setDragOverStage(null)
+    const target = e.target as HTMLElement
+    target.style.opacity = '1'
+  }
+
+  const handleDragOver = (e: React.DragEvent, estagioId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverStage(estagioId)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Verificar se realmente saiu da area de drop
+    const relatedTarget = e.relatedTarget as HTMLElement
+    const currentTarget = e.currentTarget as HTMLElement
+    if (!currentTarget.contains(relatedTarget)) {
+      setDragOverStage(null)
+    }
+  }
+
+  const handleDrop = async (e: React.DragEvent, estagioId: string) => {
+    e.preventDefault()
+    setDragOverStage(null)
+
+    if (draggedLead && draggedLead.estagio_id !== estagioId) {
+      await handleMoveToStage(draggedLead.id, estagioId)
+    }
+    setDraggedLead(null)
+  }
+
+  // =============================================================================
   // RENDER - KANBAN
   // =============================================================================
 
@@ -629,6 +679,8 @@ export default function LeadsPage() {
                     onView={handleViewLead}
                     formatPhone={formatPhone}
                     formatDate={formatDate}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
                   />
                 ))}
               </div>
@@ -653,8 +705,15 @@ export default function LeadsPage() {
                   </Badge>
                 </div>
                 <div
-                  className="flex-1 space-y-3 rounded-lg p-3"
+                  className={`flex-1 space-y-3 rounded-lg p-3 transition-all ${
+                    dragOverStage === estagio.id
+                      ? 'ring-2 ring-primary ring-offset-2'
+                      : ''
+                  }`}
                   style={{ backgroundColor: `${estagio.cor}10` }}
+                  onDragOver={(e) => handleDragOver(e, estagio.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, estagio.id)}
                 >
                   {(leadsByStage[estagio.id] || []).map((lead) => (
                     <KanbanCard
@@ -667,12 +726,20 @@ export default function LeadsPage() {
                       onView={handleViewLead}
                       formatPhone={formatPhone}
                       formatDate={formatDate}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
                     />
                   ))}
                   {(!leadsByStage[estagio.id] ||
                     leadsByStage[estagio.id].length === 0) && (
-                    <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-                      <p className="text-sm text-gray-400">Nenhum lead</p>
+                    <div className={`flex h-24 items-center justify-center rounded-lg border-2 border-dashed ${
+                      dragOverStage === estagio.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}>
+                      <p className="text-sm text-gray-400">
+                        {dragOverStage === estagio.id ? 'Solte aqui' : 'Nenhum lead'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -754,6 +821,8 @@ interface KanbanCardProps {
   onView: (lead: Lead) => void
   formatPhone: (phone: string) => string
   formatDate: (date: string) => string
+  onDragStart: (e: React.DragEvent, lead: Lead) => void
+  onDragEnd: (e: React.DragEvent) => void
 }
 
 function KanbanCard({
@@ -765,14 +834,19 @@ function KanbanCard({
   onView,
   formatPhone,
   formatDate,
+  onDragStart,
+  onDragEnd,
 }: KanbanCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [showMoveMenu, setShowMoveMenu] = useState(false)
 
   return (
     <Card
-      className="cursor-pointer transition-shadow hover:shadow-md"
+      className="cursor-grab transition-shadow hover:shadow-md active:cursor-grabbing"
       onClick={() => onView(lead)}
+      draggable
+      onDragStart={(e) => onDragStart(e, lead)}
+      onDragEnd={onDragEnd}
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
