@@ -121,7 +121,9 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
       funil_id,
       estagio_id,
       date_from,
-      date_to
+      date_to,
+      campanha,
+      origem
     } = req.query
 
     const pageNum = parseInt(page as string)
@@ -153,6 +155,16 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
     // Busca por nome, email ou telefone
     if (search) {
       query = query.or(`nome_cliente.ilike.%${search}%,email_usuario.ilike.%${search}%,numero_formatado.ilike.%${search}%`)
+    }
+
+    // Filtro por campanha
+    if (campanha) {
+      query = query.ilike('nome_campanha', `%${campanha}%`)
+    }
+
+    // Filtro por origem
+    if (origem) {
+      query = query.ilike('origem', `%${origem}%`)
     }
 
     // Filtro por data

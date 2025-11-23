@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Select,
   SelectContent,
@@ -98,8 +99,10 @@ export default function LeadsPage() {
   const [selectedFunilId, setSelectedFunilId] = useState<string>('')
   const [selectedEstagioId, setSelectedEstagioId] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [dateFrom, setDateFrom] = useState<string>('')
-  const [dateTo, setDateTo] = useState<string>('')
+  const [campanha, setCampanha] = useState<string>('')
+  const [origem, setOrigem] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState<Date | undefined>()
+  const [dateTo, setDateTo] = useState<Date | undefined>()
 
   // Estados de UI
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -163,8 +166,10 @@ export default function LeadsPage() {
       if (selectedFunilId) params.funil_id = selectedFunilId
       if (selectedEstagioId && selectedEstagioId !== 'all') params.estagio_id = selectedEstagioId
       if (searchQuery) params.search = searchQuery
-      if (dateFrom) params.date_from = dateFrom
-      if (dateTo) params.date_to = dateTo
+      if (campanha) params.campanha = campanha
+      if (origem) params.origem = origem
+      if (dateFrom) params.date_from = dateFrom.toISOString().split('T')[0]
+      if (dateTo) params.date_to = dateTo.toISOString().split('T')[0]
 
       const response = await leadsApi.list(params)
 
@@ -184,7 +189,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedFunilId, selectedEstagioId, searchQuery, dateFrom, dateTo, currentPage])
+  }, [selectedFunilId, selectedEstagioId, searchQuery, campanha, origem, dateFrom, dateTo, currentPage])
 
   useEffect(() => {
     fetchFunis()
@@ -198,7 +203,7 @@ export default function LeadsPage() {
   // Resetar pagina quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedFunilId, selectedEstagioId, searchQuery, dateFrom, dateTo])
+  }, [selectedFunilId, selectedEstagioId, searchQuery, campanha, origem, dateFrom, dateTo])
 
   // =============================================================================
   // HANDLERS
@@ -274,8 +279,10 @@ export default function LeadsPage() {
   const clearFilters = () => {
     setSelectedEstagioId('all')
     setSearchQuery('')
-    setDateFrom('')
-    setDateTo('')
+    setCampanha('')
+    setOrigem('')
+    setDateFrom(undefined)
+    setDateTo(undefined)
     setCurrentPage(1) // Resetar pagina ao limpar filtros
   }
 
@@ -419,22 +426,42 @@ export default function LeadsPage() {
             </Select>
           </div>
 
-          {/* Filtro de Data */}
-          <div className="w-full md:w-36">
-            <Label className="mb-2 block text-sm">Data Inicio</Label>
+          {/* Filtro de Campanha */}
+          <div className="w-full md:w-48">
+            <Label className="mb-2 block text-sm">Campanha</Label>
             <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              placeholder="Nome da campanha"
+              value={campanha}
+              onChange={(e) => setCampanha(e.target.value)}
             />
           </div>
 
-          <div className="w-full md:w-36">
-            <Label className="mb-2 block text-sm">Data Fim</Label>
+          {/* Filtro de Origem */}
+          <div className="w-full md:w-48">
+            <Label className="mb-2 block text-sm">Origem</Label>
             <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              placeholder="Origem do lead"
+              value={origem}
+              onChange={(e) => setOrigem(e.target.value)}
+            />
+          </div>
+
+          {/* Filtro de Data */}
+          <div className="w-full md:w-40">
+            <Label className="mb-2 block text-sm">Data Inicio</Label>
+            <DatePicker
+              date={dateFrom}
+              onSelect={setDateFrom}
+              placeholder="Selecione"
+            />
+          </div>
+
+          <div className="w-full md:w-40">
+            <Label className="mb-2 block text-sm">Data Fim</Label>
+            <DatePicker
+              date={dateTo}
+              onSelect={setDateTo}
+              placeholder="Selecione"
             />
           </div>
 
@@ -454,7 +481,7 @@ export default function LeadsPage() {
 
           {/* Botoes de acao */}
           <div className="flex items-center gap-2">
-            {((selectedEstagioId && selectedEstagioId !== 'all') || searchQuery || dateFrom || dateTo) && (
+            {((selectedEstagioId && selectedEstagioId !== 'all') || searchQuery || campanha || origem || dateFrom || dateTo) && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="mr-1 h-4 w-4" />
                 Limpar
