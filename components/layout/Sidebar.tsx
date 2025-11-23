@@ -9,24 +9,17 @@ import { supabase, User } from '../../lib/supabase'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   BarChart3,
   Users,
-  MessageSquare,
   Target,
-  Calendar,
   Settings,
   Home,
   Send,
   Menu,
   X,
-  LogOut,
   MessageCircle,
   Bot,
-  ChevronLeft,
-  ChevronRight,
   Database,
   Search,
   Plug,
@@ -35,6 +28,7 @@ import {
   PanelLeft
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { UserMenu } from '@/components/user/UserMenu'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home, feature: 'dashboard' as const },
@@ -295,55 +289,17 @@ function SidebarContent({
         </nav>
       </ScrollArea>
 
-      {/* User info and logout */}
-      {user && (
+      {/* User Menu */}
+      {user && onLogout && (
         <div className={cn(
-          "border-t border-sidebar-border p-4",
+          "border-t border-sidebar-border p-3",
           isCollapsed && "flex flex-col items-center px-2"
         )}>
-          {isCollapsed ? (
-            <div className="flex flex-col items-center gap-3">
-              <Avatar className="h-9 w-9 border-2 border-sidebar-border">
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-sm font-semibold">
-                  {user.name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onLogout}
-                className="h-8 w-8 text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground"
-                title="Sair"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border-2 border-sidebar-border">
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold">
-                  {user.name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {user.name}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user.role === 'admin' ? 'Administrador' : 'Usuário'}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onLogout}
-                className="h-9 w-9 text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground shrink-0"
-                title="Sair"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <UserMenu
+            user={user}
+            onLogout={onLogout}
+            isCollapsed={isCollapsed}
+          />
         </div>
       )}
     </div>
