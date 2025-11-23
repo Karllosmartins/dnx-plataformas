@@ -107,6 +107,36 @@ router.get('/stats', async (req: WorkspaceRequest, res: Response) => {
   }
 })
 
+// GET /api/leads/by-remotejid/:remotejid - Buscar lead por remotejid (número WhatsApp)
+// IMPORTANTE: Esta rota deve vir ANTES de /:id para não conflitar
+router.get('/by-remotejid/:remotejid', async (req: WorkspaceRequest, res: Response) => {
+  try {
+    const { remotejid } = req.params
+    const workspaceId = req.workspaceId
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('remotejid', remotejid)
+      .maybeSingle()
+
+    if (error) {
+      logger.error({ error }, 'Failed to fetch lead by remotejid')
+      throw ApiError.internal('Erro ao buscar lead', 'FETCH_LEAD_ERROR')
+    }
+
+    if (!lead) {
+      throw ApiError.notFound('Lead nao encontrado', 'LEAD_NOT_FOUND')
+    }
+
+    ApiResponse.success(res, lead)
+
+  } catch (error) {
+    handleApiError(error, res)
+  }
+})
+
 // GET /api/leads - Listar leads do workspace com paginação e filtros
 router.get('/', async (req: WorkspaceRequest, res: Response) => {
   try {
@@ -123,7 +153,8 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
       date_from,
       date_to,
       campanha,
-      origem
+      origem,
+      remotejid
     } = req.query
 
     const pageNum = parseInt(page as string)
@@ -165,6 +196,11 @@ router.get('/', async (req: WorkspaceRequest, res: Response) => {
     // Filtro por origem
     if (origem) {
       query = query.ilike('origem', `%${origem}%`)
+    }
+
+    // Filtro por remotejid (número WhatsApp)
+    if (remotejid) {
+      query = query.eq('remotejid', remotejid)
     }
 
     // Filtro por data

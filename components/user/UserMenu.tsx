@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User } from '@/lib/supabase'
-import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,14 +18,11 @@ import {
   Settings,
   Users,
   HelpCircle,
-  BarChart3,
   LogOut,
   ChevronDown,
-  Building2,
   CreditCard,
 } from 'lucide-react'
 import { MembersDialog } from './MembersDialog'
-import { UsageReportDialog } from './UsageReportDialog'
 
 interface UserMenuProps {
   user: User
@@ -37,7 +33,6 @@ interface UserMenuProps {
 export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps) {
   const router = useRouter()
   const [membersOpen, setMembersOpen] = useState(false)
-  const [usageOpen, setUsageOpen] = useState(false)
 
   const userInitials = user.name
     .split(' ')
@@ -70,14 +65,12 @@ export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps)
               roleLabel={roleLabel}
               onLogout={onLogout}
               onOpenMembers={() => setMembersOpen(true)}
-              onOpenUsage={() => setUsageOpen(true)}
               onOpenAccount={() => router.push('/minha-conta')}
             />
           </DropdownMenuContent>
         </DropdownMenu>
 
         <MembersDialog open={membersOpen} onOpenChange={setMembersOpen} />
-        <UsageReportDialog open={usageOpen} onOpenChange={setUsageOpen} />
       </>
     )
   }
@@ -112,14 +105,12 @@ export function UserMenu({ user, onLogout, isCollapsed = false }: UserMenuProps)
             roleLabel={roleLabel}
             onLogout={onLogout}
             onOpenMembers={() => setMembersOpen(true)}
-            onOpenUsage={() => setUsageOpen(true)}
             onOpenAccount={() => router.push('/minha-conta')}
           />
         </DropdownMenuContent>
       </DropdownMenu>
 
       <MembersDialog open={membersOpen} onOpenChange={setMembersOpen} />
-      <UsageReportDialog open={usageOpen} onOpenChange={setUsageOpen} />
     </>
   )
 }
@@ -129,14 +120,12 @@ function UserMenuContent({
   roleLabel,
   onLogout,
   onOpenMembers,
-  onOpenUsage,
   onOpenAccount,
 }: {
   user: User
   roleLabel: string
   onLogout: () => void
   onOpenMembers: () => void
-  onOpenUsage: () => void
   onOpenAccount: () => void
 }) {
   const canManageMembers = user.role === 'admin'
@@ -165,20 +154,6 @@ function UserMenuContent({
             <span>Gerenciar Membros</span>
           </DropdownMenuItem>
         )}
-
-        <DropdownMenuItem className="cursor-pointer">
-          <Building2 className="mr-2 h-4 w-4" />
-          <span>Workspace</span>
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-
-      <DropdownMenuSeparator />
-
-      <DropdownMenuGroup>
-        <DropdownMenuItem className="cursor-pointer" onClick={onOpenUsage}>
-          <BarChart3 className="mr-2 h-4 w-4" />
-          <span>Uso e Limites</span>
-        </DropdownMenuItem>
 
         <DropdownMenuItem className="cursor-pointer">
           <CreditCard className="mr-2 h-4 w-4" />

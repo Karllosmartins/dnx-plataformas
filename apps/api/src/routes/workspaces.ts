@@ -54,20 +54,22 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.internal('Erro ao buscar workspaces', 'FETCH_WORKSPACES_ERROR')
     }
 
-    // Transformar resultado e contar leads/instâncias reais
+    // Transformar resultado e contar leads/instâncias reais por workspace
     const workspacesWithCounts = await Promise.all(
       (memberships || []).map(async (m) => {
         const ws = m.workspaces as unknown as Workspace & { planos?: { nome: string } }
 
-        // Contar leads reais da tabela leads
+        // Contar leads reais da tabela leads FILTRADO POR WORKSPACE
         const { count: leadsCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', ws.id)
 
-        // Contar instâncias WhatsApp reais
+        // Contar instâncias WhatsApp reais FILTRADO POR WORKSPACE
         const { count: instancesCount } = await supabase
           .from('instancia_whtats')
           .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', ws.id)
 
         return {
           ...ws,
