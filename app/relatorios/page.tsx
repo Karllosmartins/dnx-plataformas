@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { funisApi } from '../../lib/api'
 
 // Componentes shadcn/ui
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -308,37 +309,23 @@ export default function RelatoriosPage() {
     if (!user) return
 
     try {
-      const { data: funisData, error } = await supabase
-        .from('funis')
-        .select(`
-          id,
-          nome,
-          cor,
-          ordem,
-          ativo,
-          estagios:funil_estagios(
-            id,
-            funil_id,
-            nome,
-            cor,
-            ordem,
-            ativo
-          )
-        `)
-        .eq('ativo', true)
-        .order('ordem', { ascending: true })
+      // Usar API que já filtra por workspace via JWT
+      const response = await funisApi.list(true) // true = incluir estágios
 
-      if (error) throw error
+      if (response.success && response.data) {
+        const funisData = Array.isArray(response.data) ? response.data : [response.data]
 
-      if (funisData) {
-        // Ordenar estágios dentro de cada funil
-        const funisComEstagios = funisData.map((funil: any) => ({
-          ...funil,
-          estagios: (funil.estagios || [])
-            .filter((e: any) => e.ativo)
-            .sort((a: any, b: any) => a.ordem - b.ordem)
-        }))
-        setFunis(funisComEstagios as Funil[])
+        // Filtrar apenas funis ativos e ordenar estágios
+        const funisAtivos = funisData
+          .filter((funil: any) => funil.ativo)
+          .map((funil: any) => ({
+            ...funil,
+            estagios: (funil.estagios || [])
+              .filter((e: any) => e.ativo)
+              .sort((a: any, b: any) => a.ordem - b.ordem)
+          }))
+
+        setFunis(funisAtivos as Funil[])
       }
     } catch (error) {
       console.error('Erro ao buscar funis:', error)
