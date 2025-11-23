@@ -252,23 +252,38 @@ router.put('/:id/reorder', async (req: WorkspaceRequest, res: Response) => {
 
     const ordemAtual = funil.ordem
 
-    // Atualizar ordem dos funis afetados
+    // Atualizar ordem dos funis afetados usando RPC ou queries individuais
     if (novaOrdem > ordemAtual) {
       // Movendo para baixo - decrementar ordem dos funis entre atual e nova posição
-      await supabase
+      // Buscar funis afetados e atualizar individualmente
+      const { data: funisAfetados } = await supabase
         .from('funis')
-        .update({ ordem: supabase.raw('ordem - 1') as any })
+        .select('id, ordem')
         .eq('workspace_id', workspaceId)
         .gt('ordem', ordemAtual)
         .lte('ordem', novaOrdem)
+
+      for (const f of funisAfetados || []) {
+        await supabase
+          .from('funis')
+          .update({ ordem: f.ordem - 1 })
+          .eq('id', f.id)
+      }
     } else if (novaOrdem < ordemAtual) {
       // Movendo para cima - incrementar ordem dos funis entre nova posição e atual
-      await supabase
+      const { data: funisAfetados } = await supabase
         .from('funis')
-        .update({ ordem: supabase.raw('ordem + 1') as any })
+        .select('id, ordem')
         .eq('workspace_id', workspaceId)
         .gte('ordem', novaOrdem)
         .lt('ordem', ordemAtual)
+
+      for (const f of funisAfetados || []) {
+        await supabase
+          .from('funis')
+          .update({ ordem: f.ordem + 1 })
+          .eq('id', f.id)
+      }
     }
 
     // Atualizar ordem do funil movido

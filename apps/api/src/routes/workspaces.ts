@@ -429,8 +429,7 @@ router.delete('/:id/members/:memberId', async (req: AuthenticatedRequest, res: R
       throw ApiError.forbidden('Voce nao e membro deste workspace', 'NOT_MEMBER')
     }
 
-    const canRemove = ['owner', 'admin'].includes(membership.role) ||
-                     membership.permissions?.members?.remove
+    const canRemove = ['owner', 'admin'].includes(membership.role)
 
     if (!canRemove) {
       throw ApiError.forbidden('Voce nao tem permissao para remover membros', 'CANNOT_REMOVE')

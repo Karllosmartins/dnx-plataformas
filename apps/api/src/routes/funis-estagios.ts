@@ -265,21 +265,36 @@ router.put('/:funilId/estagios/:estagioId/reorder', async (req: WorkspaceRequest
 
     const ordemAtual = estagio.ordem
 
-    // Atualizar ordem dos estágios afetados
+    // Atualizar ordem dos estágios afetados usando queries individuais
     if (novaOrdem > ordemAtual) {
-      await supabase
+      // Buscar estágios afetados e atualizar individualmente
+      const { data: estagiosAfetados } = await supabase
         .from('funil_estagios')
-        .update({ ordem: supabase.raw('ordem - 1') as any })
+        .select('id, ordem')
         .eq('funil_id', funilId)
         .gt('ordem', ordemAtual)
         .lte('ordem', novaOrdem)
+
+      for (const e of estagiosAfetados || []) {
+        await supabase
+          .from('funil_estagios')
+          .update({ ordem: e.ordem - 1 })
+          .eq('id', e.id)
+      }
     } else if (novaOrdem < ordemAtual) {
-      await supabase
+      const { data: estagiosAfetados } = await supabase
         .from('funil_estagios')
-        .update({ ordem: supabase.raw('ordem + 1') as any })
+        .select('id, ordem')
         .eq('funil_id', funilId)
         .gte('ordem', novaOrdem)
         .lt('ordem', ordemAtual)
+
+      for (const e of estagiosAfetados || []) {
+        await supabase
+          .from('funil_estagios')
+          .update({ ordem: e.ordem + 1 })
+          .eq('id', e.id)
+      }
     }
 
     // Atualizar ordem do estágio movido
