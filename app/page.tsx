@@ -13,6 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
   Users,
@@ -228,25 +235,28 @@ export default function HomePage() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="funil-filter">Funil</Label>
-              <select
-                id="funil-filter"
-                className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-                value={selectedFunil || ''}
-                onChange={(e) => setSelectedFunil(e.target.value || null)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Funil</Label>
+              <Select
+                value={selectedFunil || 'all'}
+                onValueChange={(value) => setSelectedFunil(value === 'all' ? null : value)}
               >
-                <option value="">Todos os funis</option>
-                {funis.map(funil => (
-                  <option key={funil.id} value={funil.id}>
-                    {funil.nome}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os funis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os funis</SelectItem>
+                  {funis.map(funil => (
+                    <SelectItem key={funil.id} value={funil.id}>
+                      {funil.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="flex-1 min-w-[200px]">
+            <div className="space-y-2">
               <Label>Data Início</Label>
               <DatePicker
                 date={startDate}
@@ -254,7 +264,7 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="flex-1 min-w-[200px]">
+            <div className="space-y-2">
               <Label>Data Fim</Label>
               <DatePicker
                 date={endDate}
@@ -262,9 +272,11 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="flex items-end">
+            <div className="space-y-2">
+              <Label className="invisible">Ações</Label>
               <Button
                 variant="outline"
+                className="w-full"
                 onClick={() => {
                   setStartDate(undefined)
                   setEndDate(undefined)
