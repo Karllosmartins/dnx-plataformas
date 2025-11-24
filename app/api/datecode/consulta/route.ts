@@ -53,36 +53,71 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar limite do usuário
-    const { data: userPlan, error: planError } = await getSupabaseAdmin()
-      .from('view_usuarios_planos')
-      .select('*')
+    // Buscar workspace do usuário
+    const { data: userData, error: userError } = await getSupabaseAdmin()
+      .from('users')
+      .select('current_workspace_id')
       .eq('id', userId)
       .single()
 
-    if (planError || !userPlan) {
-      console.error('Erro ao buscar plano do usuário:', planError)
+    if (userError || !userData || !userData.current_workspace_id) {
+      console.error('Erro ao buscar workspace do usuário:', userError)
       return NextResponse.json(
-        { error: 'Usuário não encontrado ou sem plano ativo' },
+        { error: 'Usuário não possui workspace ativo' },
         { status: 404 }
       )
     }
 
-    // Verificar se o usuário tem acesso às consultas
-    if (!userPlan.acesso_consulta) {
+    const workspaceId = userData.current_workspace_id
+
+    // Buscar plano do workspace
+    const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
+      .from('workspaces')
+      .select(`
+        id,
+        plano_id,
+        planos (
+          acesso_consulta,
+          limite_consultas_mes
+        )
+      `)
+      .eq('id', workspaceId)
+      .single()
+
+    if (workspaceError || !workspace || !workspace.planos) {
+      console.error('Erro ao buscar plano do workspace:', workspaceError)
       return NextResponse.json(
-        { error: 'Usuário não tem acesso às consultas individuais' },
+        { error: 'Workspace não encontrado ou sem plano ativo' },
+        { status: 404 }
+      )
+    }
+
+    const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+
+    // Verificar se o workspace tem acesso às consultas
+    if (!plano.acesso_consulta) {
+      return NextResponse.json(
+        { error: 'Seu plano não tem acesso às consultas individuais' },
         { status: 403 }
       )
     }
 
-    // Verificar se o usuário tem consultas disponíveis
-    if (!hasAvailableConsultas(userPlan, 1)) {
-      const consultasRestantes = getConsultasBalance(userPlan)
+    // Verificar limite de consultas do workspace
+    const { data: workspaceData } = await getSupabaseAdmin()
+      .from('workspaces')
+      .select('consultas_realizadas_mes')
+      .eq('id', workspaceId)
+      .single()
+
+    const consultasRealizadas = workspaceData?.consultas_realizadas_mes || 0
+    const limiteConsultas = plano.limite_consultas_mes || 0
+    const consultasRestantes = limiteConsultas - consultasRealizadas
+
+    if (consultasRestantes <= 0) {
       return NextResponse.json(
         {
           error: 'Limite de consultas excedido',
-          details: `Você não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
+          details: `Seu workspace não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
         },
         { status: 429 }
       )
@@ -158,18 +193,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Consumir uma consulta do usuário (usando admin client para ter permissão de UPDATE)
-    const supabaseAdmin = getSupabaseAdmin()
-    const consumeResult = await consumeConsultas(userId, 1, supabaseAdmin)
-    if (!consumeResult.success) {
-      console.error('Erro ao consumir consulta:', consumeResult.error)
+    // Incrementar contador de consultas do workspace
+    const { error: updateError } = await getSupabaseAdmin()
+      .from('workspaces')
+      .update({
+        consultas_realizadas_mes: consultasRealizadas + 1
+      })
+      .eq('id', workspaceId)
+
+    if (updateError) {
+      console.error('Erro ao atualizar contador de consultas:', updateError)
       return NextResponse.json(
         { error: 'Erro ao processar consulta' },
         { status: 500 }
       )
     }
 
-    // Registrar consulta no banco para controle de limite (não salvar os dados, apenas contar)
+    // Registrar consulta no banco para controle de limite
     try {
       // Determinar o tipo de consulta realizada
       let tipoConsulta = 'Consulta Individual'
@@ -188,6 +228,7 @@ export async function POST(request: NextRequest) {
       await getSupabaseAdmin()
         .from('leads')
         .insert({
+          workspace_id: workspaceId,
           user_id: userId,
           nome_cliente: nomeRazao || 'Consulta Individual',
           cpf_cnpj: documentoLimpo || null,
@@ -203,30 +244,23 @@ export async function POST(request: NextRequest) {
       // Não interromper o fluxo por erro de logging
     }
 
-    // Buscar dados atualizados do usuário DIRETAMENTE da tabela users (não da view para evitar cache)
-    const { data: updatedUserData, error: updateError } = await getSupabaseAdmin()
-      .from('users')
-      .select('consultas_realizadas, limite_consultas')
-      .eq('id', userId)
-      .single()
-
-    const consultasRealizadas = updatedUserData?.consultas_realizadas || 0
-    const limiteConsultas = updatedUserData?.limite_consultas || userPlan.limite_consultas
-    const consultasRestantes = limiteConsultas - consultasRealizadas
+    // Calcular dados atualizados
+    const consultasRealizadasAtual = consultasRealizadas + 1
+    const consultasRestantesAtual = limiteConsultas - consultasRealizadasAtual
 
     console.log('[API Consulta] Dados atualizados:', {
-      consultasRealizadas,
+      consultasRealizadas: consultasRealizadasAtual,
       limiteConsultas,
-      consultasRestantes
+      consultasRestantes: consultasRestantesAtual
     })
 
     return NextResponse.json({
       success: true,
       data: data,
       usage: {
-        consultasRealizadas: consultasRealizadas,
+        consultasRealizadas: consultasRealizadasAtual,
         limiteConsultas: limiteConsultas,
-        consultasRestantes: consultasRestantes
+        consultasRestantes: consultasRestantesAtual
       }
     })
 

@@ -14,28 +14,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Se userId foi fornecido, verificar limites do usuário
+    // Se userId foi fornecido, verificar limites do workspace
+    let workspaceId: string | null = null
+    let limiteConsultas = 0
+    let consultasRealizadas = 0
+
     if (userId) {
-      const { data: userPlan, error: planError } = await getSupabaseAdmin()
-        .from('view_usuarios_planos')
-        .select('*')
+      // Buscar workspace do usuário
+      const { data: userData, error: userError } = await getSupabaseAdmin()
+        .from('users')
+        .select('current_workspace_id')
         .eq('id', userId)
         .single()
 
-      if (planError || !userPlan) {
+      if (userError || !userData || !userData.current_workspace_id) {
         return NextResponse.json(
-          { error: 'Usuário não encontrado ou sem plano ativo' },
+          { error: 'Usuário não possui workspace ativo' },
           { status: 404 }
         )
       }
 
-      // Verificar se o usuário tem consultas disponíveis
-      if (!hasAvailableConsultas(userPlan, 1)) {
-        const consultasRestantes = getConsultasBalance(userPlan)
+      workspaceId = userData.current_workspace_id
+
+      // Buscar plano do workspace
+      const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
+        .from('workspaces')
+        .select(`
+          id,
+          plano_id,
+          consultas_realizadas_mes,
+          planos (
+            acesso_consulta,
+            limite_consultas_mes
+          )
+        `)
+        .eq('id', workspaceId)
+        .single()
+
+      if (workspaceError || !workspace || !workspace.planos) {
+        return NextResponse.json(
+          { error: 'Workspace não encontrado ou sem plano ativo' },
+          { status: 404 }
+        )
+      }
+
+      const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+
+      // Verificar se o workspace tem acesso às consultas
+      if (!plano.acesso_consulta) {
+        return NextResponse.json(
+          { error: 'Seu plano não tem acesso às consultas individuais' },
+          { status: 403 }
+        )
+      }
+
+      consultasRealizadas = workspace.consultas_realizadas_mes || 0
+      limiteConsultas = plano.limite_consultas_mes || 0
+      const consultasRestantes = limiteConsultas - consultasRealizadas
+
+      // Verificar se o workspace tem consultas disponíveis
+      if (consultasRestantes <= 0) {
         return NextResponse.json(
           {
             error: 'Limite de consultas excedido',
-            details: `Você não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
+            details: `Seu workspace não possui consultas disponíveis. Consultas restantes: ${consultasRestantes}`
           },
           { status: 429 }
         )
@@ -82,28 +124,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Se userId foi fornecido, consumir uma consulta
-    if (userId) {
-      const supabaseAdmin = getSupabaseAdmin()
-      await consumeConsultas(userId, 1, supabaseAdmin)
+    // Se userId foi fornecido, consumir uma consulta do workspace
+    if (userId && workspaceId) {
+      // Incrementar contador de consultas do workspace
+      await getSupabaseAdmin()
+        .from('workspaces')
+        .update({
+          consultas_realizadas_mes: consultasRealizadas + 1
+        })
+        .eq('id', workspaceId)
 
-      // Buscar dados atualizados DIRETAMENTE da tabela users (não da view para evitar cache)
-      const { data: updatedUserData } = await getSupabaseAdmin()
-        .from('users')
-        .select('consultas_realizadas, limite_consultas')
-        .eq('id', userId)
-        .single()
-
-      const consultasRealizadas = updatedUserData?.consultas_realizadas || 0
-      const limiteConsultas = updatedUserData?.limite_consultas || 0
-      const consultasRestantes = limiteConsultas - consultasRealizadas
+      // Calcular dados atualizados
+      const consultasRealizadasAtual = consultasRealizadas + 1
+      const consultasRestantesAtual = limiteConsultas - consultasRealizadasAtual
 
       return NextResponse.json({
         ...data,
         usage: {
-          consultasRealizadas: consultasRealizadas,
+          consultasRealizadas: consultasRealizadasAtual,
           limiteConsultas: limiteConsultas,
-          consultasRestantes: consultasRestantes
+          consultasRestantes: consultasRestantesAtual
         }
       })
     }
