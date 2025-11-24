@@ -209,8 +209,10 @@ function SidebarContent({
   }, [user?.id])
 
   const filteredNavigation = navigation.filter(item => {
+    const isAdmin = user?.role === 'admin'
+
     // Admin sempre tem acesso total
-    if (user?.role === 'admin') {
+    if (isAdmin) {
       return true
     }
 
@@ -226,7 +228,7 @@ function SidebarContent({
     }
 
     // Verificar adminOnly
-    if (item.adminOnly && user?.role !== 'admin') {
+    if (item.adminOnly) {
       console.log(`[Sidebar] ${item.name}: AdminOnly bloqueado`)
       return false
     }
