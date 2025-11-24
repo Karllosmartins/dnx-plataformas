@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express'
 import { supabase } from '../lib/supabase.js'
-import { ApiError } from '../utils/index.js'
+import { ApiError, logger } from '../utils/index.js'
 import { AuthenticatedRequest } from './auth.js'
 
 export interface WorkspaceRequest extends AuthenticatedRequest {
@@ -18,6 +18,7 @@ export async function workspaceMiddleware(
 ): Promise<void> {
   try {
     const userId = req.user?.userId
+    logger.info({ userId }, 'Workspace middleware - resolving workspace')
 
     // Buscar current_workspace_id do usuário
     const { data: user, error } = await supabase
@@ -26,12 +27,18 @@ export async function workspaceMiddleware(
       .eq('id', parseInt(userId || '0'))
       .single()
 
+    if (error) {
+      logger.error({ error, userId }, 'Error fetching user workspace')
+    }
+
     if (error || !user || !user.current_workspace_id) {
       throw ApiError.badRequest(
         'Usuario nao possui workspace ativo',
         'NO_ACTIVE_WORKSPACE'
       )
     }
+
+    logger.info({ userId, workspaceId: user.current_workspace_id }, 'User workspace resolved')
 
     // Verificar se usuário é membro do workspace
     const { data: membership } = await supabase
@@ -42,11 +49,14 @@ export async function workspaceMiddleware(
       .single()
 
     if (!membership) {
+      logger.warn({ userId, workspaceId: user.current_workspace_id }, 'User is not a workspace member')
       throw ApiError.forbidden(
         'Usuario nao e membro do workspace',
         'NOT_WORKSPACE_MEMBER'
       )
     }
+
+    logger.info({ userId, workspaceId: user.current_workspace_id, role: membership.role }, 'Workspace middleware completed')
 
     // Adicionar workspace_id ao request
     req.workspaceId = user.current_workspace_id
@@ -61,6 +71,7 @@ export async function workspaceMiddleware(
       return
     }
 
+    logger.error({ error }, 'Unexpected error in workspace middleware')
     res.status(500).json({
       success: false,
       error: 'Erro ao verificar workspace',

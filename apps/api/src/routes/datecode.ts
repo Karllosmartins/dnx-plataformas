@@ -91,10 +91,24 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       .eq('id', workspaceId)
       .single()
 
-    if (workspaceError || !workspace) {
-      logger.error({ error: workspaceError, workspaceId }, 'Failed to fetch workspace')
-      throw ApiError.internal('Erro ao buscar informações do workspace', 'WORKSPACE_FETCH_ERROR')
+    if (workspaceError) {
+      logger.error({
+        error: workspaceError,
+        message: workspaceError.message,
+        details: workspaceError.details,
+        hint: workspaceError.hint,
+        code: workspaceError.code,
+        workspaceId
+      }, 'Supabase error fetching workspace')
+      throw ApiError.internal(`Erro ao buscar workspace: ${workspaceError.message}`, 'WORKSPACE_FETCH_ERROR')
     }
+
+    if (!workspace) {
+      logger.error({ workspaceId }, 'Workspace not found')
+      throw ApiError.notFound('Workspace não encontrado', 'WORKSPACE_NOT_FOUND')
+    }
+
+    logger.info({ workspace }, 'Workspace fetched successfully')
 
     // Verificar se workspace tem plano configurado
     if (!workspace.plano_id) {
@@ -111,6 +125,8 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       logger.error({ workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
       throw ApiError.internal('Plano do workspace não encontrado', 'PLAN_NOT_FOUND')
     }
+
+    logger.info({ plano }, 'Plan fetched successfully')
 
     // Verificar acesso à funcionalidade
     if (!plano?.acesso_consulta) {
