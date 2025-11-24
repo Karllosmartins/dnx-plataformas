@@ -101,11 +101,8 @@ export default function ConsultaPage() {
     setConsultaResult(null)
 
     try {
-      // Buscar token JWT dos cookies
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('auth_token='))
-        ?.split('=')[1]
+      // Buscar token JWT do localStorage
+      const token = localStorage.getItem('auth_token')
 
       if (!token) {
         throw new Error('Token de autenticação não encontrado')
@@ -130,7 +127,8 @@ export default function ConsultaPage() {
         requestBody.document = consultaForm.document
       }
 
-      const response = await fetch('http://localhost:3001/api/datecode/consulta', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.dnxplataformas.com.br/api'
+      const response = await fetch(`${API_URL}/datecode/consulta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,17 +210,15 @@ export default function ConsultaPage() {
     setConsultando(true)
 
     try {
-      // Buscar token JWT dos cookies
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('auth_token='))
-        ?.split('=')[1]
+      // Buscar token JWT do localStorage
+      const token = localStorage.getItem('auth_token')
 
       if (!token) {
         throw new Error('Token de autenticação não encontrado')
       }
 
-      const response = await fetch('http://localhost:3001/api/datecode/consulta', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.dnxplataformas.com.br/api'
+      const response = await fetch(`${API_URL}/datecode/consulta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
