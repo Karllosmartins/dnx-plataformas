@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: 'CRM para recuperação de crédito',
 }
 
+// Força renderização dinâmica para evitar problemas com hooks client-side
+export const dynamic = 'force-dynamic'
+
 export default function RootLayout({
   children,
 }: {

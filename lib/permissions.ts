@@ -82,7 +82,70 @@ export const PLANOS_DEFAULT = {
 }
 
 /**
+ * Interface para workspace com permissões do plano
+ */
+export interface WorkspaceComPlano {
+  id: string
+  name: string
+  plano_id?: number
+  plano_nome?: string
+  acesso_dashboard?: boolean
+  acesso_crm?: boolean
+  acesso_whatsapp?: boolean
+  acesso_disparo_simples?: boolean
+  acesso_disparo_ia?: boolean
+  acesso_agentes_ia?: boolean
+  acesso_extracao_leads?: boolean
+  acesso_enriquecimento?: boolean
+  acesso_usuarios?: boolean
+  acesso_consulta?: boolean
+  acesso_integracoes?: boolean
+  acesso_arquivos?: boolean
+  plano_customizado?: Record<string, any>
+}
+
+/**
+ * Verifica se o workspace tem acesso a uma feature específica
+ * PREFERIR ESTA FUNÇÃO em arquitetura multi-tenant
+ */
+export function hasWorkspaceFeatureAccess(
+  workspace: WorkspaceComPlano | null | undefined,
+  feature: FeatureType
+): boolean {
+  // Se não tem workspace, bloquear acesso
+  if (!workspace) {
+    return false
+  }
+
+  // Verificar overrides personalizados primeiro
+  if (workspace.plano_customizado && workspace.plano_customizado[`acesso_${feature}`] !== undefined) {
+    return workspace.plano_customizado[`acesso_${feature}`]
+  }
+
+  // Mapear features para campos do banco
+  const featureMap: Record<FeatureType, keyof WorkspaceComPlano> = {
+    dashboard: 'acesso_dashboard',
+    crm: 'acesso_crm',
+    whatsapp: 'acesso_whatsapp',
+    disparoSimples: 'acesso_disparo_simples',
+    disparoIA: 'acesso_disparo_ia',
+    agentesIA: 'acesso_agentes_ia',
+    extracaoLeads: 'acesso_extracao_leads',
+    enriquecimento: 'acesso_enriquecimento',
+    enriquecimentoAPI: 'acesso_enriquecimento',
+    consulta: 'acesso_consulta',
+    usuarios: 'acesso_usuarios',
+    integracoes: 'acesso_integracoes',
+    arquivos: 'acesso_arquivos',
+  }
+
+  const fieldName = featureMap[feature]
+  return Boolean(workspace[fieldName])
+}
+
+/**
  * Verifica se o usuário tem acesso a uma feature específica
+ * DEPRECATED em arquitetura multi-tenant - usar hasWorkspaceFeatureAccess
  */
 export function hasFeatureAccess(
   user: User | UsuarioComPlano,

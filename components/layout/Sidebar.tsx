@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { hasFeatureAccess } from '../../lib/permissions'
-import { supabase, User } from '../../lib/supabase'
+import { hasWorkspaceFeatureAccess, WorkspaceComPlano } from '../../lib/permissions'
+import { User } from '../../lib/supabase'
+import { workspacesApi } from '../../lib/api-client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -142,57 +143,88 @@ function SidebarContent({
   setIsCollapsed: (collapsed: boolean) => void
   onCollapseChange?: (collapsed: boolean) => void
 }) {
-  const [userWithPlan, setUserWithPlan] = useState<User | null>(null)
+  const [workspaceWithPlan, setWorkspaceWithPlan] = useState<WorkspaceComPlano | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchUserWithPlan() {
+    async function fetchWorkspacePermissions() {
       if (!user?.id) {
+        setLoading(false)
         return
       }
 
       try {
-        const { data, error } = await supabase
-          .from('view_usuarios_planos')
-          .select('*')
-          .eq('id', parseInt(user.id?.toString() || '0'))
-          .single()
+        // Buscar workspaces do usuário
+        const response = await workspacesApi.list()
 
-        if (!error && data) {
-          const userWithPlanData = {
-            ...user,
-            ...data,
-            acesso_consulta: data.acesso_consulta || false,
-            acesso_integracoes: data.acesso_integracoes || false,
-            acesso_dashboard: data.acesso_dashboard || false,
-            acesso_crm: data.acesso_crm || false,
-            acesso_whatsapp: data.acesso_whatsapp || false,
-            acesso_disparo_simples: data.acesso_disparo_simples || false,
-            acesso_disparo_ia: data.acesso_disparo_ia || false,
-            acesso_agentes_ia: data.acesso_agentes_ia || false,
-            acesso_extracao_leads: data.acesso_extracao_leads || false,
-            acesso_enriquecimento: data.acesso_enriquecimento || false,
-            acesso_usuarios: data.acesso_usuarios || false,
-            acesso_arquivos: data.acesso_arquivos || false
+        if (response.success && response.data) {
+          const workspaces = Array.isArray(response.data) ? response.data : [response.data]
+
+          if (workspaces.length > 0) {
+            const currentWorkspace = workspaces[0] as any
+
+            // Buscar detalhes do workspace com permissões do plano
+            const detailsResponse = await workspacesApi.get(currentWorkspace.id)
+
+            if (detailsResponse.success && detailsResponse.data) {
+              const wsDetails = detailsResponse.data as any
+              const planoData = wsDetails.planos || {}
+
+              setWorkspaceWithPlan({
+                id: wsDetails.id,
+                name: wsDetails.name,
+                plano_id: wsDetails.plano_id,
+                plano_nome: planoData.nome,
+                acesso_dashboard: planoData.acesso_dashboard || false,
+                acesso_crm: planoData.acesso_crm || false,
+                acesso_whatsapp: planoData.acesso_whatsapp || false,
+                acesso_disparo_simples: planoData.acesso_disparo_simples || false,
+                acesso_disparo_ia: planoData.acesso_disparo_ia || false,
+                acesso_agentes_ia: planoData.acesso_agentes_ia || false,
+                acesso_extracao_leads: planoData.acesso_extracao_leads || false,
+                acesso_enriquecimento: planoData.acesso_enriquecimento || false,
+                acesso_usuarios: planoData.acesso_usuarios || false,
+                acesso_consulta: planoData.acesso_consulta || false,
+                acesso_integracoes: planoData.acesso_integracoes || false,
+                acesso_arquivos: planoData.acesso_arquivos || false,
+                plano_customizado: wsDetails.plano_customizado
+              })
+            }
           }
-          setUserWithPlan(userWithPlanData)
-        } else {
-          setUserWithPlan(user)
         }
       } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error)
-        setUserWithPlan(user)
+        console.error('Erro ao carregar permissões do workspace:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchUserWithPlan()
+    fetchWorkspacePermissions()
   }, [user?.id])
 
   const filteredNavigation = navigation.filter(item => {
-    if (!userWithPlan) return false
-    if (item.adminOnly && userWithPlan.role !== 'admin') {
+    // Admin sempre tem acesso total
+    if (user?.role === 'admin') {
+      return true
+    }
+
+    // Se ainda está carregando, não mostrar nada
+    if (loading) {
       return false
     }
-    return hasFeatureAccess(userWithPlan, item.feature)
+
+    // Verificar se tem workspace com permissões
+    if (!workspaceWithPlan) {
+      return false
+    }
+
+    // Verificar adminOnly
+    if (item.adminOnly && user?.role !== 'admin') {
+      return false
+    }
+
+    // Verificar permissão do workspace
+    return hasWorkspaceFeatureAccess(workspaceWithPlan, item.feature)
   })
 
   return (

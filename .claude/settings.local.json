@@ -19,7 +19,8 @@
       "Bash(npx shadcn@latest init:*)",
       "Bash(claude mcp add shadcn -- npx shadcn@latest mcp)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm run build:web:*)"
     ],
     "deny": [],
     "ask": []
