@@ -170,7 +170,10 @@ function SidebarContent({
               const wsDetails = detailsResponse.data as any
               const planoData = wsDetails.planos || {}
 
-              setWorkspaceWithPlan({
+              console.log('[Sidebar] Workspace details:', wsDetails)
+              console.log('[Sidebar] Plano data:', planoData)
+
+              const workspacePermissions = {
                 id: wsDetails.id,
                 name: wsDetails.name,
                 plano_id: wsDetails.plano_id,
@@ -188,7 +191,10 @@ function SidebarContent({
                 acesso_integracoes: planoData.acesso_integracoes || false,
                 acesso_arquivos: planoData.acesso_arquivos || false,
                 plano_customizado: wsDetails.plano_customizado
-              })
+              }
+
+              console.log('[Sidebar] Workspace permissions:', workspacePermissions)
+              setWorkspaceWithPlan(workspacePermissions)
             }
           }
         }
@@ -215,16 +221,20 @@ function SidebarContent({
 
     // Verificar se tem workspace com permissões
     if (!workspaceWithPlan) {
+      console.log(`[Sidebar] ${item.name}: Sem workspace`)
       return false
     }
 
     // Verificar adminOnly
     if (item.adminOnly && user?.role !== 'admin') {
+      console.log(`[Sidebar] ${item.name}: AdminOnly bloqueado`)
       return false
     }
 
     // Verificar permissão do workspace
-    return hasWorkspaceFeatureAccess(workspaceWithPlan, item.feature)
+    const hasAccess = hasWorkspaceFeatureAccess(workspaceWithPlan, item.feature)
+    console.log(`[Sidebar] ${item.name} (${item.feature}): ${hasAccess ? '✅ PERMITIDO' : '❌ BLOQUEADO'}`)
+    return hasAccess
   })
 
   return (
