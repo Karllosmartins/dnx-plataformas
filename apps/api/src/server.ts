@@ -15,6 +15,7 @@ import agentesIARoutes from './routes/agentes-ia.js'
 import funisRoutes from './routes/funis.js'
 import funisEstagiosRoutes from './routes/funis-estagios.js'
 import camposPersonalizadosRoutes from './routes/campos-personalizados.js'
+import datecodeRoutes from './routes/datecode.js'
 
 const app = express()
 const PORT = process.env.API_PORT || 3001
@@ -48,6 +49,7 @@ app.use('/api/agentes-ia', agentesIARoutes)
 app.use('/api/funis', funisRoutes)
 app.use('/api/funis', funisEstagiosRoutes)  // Rotas aninhadas /:funilId/estagios
 app.use('/api/campos', camposPersonalizadosRoutes)
+app.use('/api/datecode', datecodeRoutes)
 
 // Error handler global
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

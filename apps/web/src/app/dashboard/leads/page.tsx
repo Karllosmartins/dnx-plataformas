@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { leadsApi } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Search, Plus } from 'lucide-react'
+import PlanProtection from '@/components/shared/PlanProtection'
 
 interface Lead {
   id: number
@@ -41,9 +42,10 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <PlanProtection feature="leads">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Leads</h1>
           <p className="text-muted-foreground">Gerencie todos os seus leads</p>
@@ -128,6 +130,7 @@ export default function LeadsPage() {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </PlanProtection>
   )
 }

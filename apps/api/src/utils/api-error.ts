@@ -33,6 +33,10 @@ export class ApiError extends Error {
   static internal(message: string = 'Internal server error', code?: string): ApiError {
     return new ApiError(500, message, code || 'INTERNAL_ERROR')
   }
+
+  static tooManyRequests(message: string = 'Too many requests', code?: string): ApiError {
+    return new ApiError(429, message, code || 'TOO_MANY_REQUESTS')
+  }
 }
 
 /**

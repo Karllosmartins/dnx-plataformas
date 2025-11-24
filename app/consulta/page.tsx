@@ -101,9 +101,18 @@ export default function ConsultaPage() {
     setConsultaResult(null)
 
     try {
+      // Buscar token JWT dos cookies
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1]
+
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado')
+      }
+
       // Preparar body da requisição - tipoPessoa é sempre obrigatório pela API Datecode
       const requestBody: any = {
-        userId: user.id,
         tipoPessoa: consultaForm.tipoPessoa, // Sempre enviar tipoPessoa
         nomeRazao: consultaForm.nomeRazao,
         cidade: consultaForm.cidade,
@@ -121,10 +130,11 @@ export default function ConsultaPage() {
         requestBody.document = consultaForm.document
       }
 
-      const response = await fetch('/api/datecode/consulta', {
+      const response = await fetch('http://localhost:3001/api/datecode/consulta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(requestBody)
       })
@@ -202,15 +212,25 @@ export default function ConsultaPage() {
     setConsultando(true)
 
     try {
-      const response = await fetch('/api/datecode/consulta', {
+      // Buscar token JWT dos cookies
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1]
+
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado')
+      }
+
+      const response = await fetch('http://localhost:3001/api/datecode/consulta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           document: documento,
-          tipoPessoa: tipoPessoa,
-          userId: user.id
+          tipoPessoa: tipoPessoa
         })
       })
 
