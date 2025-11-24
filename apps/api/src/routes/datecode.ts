@@ -14,19 +14,20 @@ router.use(workspaceMiddleware)
 // Helper para obter credenciais Datecode do workspace
 async function getDatecodeCredentials(workspaceId: string) {
   const { data, error } = await supabase
-    .from('configuracoes_credenciais')
-    .select('*')
+    .from('credencias_diversas')
+    .select('datecode')
     .eq('workspace_id', workspaceId)
-    .eq('instancia', 'datecode')
     .single()
 
-  if (error || !data) {
+  if (error || !data || !data.datecode) {
     return null
   }
 
+  const datecode = data.datecode as { username?: string; password?: string }
+
   return {
-    usuario: data.usuario,
-    senha: data.senha
+    usuario: datecode.username || '',
+    senha: datecode.password || ''
   }
 }
 
