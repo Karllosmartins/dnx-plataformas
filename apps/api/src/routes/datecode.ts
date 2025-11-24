@@ -75,13 +75,15 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
     }
 
     // Buscar plano do workspace
+    logger.info({ workspaceId, userId }, 'Fetching workspace and plan information')
+
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
       .select(`
         id,
         plano_id,
         consultas_realizadas_mes,
-        planos!inner (
+        planos (
           acesso_consulta,
           limite_consultas_mes
         )
@@ -90,11 +92,25 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       .single()
 
     if (workspaceError || !workspace) {
-      logger.error({ error: workspaceError }, 'Failed to fetch workspace')
+      logger.error({ error: workspaceError, workspaceId }, 'Failed to fetch workspace')
       throw ApiError.internal('Erro ao buscar informações do workspace', 'WORKSPACE_FETCH_ERROR')
     }
 
+    // Verificar se workspace tem plano configurado
+    if (!workspace.plano_id) {
+      logger.error({ workspaceId }, 'Workspace does not have a plan configured')
+      throw ApiError.forbidden(
+        'Workspace não possui plano configurado. Entre em contato com o administrador.',
+        'NO_PLAN_CONFIGURED'
+      )
+    }
+
     const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+
+    if (!plano) {
+      logger.error({ workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
+      throw ApiError.internal('Plano do workspace não encontrado', 'PLAN_NOT_FOUND')
+    }
 
     // Verificar acesso à funcionalidade
     if (!plano?.acesso_consulta) {
@@ -236,13 +252,15 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
     }
 
     // Buscar plano do workspace
+    logger.info({ workspaceId, userId }, 'Fetching workspace and plan information for CPF query')
+
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
       .select(`
         id,
         plano_id,
         consultas_realizadas_mes,
-        planos!inner (
+        planos (
           acesso_consulta,
           limite_consultas_mes
         )
@@ -251,10 +269,23 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
       .single()
 
     if (workspaceError || !workspace) {
+      logger.error({ error: workspaceError, workspaceId }, 'Failed to fetch workspace for CPF query')
       throw ApiError.internal('Erro ao buscar informações do workspace', 'WORKSPACE_FETCH_ERROR')
     }
 
+    if (!workspace.plano_id) {
+      throw ApiError.forbidden(
+        'Workspace não possui plano configurado. Entre em contato com o administrador.',
+        'NO_PLAN_CONFIGURED'
+      )
+    }
+
     const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+
+    if (!plano) {
+      logger.error({ workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
+      throw ApiError.internal('Plano do workspace não encontrado', 'PLAN_NOT_FOUND')
+    }
 
     // Verificar acesso
     if (!plano?.acesso_consulta) {
