@@ -26,9 +26,18 @@ interface Props {
   activeTab: string
   consultarDocumento: (documento: string, tipoPessoa: 'PF' | 'PJ') => Promise<void>
   consultando: boolean
+  documentoPrincipal?: string
 }
 
-export default function ConsultaResultados({ resultado, activeTab, consultarDocumento, consultando }: Props) {
+export default function ConsultaResultados({ resultado, activeTab, consultarDocumento, consultando, documentoPrincipal }: Props) {
+  // Função para comparar documentos removendo formatação
+  const documentoEhPrincipal = (documento: string): boolean => {
+    if (!documentoPrincipal || !documento) return false
+    const docLimpo = documento.replace(/\D/g, '')
+    const principalLimpo = documentoPrincipal.replace(/\D/g, '')
+    return docLimpo === principalLimpo
+  }
+
   return (
     <div className="space-y-6">
       {/* Aba: Dados Gerais */}
@@ -48,17 +57,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">CNPJ</p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-gray-900">{resultado.empresa.cnpjFormatado}</p>
-                    <button
-                      onClick={() => consultarDocumento(resultado.empresa.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
-                      disabled={consultando}
-                      className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Reconsultar empresa"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <p className="font-semibold text-gray-900">{resultado.empresa.cnpjFormatado}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">Nome Fantasia</p>
@@ -141,17 +140,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">CPF</p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-gray-900">{resultado.pessoa.cpfFormatado}</p>
-                    <button
-                      onClick={() => consultarDocumento(resultado.pessoa.cpfFormatado.replace(/\D/g, ''), 'PF')}
-                      disabled={consultando}
-                      className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Reconsultar pessoa"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <p className="font-semibold text-gray-900">{resultado.pessoa.cpfFormatado}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">Sexo</p>
@@ -455,14 +444,16 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                             </span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => consultarDocumento(pessoa.cpf, 'PF')}
-                          disabled={consultando}
-                          className="ml-3 p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Consultar esta pessoa"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
+                        {!documentoEhPrincipal(pessoa.cpf) && (
+                          <button
+                            onClick={() => consultarDocumento(pessoa.cpf, 'PF')}
+                            disabled={consultando}
+                            className="ml-3 p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Consultar esta pessoa"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -504,7 +495,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                           </span>
                         </div>
                       </div>
-                      {parseFloat(empresa.participacao) > 0 && (
+                      {parseFloat(empresa.participacao) > 0 && !documentoEhPrincipal(empresa.cnpjFormatado) && (
                         <button
                           onClick={() => consultarDocumento(empresa.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
                           disabled={consultando}
@@ -565,7 +556,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                                 </p>
                               )}
                             </div>
-                            {socio.cpfCnpj && parseFloat(socio.participacao) > 0 && (
+                            {socio.cpfCnpj && parseFloat(socio.participacao) > 0 && !documentoEhPrincipal(socio.cpfCnpj) && (
                               <button
                                 onClick={() => {
                                   const documento = socio.cpfCnpj.replace(/\D/g, '')
@@ -627,7 +618,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                                 )}
                               </div>
                             </div>
-                            {!funcionario.dataDesligamento && (
+                            {!funcionario.dataDesligamento && !documentoEhPrincipal(funcionario.cpf) && (
                               <button
                                 onClick={() => consultarDocumento(funcionario.cpf, 'PF')}
                                 disabled={consultando}
@@ -725,7 +716,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                       )}
                     </div>
                   </div>
-                  {trabalho.cnpjFormatado && (
+                  {trabalho.cnpjFormatado && !documentoEhPrincipal(trabalho.cnpjFormatado) && (
                     <button
                       onClick={() => consultarDocumento(trabalho.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
                       disabled={consultando}

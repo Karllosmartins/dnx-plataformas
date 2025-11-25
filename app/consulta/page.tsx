@@ -188,6 +188,37 @@ export default function ConsultaPage() {
 
       const data = await response.json()
 
+      console.log('📊 Resposta reconsulta:', data)
+
+      if (!response.ok) {
+        console.error('❌ Erro na reconsulta:', data)
+        throw new Error(data.error || 'Erro na reconsulta')
+      }
+
+      // A API Datecode retorna um array, pegar o primeiro elemento
+      const resultado = Array.isArray(data.data) ? data.data[0] : data.data
+      console.log('✅ Resultado reconsulta processado:', resultado)
+
+      // Atualizar o estado com os novos dados e mudar para aba geral
+      setConsultaResult(resultado)
+      setActiveTab('geral')
+
+      // Atualizar formulário com novo documento consultado
+      setConsultaForm(prev => ({
+        ...prev,
+        document: documento,
+        tipoPessoa: tipoPessoa
+      }))
+
+      // Atualizar limiteInfo se vier na resposta
+      if (data.usage) {
+        console.log('✅ Setando usage da reconsulta:', data.usage)
+        setLimiteInfo(data.usage)
+      }
+
+    } catch (error) {
+      console.error('Erro na reconsulta:', error)
+      setError(error instanceof Error ? error.message : 'Erro ao realizar reconsulta')
     } finally {
       setConsultando(false)
     }
@@ -461,6 +492,7 @@ export default function ConsultaPage() {
                       activeTab="geral"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                   <TabsContent value="contatos" className="mt-0">
@@ -469,6 +501,7 @@ export default function ConsultaPage() {
                       activeTab="contatos"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                   <TabsContent value="perfil" className="mt-0">
@@ -477,6 +510,7 @@ export default function ConsultaPage() {
                       activeTab="perfil"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                   <TabsContent value="participacoes" className="mt-0">
@@ -485,6 +519,7 @@ export default function ConsultaPage() {
                       activeTab="participacoes"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                   <TabsContent value="socios" className="mt-0">
@@ -493,6 +528,7 @@ export default function ConsultaPage() {
                       activeTab="socios"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                   <TabsContent value="veiculos" className="mt-0">
@@ -501,6 +537,7 @@ export default function ConsultaPage() {
                       activeTab="veiculos"
                       consultarDocumento={consultarDocumento}
                       consultando={consultando}
+                      documentoPrincipal={consultaForm.document}
                     />
                   </TabsContent>
                 </div>
