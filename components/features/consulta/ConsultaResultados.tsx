@@ -47,7 +47,17 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">CNPJ</p>
-                  <p className="font-semibold text-gray-900">{resultado.empresa.cnpjFormatado}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-gray-900">{resultado.empresa.cnpjFormatado}</p>
+                    <button
+                      onClick={() => consultarDocumento(resultado.empresa.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
+                      disabled={consultando}
+                      className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Reconsultar empresa"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">Nome Fantasia</p>
@@ -131,7 +141,17 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">CPF</p>
-                  <p className="font-semibold text-gray-900">{resultado.pessoa.cpfFormatado}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-gray-900">{resultado.pessoa.cpfFormatado}</p>
+                    <button
+                      onClick={() => consultarDocumento(resultado.pessoa.cpfFormatado.replace(/\D/g, ''), 'PF')}
+                      disabled={consultando}
+                      className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Reconsultar pessoa"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">Sexo</p>
