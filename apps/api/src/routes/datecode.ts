@@ -74,20 +74,12 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       )
     }
 
-    // Buscar plano do workspace
-    logger.info({ workspaceId, userId }, 'Fetching workspace and plan information')
+    // Buscar workspace com limites
+    logger.info({ workspaceId, userId }, 'Fetching workspace information')
 
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
-      .select(`
-        id,
-        plano_id,
-        consultas_realizadas_mes,
-        planos (
-          acesso_consulta,
-          limite_consultas_mes
-        )
-      `)
+      .select('id, plano_id, consultas_realizadas, limite_consultas')
       .eq('id', workspaceId)
       .single()
 
@@ -95,9 +87,6 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       logger.error({
         error: workspaceError,
         message: workspaceError.message,
-        details: workspaceError.details,
-        hint: workspaceError.hint,
-        code: workspaceError.code,
         workspaceId
       }, 'Supabase error fetching workspace')
       throw ApiError.internal(`Erro ao buscar workspace: ${workspaceError.message}`, 'WORKSPACE_FETCH_ERROR')
@@ -108,8 +97,6 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       throw ApiError.notFound('Workspace não encontrado', 'WORKSPACE_NOT_FOUND')
     }
 
-    logger.info({ workspace }, 'Workspace fetched successfully')
-
     // Verificar se workspace tem plano configurado
     if (!workspace.plano_id) {
       logger.error({ workspaceId }, 'Workspace does not have a plan configured')
@@ -119,10 +106,23 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       )
     }
 
-    const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+    logger.info({ workspace }, 'Workspace fetched successfully')
 
-    if (!plano) {
-      logger.error({ workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
+    // Buscar plano para verificar acesso à funcionalidade
+    logger.info({ plano_id: workspace.plano_id }, 'Fetching plan information')
+
+    const { data: plano, error: planoError } = await supabase
+      .from('planos')
+      .select('acesso_consulta')
+      .eq('id', workspace.plano_id)
+      .single()
+
+    if (planoError || !plano) {
+      logger.error({
+        error: planoError,
+        workspaceId,
+        plano_id: workspace.plano_id
+      }, 'Plan not found for workspace')
       throw ApiError.internal('Plano do workspace não encontrado', 'PLAN_NOT_FOUND')
     }
 
@@ -136,9 +136,9 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
       )
     }
 
-    // Verificar limite de consultas
-    const consultasRealizadas = workspace.consultas_realizadas_mes || 0
-    const limiteConsultas = plano.limite_consultas_mes || 0
+    // Verificar limite de consultas (limites estão no workspace)
+    const consultasRealizadas = workspace.consultas_realizadas || 0
+    const limiteConsultas = workspace.limite_consultas || 0
     const consultasRestantes = limiteConsultas - consultasRealizadas
 
     if (consultasRestantes <= 0) {
@@ -198,7 +198,7 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
     const { error: updateError } = await supabase
       .from('workspaces')
       .update({
-        consultas_realizadas_mes: consultasRealizadas + 1
+        consultas_realizadas: consultasRealizadas + 1
       })
       .eq('id', workspaceId)
 
@@ -267,20 +267,12 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
       throw ApiError.badRequest('CPF é obrigatório', 'MISSING_CPF')
     }
 
-    // Buscar plano do workspace
-    logger.info({ workspaceId, userId }, 'Fetching workspace and plan information for CPF query')
+    // Buscar workspace
+    logger.info({ workspaceId, userId }, 'Fetching workspace for CPF query')
 
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
-      .select(`
-        id,
-        plano_id,
-        consultas_realizadas_mes,
-        planos (
-          acesso_consulta,
-          limite_consultas_mes
-        )
-      `)
+      .select('id, plano_id, consultas_realizadas, limite_consultas')
       .eq('id', workspaceId)
       .single()
 
@@ -296,10 +288,15 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
       )
     }
 
-    const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+    // Buscar plano para verificar acesso
+    const { data: plano, error: planoError } = await supabase
+      .from('planos')
+      .select('acesso_consulta')
+      .eq('id', workspace.plano_id)
+      .single()
 
-    if (!plano) {
-      logger.error({ workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
+    if (planoError || !plano) {
+      logger.error({ error: planoError, workspaceId, plano_id: workspace.plano_id }, 'Plan not found for workspace')
       throw ApiError.internal('Plano do workspace não encontrado', 'PLAN_NOT_FOUND')
     }
 
@@ -311,9 +308,9 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
       )
     }
 
-    // Verificar limite
-    const consultasRealizadas = workspace.consultas_realizadas_mes || 0
-    const limiteConsultas = plano?.limite_consultas_mes || 0
+    // Verificar limite (limites estão no workspace)
+    const consultasRealizadas = workspace.consultas_realizadas || 0
+    const limiteConsultas = workspace.limite_consultas || 0
     const consultasRestantes = limiteConsultas - consultasRealizadas
 
     if (consultasRestantes <= 0) {
@@ -357,7 +354,7 @@ router.post('/cpf', async (req: WorkspaceRequest, res: Response) => {
     await supabase
       .from('workspaces')
       .update({
-        consultas_realizadas_mes: consultasRealizadas + 1
+        consultas_realizadas: consultasRealizadas + 1
       })
       .eq('id', workspaceId)
 
