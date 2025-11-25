@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import PlanProtection from '@/components/shared/PlanProtection'
+// import PlanProtection from '@/components/shared/PlanProtection'
 
 interface Estagio {
   id: string
@@ -95,7 +95,7 @@ export default function FunisPage() {
   }
 
   return (
-    <PlanProtection feature="funis">
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -247,7 +247,7 @@ export default function FunisPage() {
         />
       )}
       </div>
-    </PlanProtection>
+    </>
   )
 }
 

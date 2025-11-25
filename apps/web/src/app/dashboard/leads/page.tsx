@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { leadsApi } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Search, Plus } from 'lucide-react'
-import PlanProtection from '@/components/shared/PlanProtection'
+// import PlanProtection from '@/components/shared/PlanProtection'
 
 interface Lead {
   id: number
@@ -42,7 +42,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <PlanProtection feature="leads">
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -131,6 +131,6 @@ export default function LeadsPage() {
         </div>
       )}
       </div>
-    </PlanProtection>
+    </>
   )
 }

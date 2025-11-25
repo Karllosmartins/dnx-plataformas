@@ -17,7 +17,8 @@ import {
   CreditCard,
   Eye,
   CheckCircle,
-  XCircle
+  XCircle,
+  AlertTriangle
 } from 'lucide-react'
 
 interface Props {
@@ -216,6 +217,36 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                   </div>
                 </div>
               )}
+
+              {/* Informações de Óbito */}
+              {resultado.obito && (
+                <div className="mt-4 bg-red-50 border border-red-300 rounded-lg p-4">
+                  <h5 className="font-semibold text-red-900 mb-3 flex items-center">
+                    <AlertTriangle className="h-5 w-5 mr-2 text-red-700" />
+                    Informações de Óbito
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    {resultado.obito.dataObito && (
+                      <div>
+                        <span className="text-red-700 font-semibold">Data do Óbito:</span>
+                        <span className="ml-2 text-red-900">{resultado.obito.dataObito}</span>
+                      </div>
+                    )}
+                    {resultado.obito.localObito && (
+                      <div>
+                        <span className="text-red-700 font-semibold">Local:</span>
+                        <span className="ml-2 text-red-900">{resultado.obito.localObito}</span>
+                      </div>
+                    )}
+                    {resultado.obito.causaMortis && (
+                      <div className="col-span-1 md:col-span-2">
+                        <span className="text-red-700 font-semibold">Causa:</span>
+                        <span className="ml-2 text-red-900">{resultado.obito.causaMortis}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -224,6 +255,17 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
       {/* Aba: Contatos */}
       {activeTab === 'contatos' && (
         <div className="space-y-6">
+          {/* Verificar se não há nenhum contato */}
+          {(!resultado.telefones || resultado.telefones.length === 0) &&
+           (!resultado.enderecos || resultado.enderecos.length === 0) &&
+           (!resultado.emails || resultado.emails.length === 0) ? (
+            <div className="text-center py-12">
+              <Phone className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-lg font-medium">Nenhum contato encontrado</p>
+              <p className="text-gray-400 text-sm mt-1">Não foram encontrados telefones, endereços ou emails para este registro</p>
+            </div>
+          ) : null}
+
           {/* Telefones */}
           {resultado.telefones && resultado.telefones.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -300,8 +342,19 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
         </div>
       )}
 
-      {/* Aba: Perfil (apenas PF) */}
-      {activeTab === 'perfil' && resultado.pessoa && (
+      {/* Aba: Perfil */}
+      {activeTab === 'perfil' && (
+        <div className="space-y-6">
+          {/* Mensagem quando não há dados de perfil (PJ ou sem dados) */}
+          {!resultado.pessoa && !resultado.perfilSociodemografico && !resultado.perfilConsumo && !resultado.pessoasLigadas && !resultado.historicoProfissional ? (
+            <div className="text-center py-12">
+              <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-lg font-medium">Nenhum dado de perfil encontrado</p>
+              <p className="text-gray-400 text-sm mt-1">Dados de perfil estão disponíveis apenas para consultas de Pessoa Física</p>
+            </div>
+          ) : null}
+
+          {resultado.pessoa && (
         <div className="space-y-6">
           {/* Perfil Sociodemográfico */}
           {resultado.perfilSociodemografico && (
@@ -419,10 +472,21 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
             </div>
           )}
         </div>
+          )}
+        </div>
       )}
 
-      {/* Aba: Participações (apenas PF) */}
-      {activeTab === 'participacoes' && resultado.participacaoEmpresarial && resultado.participacaoEmpresarial.length > 0 && (
+      {/* Aba: Participações */}
+      {activeTab === 'participacoes' && (
+        <>
+          {!resultado.participacaoEmpresarial || resultado.participacaoEmpresarial.length === 0 ? (
+            <div className="text-center py-12">
+              <Briefcase className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-lg font-medium">Nenhuma participação empresarial encontrada</p>
+              <p className="text-gray-400 text-sm mt-1">Esta pessoa não possui participação em empresas registradas</p>
+            </div>
+          ) : (
+        resultado.participacaoEmpresarial && resultado.participacaoEmpresarial.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Briefcase className="h-5 w-5 mr-2 text-teal-600" />
@@ -457,10 +521,22 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
             ))}
           </div>
         </div>
+        )
+          )}
+        </>
       )}
 
-      {/* Aba: Sócios & Funcionários (apenas PJ) */}
-      {activeTab === 'socios' && resultado.empresa && (
+      {/* Aba: Sócios */}
+      {activeTab === 'socios' && (
+        <>
+          {!resultado.empresa && !resultado.receitaFederal?.socios && !resultado.funcionarios ? (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-lg font-medium">Nenhum dado de sócios encontrado</p>
+              <p className="text-gray-400 text-sm mt-1">Dados de sócios e funcionários estão disponíveis apenas para Pessoa Jurídica</p>
+            </div>
+          ) : (
+        resultado.empresa && (
         <div className="space-y-6">
           {/* Sócios */}
           {resultado.receitaFederal?.socios && resultado.receitaFederal.socios.length > 0 && (
@@ -571,6 +647,9 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
             </div>
           )}
         </div>
+          )
+          )}
+        </>
       )}
 
       {/* Aba: Veículos */}
@@ -609,6 +688,60 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
         <div className="text-center py-12">
           <Car className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">Nenhum veículo encontrado</p>
+        </div>
+      )}
+
+      {/* Aba: Histórico Profissional (apenas PF) */}
+      {activeTab === 'perfil' && resultado.historicoProfissional && resultado.historicoProfissional.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mt-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Briefcase className="h-5 w-5 mr-2 text-indigo-600" />
+            Histórico Profissional ({resultado.historicoProfissional.length})
+          </h4>
+          <div className="space-y-3">
+            {resultado.historicoProfissional.map((trabalho: any, idx: number) => (
+              <div key={idx} className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 hover:bg-indigo-100 transition-colors">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{trabalho.razaoSocial}</p>
+                    {trabalho.nomeFantasia && (
+                      <p className="text-sm text-gray-600">({trabalho.nomeFantasia})</p>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
+                      <span>CNPJ: {trabalho.cnpjFormatado}</span>
+                      {trabalho.descricaoCbo && (
+                        <span>Cargo: {trabalho.descricaoCbo}</span>
+                      )}
+                      <span>Admissão: {trabalho.dataAdmissao}</span>
+                      {trabalho.dataDemissao && (
+                        <span>Demissão: {trabalho.dataDemissao}</span>
+                      )}
+                      {trabalho.mediaSalario && (
+                        <span className="font-semibold text-indigo-700">
+                          Salário Médio: R$ {trabalho.mediaSalario}
+                        </span>
+                      )}
+                      {trabalho.motivoDesligamento && (
+                        <span className="col-span-2 text-xs">
+                          Motivo: {trabalho.motivoDesligamento}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {trabalho.cnpjFormatado && (
+                    <button
+                      onClick={() => consultarDocumento(trabalho.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
+                      disabled={consultando}
+                      className="ml-3 p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Consultar esta empresa"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

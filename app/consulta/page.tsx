@@ -456,13 +456,70 @@ export default function ConsultaPage() {
                 Resultados da Consulta
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ConsultaResultados
-                resultado={consultaResult}
-                activeTab={activeTab}
-                consultarDocumento={consultarDocumento}
-                consultando={consultando}
-              />
+            <CardContent className="p-0">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div className="px-6 pt-6">
+                  <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
+                    <TabsTrigger value="geral">Geral</TabsTrigger>
+                    <TabsTrigger value="contatos">Contatos</TabsTrigger>
+                    <TabsTrigger value="perfil">Perfil</TabsTrigger>
+                    <TabsTrigger value="participacoes">Participações</TabsTrigger>
+                    <TabsTrigger value="socios">Sócios</TabsTrigger>
+                    <TabsTrigger value="veiculos">Veículos</TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="px-6 pb-6">
+                  <TabsContent value="geral" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="geral"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                  <TabsContent value="contatos" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="contatos"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                  <TabsContent value="perfil" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="perfil"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                  <TabsContent value="participacoes" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="participacoes"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                  <TabsContent value="socios" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="socios"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                  <TabsContent value="veiculos" className="mt-0">
+                    <ConsultaResultados
+                      resultado={consultaResult}
+                      activeTab="veiculos"
+                      consultarDocumento={consultarDocumento}
+                      consultando={consultando}
+                    />
+                  </TabsContent>
+                </div>
+              </Tabs>
             </CardContent>
           </Card>
         )}
