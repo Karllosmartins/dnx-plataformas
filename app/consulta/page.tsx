@@ -107,14 +107,22 @@ export default function ConsultaPage() {
 
       const data = await response.json()
 
+      console.log('📊 Resposta completa da API:', data)
+      console.log('📊 Status da resposta:', response.status)
+      console.log('📊 data.data:', data.data)
+      console.log('📊 data.usage:', data.usage)
+
       if (!response.ok) {
+        console.error('❌ Erro na resposta:', data)
         throw new Error(data.error || 'Erro na consulta')
       }
 
+      console.log('✅ Setando resultado:', data.data)
       setConsultaResult(data.data)
 
       // Atualizar limiteInfo se vier na resposta
       if (data.usage) {
+        console.log('✅ Setando usage:', data.usage)
         setLimiteInfo(data.usage)
       }
 

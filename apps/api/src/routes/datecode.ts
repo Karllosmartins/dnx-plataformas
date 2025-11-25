@@ -242,7 +242,9 @@ router.post('/consulta', async (req: WorkspaceRequest, res: Response) => {
     // Retornar dados com informações de uso
     logger.info({ workspaceId, userId }, 'Consulta realizada com sucesso')
 
-    ApiResponse.success(res, {
+    // Retornar com estrutura correta: { success: true, data: <dados_datecode>, usage: {...} }
+    res.status(200).json({
+      success: true,
       data: data,
       usage: {
         consultasRealizadas: consultasRealizadas + 1,

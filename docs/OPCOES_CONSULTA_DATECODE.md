@@ -515,9 +515,255 @@ const response = await fetch('/api/datecode/consulta', {
 - **Endpoint:** `/api/datecode/consulta`
 - **Método:** `POST`
 - **Arquivo:** `app/api/datecode/consulta/route.ts`
-- **Documentação Datecode:** https://api.datecode.com.br/docs
+- **Documentação Datecode:** https://date-solutions.readme.io/reference/consulta-pessoa-f%C3%ADsica-1
 
 ---
+
+curl -X POST https://api.datecode.com.br/v2/dados/consulta \
+  -H "Authorization: Basic $(echo -n 'seu@email.com:suasenha' | base64)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": "12345678900",
+    "tipoPessoa": "PF",
+    "nomeRazao": "João da Silva",
+    "cidade": "São Paulo",
+    "uf": "SP",
+    "cep": "01001-000",
+    "numeroEndereco": "100",
+    "numeroTelefone": "11999999999",
+    "email": "joao@email.com",
+    "dataNascimentoAbertura": "1990-01-01",
+    "placaVeiculo": "ABC1D23"
+  }'
+ou const options = {
+  method: 'POST',
+  headers: {accept: 'application/json', 'content-type': 'application/json'}
+};
+
+fetch('https://api.datecode.com.br/v2/dados/consulta', options)
+  .then(res => res.json())
+  .then(res => console.log(res))
+  .catch(err => console.error(err));
+
+Consulta de Dados - PF/PJ
+post
+https://api.datecode.com.br/v2/dados/consulta
+
+Esta API permite a consulta de dados a partir de um documento, seja CPF ou CNPJ, entre outros dados
+
+Recent Requests
+Log in to see full request history
+Time	Status	User Agent	
+Make a request to see history.
+
+Consulta de Dados
+Esta API permite a consulta de dados a partir de um documento, seja CPF ou CNPJ. É necessário autenticação via Basic Auth e o envio de um JSON com as informações mínimas para processar a solicitação.
+
+🔐 Autenticação
+Utilize autenticação Basic Auth com seu email:senha.
+
+Exemplo de cabeçalho:
+Authorization: Basic <base64(email:senha)>
+Content-Type: application/json
+
+
+
+📤 Endpoint
+
+POST https://api.datecode.com.br/v2/dados/consulta
+
+
+
+Corpo da Requisição
+
+  {
+  "document": "12345678900",
+  "tipoPessoa": "PF",
+  "nomeRazao": "João da Silva",
+  "cidade": "São Paulo",
+  "uf": "SP",
+  "cep": "01001-000",
+  "numeroEndereco": "100",
+  "numeroTelefone": "11999999999",
+  "email": "joao@email.com",
+  "dataNascimentoAbertura": "1990-01-01",
+  "placaVeiculo": "ABC1D23"
+}
+
+Exemplo de Resposta
+
+[
+  {
+    "msg": "Consulta realizada com sucesso.",
+    "pessoa": {
+      "cpfFormatado": "123.456.789-00",
+      "sexo": "FEMININO",
+      "nome": "ANA CAROLINA MENDES",
+      "dataNascimento": "12/03/1985 - Terça-feira",
+      "idade": 40,
+      "signo": "PEIXES",
+      "nomeMae": "HELENA MENDES DA COSTA"
+    },
+    "restricoes": {
+      "isPep": false,
+      "isPepRelacionado": false,
+      "isMenorIdade": false,
+      "isPossivelAposentado": false,
+      "isProfissionalNotorio": false,
+      "isFamoso": false,
+      "hasOutraRestricao": false
+    },
+    "telefones": [
+      {
+        "ddd": "21",
+        "telefone": "998877665",
+        "telefoneFormatado": "(21) 99887-7665",
+        "tipoTelefone": "TELEFONE MÓVEL",
+        "qualificacao": 1
+      },
+      {
+        "ddd": "21",
+        "telefone": "987654321",
+        "telefoneFormatado": "(21) 98765-4321",
+        "tipoTelefone": "TELEFONE FIXO",
+        "qualificacao": 2
+      }
+    ],
+    "enderecos": [
+      {
+        "endereco": "RUA DAS FLORES",
+        "tipoLogradouro": "R",
+        "logradouro": "DAS FLORES",
+        "numero": "45",
+        "bairro": "CENTRO",
+        "cidade": "RIO DE JANEIRO",
+        "uf": "RJ",
+        "cep": "20010030",
+        "cepFormatado": "20010-030",
+        "qualificacao": 1
+      }
+    ],
+    "emails": [
+      {
+        "email": "ana.mendes@example.com",
+        "qualificacao": 1
+      },
+      {
+        "email": "ana.c.mendes@empresa.com",
+        "qualificacao": 2
+      }
+    ],
+    "situacaoCadastral": {
+      "cpf": "12345678900",
+      "cpfFormatado": "123.456.789-00",
+      "situacaoCadastral": "REGULAR",
+      "dataHora": "20/04/2025 10:45:00",
+      "codControle": "A1B2.C3D4.E5F6.G7H8"
+    },
+    "pessoasLigadas": [
+      {
+        "cpf": "32165498700",
+        "cpfFormatado": "321.654.987-00",
+        "nome": "MARCELA MENDES",
+        "idade": 38,
+        "grauParentesco": "IRMÃ"
+      }
+    ],
+    "participacaoEmpresarial": [
+      {
+        "cnpj": "12345678000199",
+        "cnpjFormatado": "12.345.678/0001-99",
+        "razaoSocial": "MENDES SOLUÇÕES DIGITAIS LTDA",
+        "nomeFantasia": "MENDES TECH",
+        "participacao": "100.00"
+      }
+    ],
+    "perfilConsumo": {
+      "cartaoCredito": "SIM",
+      "turismo": "NÃO",
+      "luxo": "NÃO",
+      "celular": "SIM",
+      "tvCabo": "NÃO",
+      "bandaLarga": "SIM",
+      "creditoImobiliario": "NÃO",
+      "ecommerce": "SIM",
+      "consignado": "NÃO",
+      "celularPosPago": "SIM",
+      "possuiVeiculo": "SIM",
+      "compraInternet": "SIM",
+      "propensaoCartaoCarrefour": "NÃO",
+      "propensaoCartaoMarisa": "SIM",
+      "seguroSaude": "NÃO",
+      "cartaoSupermercado": "SIM",
+      "videoGame": "SIM",
+      "transportePublico": "SIM",
+      "tomadorCredito": "NÃO",
+      "seguroVida": "SIM",
+      "seguroResidencial": "NÃO",
+      "seguroAuto": "SIM",
+      "resgateMilhas": "NÃO",
+      "previdenciaPrivada": "SIM",
+      "perfilTomador": "NÃO",
+      "perfilMobile": "SIM",
+      "multiplosCartoes": "NÃO",
+      "investidor": "SIM",
+      "internetHighUser": "SIM",
+      "internetBanking": "SIM",
+      "gamesOnline": "SIM",
+      "fitness": "NÃO",
+      "creditoScoreFaixa": "MÉDIO RISCO",
+      "creditoScore": "724",
+      "creditoPessoal": "SIM",
+      "clientePremium": "SIM",
+      "celularPrePago": "NÃO",
+      "casaPropria": "NÃO",
+      "cartaoPriventLabel": "NÃO",
+      "cartaoPrime": "NÃO",
+      "cartaoCreditoBv": "SIM",
+      "cacadorDescontos": "SIM"
+    },
+    "perfilSociodemografico": {
+      "scoreRisco": "MÉDIO RISCO",
+      "classe": "B2",
+      "segmento": "Profissional Estável",
+      "descricao": "Pessoas com ocupação formal e renda estável, comportamento financeiro previsível.",
+      "estadoCivil": "Casada",
+      "regiao": "ZONA SUL",
+      "escolaridade": "SUPERIOR",
+      "ocupacao": "FORMAL",
+      "renda": "MÉDIA",
+      "rendaPresumida": "8.500,00",
+      "cbo": 142205,
+      "cboDesc": "Gerente de Projetos"
+    },
+    "veiculos": [
+      {
+        "documento": "12345678900",
+        "proprietario": "ANA CAROLINA MENDES",
+        "marcaModelo": "FORD/KA SE 1.0",
+        "placa": "ABC1D23",
+        "anoFabricacao": "2019",
+        "anoModelo": "2020",
+        "renavam": "123456789",
+        "dataLicenciamento": "10/01/2024",
+        "qualificacao": 1
+      }
+    ],
+    "obito": null,
+    "historicoProfissional": [
+      {
+        "cnpj": "98765432000111",
+        "cnpjFormatado": "98.765.432/0001-11",
+        "razaoSocial": "INOVA CORP",
+        "descricaoCbo": "Analista de Sistemas",
+        "mediaSalario": "6.200,00"
+      }
+    ]
+  }
+]
+
+ 
+ 
 
 **Fim da Documentação**
 
