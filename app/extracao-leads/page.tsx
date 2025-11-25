@@ -12,6 +12,7 @@ import ExtracaoProgress from '../../components/features/extracao/ExtracaoProgres
 import HistoricoContagens from '../../components/features/extracao/HistoricoContagens'
 import ModalCriarExtracao from '../../components/features/extracao/ModalCriarExtracao'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
+import { getProfileApiKey, validateProfileApiKey } from '../../lib/profile'
 import { 
   Target, 
   Search, 
@@ -405,14 +406,11 @@ export default function ExtracaoLeadsPage() {
 
     setLoading(true)
     try {
-      const credenciais = await supabase
-        .from('configuracoes_credenciais')
-        .select('apikeydados')
-        .eq('user_id', user.id)
-        .single()
+      // Buscar API Key usando função utilitária
+      const apiKey = await getProfileApiKey(parseInt(user.id.toString()))
 
-      if (!credenciais.data?.apikeydados) {
-        throw new Error('API Key da Profile não encontrada.')
+      if (!validateProfileApiKey(apiKey)) {
+        throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
       }
 
       const response = await fetch('/api/profile-proxy?endpoint=/Auth', {
@@ -421,7 +419,7 @@ export default function ExtracaoLeadsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          apiKey: credenciais.data.apikeydados
+          apiKey: apiKey
         })
       })
 
@@ -592,16 +590,12 @@ export default function ExtracaoLeadsPage() {
     
     try {
       setLoading(true)
-      
-      // Buscar apikeydados do usuário
-      const { data: configCredenciais, error: erroConfig } = await supabase
-        .from('configuracoes_credenciais')
-        .select('apikeydados')
-        .eq('user_id', parseInt(user.id.toString()))
-        .single()
 
-      if (erroConfig || !configCredenciais?.apikeydados) {
-        throw new Error('API Key não encontrada. Verifique suas configurações.')
+      // Buscar API Key usando função utilitária
+      const apiKey = await getProfileApiKey(parseInt(user.id.toString()))
+
+      if (!validateProfileApiKey(apiKey)) {
+        throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
       }
 
       // Chamar API de extração com dados do modal
@@ -616,12 +610,12 @@ export default function ExtracaoLeadsPage() {
           idTipoAcesso: dados.idTipoAcesso,
           qtdeSolicitada: dados.qtdeSolicitada,
           removerRegistrosExtraidos: dados.removerRegistrosExtraidos,
-          apiKey: configCredenciais.apikeydados
+          apiKey: apiKey
         })
       })
 
       const resultado = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(resultado.error || 'Erro ao criar extração')
       }
@@ -635,7 +629,7 @@ export default function ExtracaoLeadsPage() {
         idExtracaoAPI: resultado.idExtracaoAPI,
         nomeArquivo: resultado.nomeArquivo,
         status: resultado.status,
-        apiKey: configCredenciais.apikeydados
+        apiKey: apiKey
       })
 
       // Opcional: mudar para aba de histórico após 3 segundos

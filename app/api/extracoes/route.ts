@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, getSupabaseAdmin } from '../../../lib/supabase'
-import { hasAvailableLeads, consumeLeads, getLeadsBalance } from '../../../lib/permissions'
 
 const API_PROFILE_BASE_URL = 'https://apiprofile.infinititi.com.br'
 
@@ -155,24 +154,52 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verificar permissões do usuário
-    const { data: userPlan, error: planError } = await getSupabaseAdmin()
-      .from('view_usuarios_planos')
-      .select('*')
+    // Buscar workspace do usuário
+    const { data: userData, error: userError } = await getSupabaseAdmin()
+      .from('users')
+      .select('current_workspace_id')
       .eq('id', userId)
       .single()
 
-    if (planError || !userPlan) {
+    if (userError || !userData || !userData.current_workspace_id) {
+      console.error('Erro ao buscar workspace do usuário:', userError)
       return NextResponse.json(
-        { error: 'Usuário não encontrado ou sem plano ativo' },
+        { error: 'Usuário não possui workspace ativo' },
         { status: 404 }
       )
     }
 
-    // Verificar se o usuário tem acesso à extração de leads
-    if (!userPlan.acesso_extracao_leads) {
+    const workspaceId = userData.current_workspace_id
+
+    // Buscar plano do workspace
+    const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
+      .from('workspaces')
+      .select(`
+        id,
+        plano_id,
+        leads_consumidos,
+        planos (
+          acesso_extracao_leads,
+          limite_leads_mes
+        )
+      `)
+      .eq('id', workspaceId)
+      .single()
+
+    if (workspaceError || !workspace || !workspace.planos) {
+      console.error('Erro ao buscar plano do workspace:', workspaceError)
       return NextResponse.json(
-        { error: 'Usuário não tem acesso à extração de leads' },
+        { error: 'Workspace não encontrado ou sem plano ativo' },
+        { status: 404 }
+      )
+    }
+
+    const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
+
+    // Verificar se o workspace tem acesso à extração de leads
+    if (!plano.acesso_extracao_leads) {
+      return NextResponse.json(
+        { error: 'Seu plano não tem acesso à extração de leads' },
         { status: 403 }
       )
     }
@@ -194,9 +221,12 @@ export async function POST(request: NextRequest) {
     // Calcular quantidade real de leads que serão extraídos
     const quantidadeReal = Math.min(qtdeSolicitada, contagem.total_registros)
 
-    // Verificar se o usuário tem leads suficientes
-    if (!hasAvailableLeads(userPlan, quantidadeReal)) {
-      const leadsRestantes = getLeadsBalance(userPlan)
+    // Verificar limite de leads do workspace
+    const leadsConsumidos = workspace.leads_consumidos || 0
+    const limiteLeads = plano.limite_leads_mes || 0
+    const leadsRestantes = limiteLeads - leadsConsumidos
+
+    if (leadsRestantes < quantidadeReal) {
       return NextResponse.json(
         {
           error: 'Leads insuficientes',
@@ -238,11 +268,16 @@ export async function POST(request: NextRequest) {
       throw new Error(`API Profile: ${resultadoExtracao.msg}`)
     }
 
-    // Consumir os leads do usuário (usando admin client para ter permissão de UPDATE)
-    const supabaseAdmin = getSupabaseAdmin()
-    const consumeResult = await consumeLeads(userId, quantidadeReal, supabaseAdmin)
-    if (!consumeResult.success) {
-      console.error('Erro ao consumir leads:', consumeResult.error)
+    // Incrementar contador de leads consumidos do workspace
+    const { error: updateError } = await getSupabaseAdmin()
+      .from('workspaces')
+      .update({
+        leads_consumidos: leadsConsumidos + quantidadeReal
+      })
+      .eq('id', workspaceId)
+
+    if (updateError) {
+      console.error('Erro ao atualizar contador de leads:', updateError)
       return NextResponse.json(
         { error: 'Erro ao processar extração de leads' },
         { status: 500 }
@@ -267,14 +302,9 @@ export async function POST(request: NextRequest) {
       .select('*')
       .single()
 
-    // Buscar dados atualizados do usuário
-    const { data: updatedUser } = await getSupabaseAdmin()
-      .from('view_usuarios_planos')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    const leadsRestantes = updatedUser ? getLeadsBalance(updatedUser) : 0
+    // Calcular dados atualizados
+    const leadsConsumidosAtual = leadsConsumidos + quantidadeReal
+    const leadsRestantesAtual = limiteLeads - leadsConsumidosAtual
 
     // 5. Retornar resultado
     return NextResponse.json({
@@ -284,8 +314,8 @@ export async function POST(request: NextRequest) {
       status: 'processando',
       message: 'Extração criada com sucesso!',
       usage: {
-        leadsConsumidos: (updatedUser?.leads_consumidos || 0),
-        leadsRestantes: leadsRestantes,
+        leadsConsumidos: leadsConsumidosAtual,
+        leadsRestantes: leadsRestantesAtual,
         quantidadeExtraida: quantidadeReal
       }
     })
