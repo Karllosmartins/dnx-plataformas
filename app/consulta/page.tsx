@@ -118,7 +118,11 @@ export default function ConsultaPage() {
       }
 
       console.log('✅ Setando resultado:', data.data)
-      setConsultaResult(data.data)
+
+      // A API Datecode retorna um array, pegar o primeiro elemento
+      const resultado = Array.isArray(data.data) ? data.data[0] : data.data
+      console.log('✅ Resultado processado:', resultado)
+      setConsultaResult(resultado)
 
       // Atualizar limiteInfo se vier na resposta
       if (data.usage) {
