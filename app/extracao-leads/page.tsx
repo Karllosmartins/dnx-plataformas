@@ -629,7 +629,7 @@ export default function ExtracaoLeadsPage() {
         idExtracaoAPI: resultado.idExtracaoAPI,
         nomeArquivo: resultado.nomeArquivo,
         status: resultado.status,
-        apiKey: apiKey
+        apiKey: apiKey! // Garantido não-nulo pela validação anterior
       })
 
       // Opcional: mudar para aba de histórico após 3 segundos
