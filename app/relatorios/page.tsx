@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase, Lead } from '../../lib/supabase'
 import { useAuth } from '../../components/shared/AuthWrapper'
-import { funisApi } from '../../lib/api'
+import { funisApi, leadsApi } from '../../lib/api-client'
 
 // Componentes shadcn/ui
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,19 +31,7 @@ import {
 } from '@/components/ui/chart'
 import { VisualFunnel } from '@/components/charts/visual-funnel'
 
-interface TipoNegocio {
-  id: number
-  nome: string
-  nome_exibicao: string
-  descricao?: string
-  icone?: string
-  cor?: string
-  campos_personalizados?: any[]
-  status_personalizados?: string[]
-  metricas_config?: any
-  ativo: boolean
-  ordem: number
-}
+
 
 interface DashboardConfig {
   title: string
@@ -128,8 +116,21 @@ export default function RelatoriosPage() {
   const [campanhas, setCampanhas] = useState<string[]>([])
   const [origens, setOrigens] = useState<string[]>([])
   const [funis, setFunis] = useState<Funil[]>([])
-  const [userTipoNegocio, setUserTipoNegocio] = useState<TipoNegocio | null>(null)
-  const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig | null>(null)
+
+  const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig>({
+    title: 'Relatórios',
+    subtitle: 'Análises e métricas',
+    metrics: {
+      novosLeads: 'Novos Leads',
+      qualificados: 'Qualificados',
+      emAndamento: 'Em Andamento',
+      casosViaveis: 'Casos Viáveis',
+      fechados: 'Fechados',
+      negociacao: 'Em Negociação',
+      leadsPerdidos: 'Leads Perdidos',
+      totalGeral: 'Total Geral'
+    }
+  })
 
   const [filters, setFilters] = useState({
     campanha: '',
@@ -144,166 +145,15 @@ export default function RelatoriosPage() {
 
   useEffect(() => {
     if (user?.id) {
-      fetchUserTipoNegocio()
+
       fetchFunis()
       fetchLeads()
     }
   }, [user])
 
-  const fetchUserTipoNegocio = async () => {
-    if (!user?.id) return
 
-    try {
-      // Buscar tipo de negócio do usuário através da tabela intermediária
-      const { data: userTypesData, error: typesError } = await supabase
-        .from('user_tipos_negocio')
-        .select(`
-          tipos_negocio (
-            id, nome, nome_exibicao, cor,
-            campos_personalizados, status_personalizados, metricas_config
-          )
-        `)
-        .eq('user_id', parseInt(user.id || '0'))
-        .eq('ativo', true)
 
-      if (typesError) throw typesError
 
-      if (userTypesData && userTypesData.length > 0) {
-        const tipoData = userTypesData[0].tipos_negocio as any
-
-        if (tipoData) {
-          // Parsear metricas_config se vier como string
-          if (typeof tipoData.metricas_config === 'string') {
-            try {
-              tipoData.metricas_config = JSON.parse(tipoData.metricas_config)
-            } catch (e) {
-              console.error('Erro ao parsear metricas_config:', e)
-            }
-          }
-
-          // Parsear campos_personalizados se vier como string
-          if (typeof tipoData.campos_personalizados === 'string') {
-            try {
-              tipoData.campos_personalizados = JSON.parse(tipoData.campos_personalizados)
-            } catch (e) {
-              console.error('Erro ao parsear campos_personalizados:', e)
-            }
-          }
-
-          // Parsear status_personalizados se vier como string
-          if (typeof tipoData.status_personalizados === 'string') {
-            try {
-              tipoData.status_personalizados = JSON.parse(tipoData.status_personalizados)
-            } catch (e) {
-              console.error('Erro ao parsear status_personalizados:', e)
-            }
-          }
-
-          setUserTipoNegocio(tipoData)
-          configureDashboard(tipoData)
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao buscar tipo de negócio:', error)
-    }
-  }
-
-  const configureDashboard = (tipoNegocio: TipoNegocio) => {
-    const config: DashboardConfig = {
-      title: 'Relatórios',
-      subtitle: 'Análises e métricas'
-    }
-
-    // Carregar configuração de métricas do banco de dados
-    if (tipoNegocio.metricas_config) {
-      const metricasConfig = tipoNegocio.metricas_config as any
-
-      config.metrics = {
-        novosLeads: metricasConfig.label_novos || 'Novos',
-        qualificados: metricasConfig.label_qualificados || 'Qualificados',
-        emAndamento: metricasConfig.label_em_andamento || 'Em Andamento',
-        casosViaveis: metricasConfig.label_casos_viaveis || 'Casos Viáveis',
-        fechados: metricasConfig.label_fechados || 'Fechados',
-        negociacao: metricasConfig.label_negociacao || 'Em Negociação',
-        leadsPerdidos: metricasConfig.label_perdidos || 'Perdidos',
-        totalGeral: metricasConfig.label_total || 'Total Geral'
-      }
-    }
-
-    // Configurações específicas por tipo de negócio
-    if (tipoNegocio.nome === 'limpa_nome') {
-      config.title = 'Relatórios - Limpa Nome'
-      config.subtitle = 'Análise de consultas e negociações'
-      if (!tipoNegocio.metricas_config) {
-        config.metrics = {
-          novosLeads: 'Novos Leads',
-          qualificados: 'Qualificados',
-          emAndamento: 'Pagou Consulta',
-          casosViaveis: 'Dívidas Encontradas',
-          fechados: 'Clientes Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Leads Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      }
-    } else if (tipoNegocio.nome === 'previdenciario') {
-      config.title = 'Relatórios - Previdenciário'
-      config.subtitle = 'Análise de casos e processos'
-      if (!tipoNegocio.metricas_config) {
-        config.metrics = {
-          novosLeads: 'Novos Casos',
-          qualificados: 'Análise Viabilidade',
-          emAndamento: 'Contratos Enviados',
-          casosViaveis: 'Casos Viáveis',
-          fechados: 'Casos Finalizados',
-          negociacao: 'Processos Iniciados',
-          leadsPerdidos: 'Casos Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      }
-    } else if (tipoNegocio.nome === 'b2b') {
-      config.title = 'Relatórios - B2B'
-      config.subtitle = 'Análise de vendas corporativas'
-      if (!tipoNegocio.metricas_config) {
-        config.metrics = {
-          novosLeads: 'Novos Contatos',
-          qualificados: 'Qualificação',
-          emAndamento: 'Apresentações',
-          casosViaveis: 'Propostas Enviadas',
-          fechados: 'Deals Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Contatos Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      }
-    } else {
-      // Configuração genérica baseada no nome do tipo
-      config.title = `Relatórios - ${tipoNegocio.nome_exibicao || tipoNegocio.nome}`
-      config.subtitle = tipoNegocio.descricao || 'Análises e métricas'
-      if (!tipoNegocio.metricas_config) {
-        config.metrics = {
-          novosLeads: 'Novos Leads',
-          qualificados: 'Qualificados',
-          emAndamento: 'Em Andamento',
-          casosViaveis: 'Casos Viáveis',
-          fechados: 'Fechados',
-          negociacao: 'Em Negociação',
-          leadsPerdidos: 'Leads Perdidos',
-          totalGeral: 'Total Geral'
-        }
-      }
-    }
-
-    // Criar mapeamento de labels de status
-    if (tipoNegocio.status_personalizados && Array.isArray(tipoNegocio.status_personalizados)) {
-      config.statusLabels = {}
-      tipoNegocio.status_personalizados.forEach((status: string) => {
-        config.statusLabels![status] = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      })
-    }
-
-    setDashboardConfig(config)
-  }
 
   const fetchFunis = async () => {
     if (!user) return
@@ -338,25 +188,19 @@ export default function RelatoriosPage() {
     try {
       setLoading(true)
 
-      let query = supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', parseInt(user.id))
-        .order('created_at', { ascending: false })
+      const response = await leadsApi.list({ limit: '1000' })
 
-      const { data, error } = await query
+      if (response.success && response.data) {
+        const leadsData = response.data as Lead[]
+        setLeads(leadsData)
 
-      if (error) throw error
+        // Extrair campanhas e origens únicas
+        const uniqueCampanhas = [...new Set(leadsData.map(l => l.nome_campanha).filter(Boolean))]
+        const uniqueOrigens = [...new Set(leadsData.map(l => l.origem).filter(Boolean))]
 
-      setLeads(data || [])
-
-      // Extrair campanhas e origens únicas
-      const uniqueCampanhas = [...new Set(data?.map(l => l.nome_campanha).filter(Boolean))]
-      const uniqueOrigens = [...new Set(data?.map(l => l.origem).filter(Boolean))]
-
-      setCampanhas(uniqueCampanhas as string[])
-      setOrigens(uniqueOrigens as string[])
-
+        setCampanhas(uniqueCampanhas as string[])
+        setOrigens(uniqueOrigens as string[])
+      }
     } catch (error) {
       console.error('Erro ao buscar leads:', error)
     } finally {
@@ -426,35 +270,7 @@ export default function RelatoriosPage() {
       }
     })
 
-    // Análise de campos personalizados
-    const customFieldsData: Record<string, Record<string, number>> = {}
 
-    if (userTipoNegocio?.campos_personalizados && Array.isArray(userTipoNegocio.campos_personalizados)) {
-      userTipoNegocio.campos_personalizados.forEach((campo: any) => {
-        const fieldName = campo.nome || campo.name
-        if (fieldName) {
-          customFieldsData[fieldName] = {}
-
-          filteredLeads.forEach(lead => {
-            if (lead.dados_personalizados) {
-              try {
-                const dados = typeof lead.dados_personalizados === 'string'
-                  ? JSON.parse(lead.dados_personalizados)
-                  : lead.dados_personalizados
-
-                const valor = dados[fieldName]
-                if (valor) {
-                  const valorStr = String(valor)
-                  customFieldsData[fieldName][valorStr] = (customFieldsData[fieldName][valorStr] || 0) + 1
-                }
-              } catch (e) {
-                // Ignora erros de parsing
-              }
-            }
-          })
-        }
-      })
-    }
 
     // Análise de Funil de Conversão - Usando Funis e Estágios Reais
     const funnelData: any[] = []
@@ -503,135 +319,7 @@ export default function RelatoriosPage() {
       }
     }
 
-    // Métricas Principais Dinâmicas (baseadas em metricas_config)
-    const metricasPrincipais: any[] = []
 
-    if (userTipoNegocio?.metricas_config?.metricas_principais && Array.isArray(userTipoNegocio.metricas_config.metricas_principais)) {
-      userTipoNegocio.metricas_config.metricas_principais.forEach((metricaConfig: any) => {
-        let valor: any = null
-
-        switch (metricaConfig.tipo) {
-          case 'media':
-            // Calcular média de um campo específico
-            if (metricaConfig.campo) {
-              const leadsComCampo = filteredLeads.filter(l => {
-                // Verificar se é campo padrão ou personalizado
-                if (l[metricaConfig.campo as keyof Lead]) {
-                  return l[metricaConfig.campo as keyof Lead]
-                }
-                // Verificar em dados_personalizados
-                if (l.dados_personalizados) {
-                  try {
-                    const dados = typeof l.dados_personalizados === 'string'
-                      ? JSON.parse(l.dados_personalizados)
-                      : l.dados_personalizados
-                    return dados[metricaConfig.campo]
-                  } catch (e) {
-                    return false
-                  }
-                }
-                return false
-              })
-
-              if (leadsComCampo.length > 0) {
-                const soma = leadsComCampo.reduce((sum, l) => {
-                  let val = l[metricaConfig.campo as keyof Lead]
-                  if (!val && l.dados_personalizados) {
-                    try {
-                      const dados = typeof l.dados_personalizados === 'string'
-                        ? JSON.parse(l.dados_personalizados)
-                        : l.dados_personalizados
-                      val = dados[metricaConfig.campo]
-                    } catch (e) {}
-                  }
-                  return sum + (parseFloat(val as string) || 0)
-                }, 0)
-                valor = (soma / leadsComCampo.length).toFixed(2)
-              } else {
-                valor = '0.00'
-              }
-            }
-            break
-
-          case 'percentual':
-            // Calcular percentual entre dois conjuntos de status
-            if (metricaConfig.numerador_status && metricaConfig.denominador_status) {
-              const numerador = filteredLeads.filter(l =>
-                metricaConfig.numerador_status.includes(l.status_generico)
-              ).length
-              const denominador = filteredLeads.filter(l =>
-                metricaConfig.denominador_status.includes(l.status_generico)
-              ).length
-              valor = denominador > 0 ? ((numerador / denominador) * 100).toFixed(1) : '0.0'
-            }
-            break
-
-          case 'tempo_entre_status':
-            // Calcular tempo médio entre dois status
-            if (metricaConfig.status_inicial && metricaConfig.status_final) {
-              const leadsCompletos = filteredLeads.filter(l =>
-                l.status_generico === metricaConfig.status_final
-              )
-
-              if (leadsCompletos.length > 0) {
-                const tempos = leadsCompletos
-                  .filter(l => l.created_at && l.updated_at)
-                  .map(l => {
-                    const dataInicio = new Date(l.created_at!)
-                    const dataFim = new Date(l.updated_at!)
-                    return (dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24) // dias
-                  })
-
-                if (tempos.length > 0) {
-                  const tempoMedio = tempos.reduce((a, b) => a + b, 0) / tempos.length
-                  valor = tempoMedio.toFixed(1)
-                } else {
-                  valor = '0.0'
-                }
-              } else {
-                valor = '0.0'
-              }
-            }
-            break
-
-          case 'distribuicao':
-            // Para distribuição, vamos calcular o total e criar dados do gráfico
-            if (metricaConfig.campo) {
-              const distribuicao: Record<string, number> = {}
-              filteredLeads.forEach(l => {
-                let val = l[metricaConfig.campo as keyof Lead]
-                if (!val && l.dados_personalizados) {
-                  try {
-                    const dados = typeof l.dados_personalizados === 'string'
-                      ? JSON.parse(l.dados_personalizados)
-                      : l.dados_personalizados
-                    val = dados[metricaConfig.campo]
-                  } catch (e) {}
-                }
-                if (val) {
-                  const valStr = String(val)
-                  distribuicao[valStr] = (distribuicao[valStr] || 0) + 1
-                }
-              })
-              valor = distribuicao
-            }
-            break
-
-          default:
-            valor = null
-        }
-
-        if (valor !== null) {
-          metricasPrincipais.push({
-            nome: metricaConfig.nome,
-            label: metricaConfig.label,
-            tipo: metricaConfig.tipo,
-            valor: valor,
-            campo: metricaConfig.campo
-          })
-        }
-      })
-    }
 
     // Análise Temporal (mês a mês)
     const monthlyData: Record<string, any> = {}
@@ -704,10 +392,7 @@ export default function RelatoriosPage() {
       campanhaValores,
       origemCounts,
       timeline,
-      customFields: customFieldsData,
-      funnel: funnelData,
-      temporal: monthlyComparison,
-      metricasPrincipais: metricasPrincipais
+      temporal: monthlyComparison
     }
   }
 
@@ -717,25 +402,9 @@ export default function RelatoriosPage() {
     // Headers base
     const baseHeaders = ['Nome', 'Telefone', 'CPF/CNPJ', 'Status', 'Campanha', 'Origem', 'Valor', 'WhatsApp', 'Data']
 
-    // Adicionar headers de campos personalizados
-    const customFieldHeaders: string[] = []
-    const customFieldNames: string[] = []
 
-    if (userTipoNegocio?.campos_personalizados && Array.isArray(userTipoNegocio.campos_personalizados)) {
-      userTipoNegocio.campos_personalizados.forEach((campo: any) => {
-        const fieldName = campo.nome || campo.name
-        if (fieldName) {
-          customFieldNames.push(fieldName)
-          // Formatar nome do campo para o header
-          const formattedName = fieldName
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, (l: string) => l.toUpperCase())
-          customFieldHeaders.push(formattedName)
-        }
-      })
-    }
 
-    const headers = [...baseHeaders, ...customFieldHeaders]
+    const headers = [...baseHeaders]
 
     const rows = filteredLeads.map(lead => {
       // Valores base
@@ -751,28 +420,7 @@ export default function RelatoriosPage() {
         lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : ''
       ]
 
-      // Extrair valores de campos personalizados
-      const customValues: string[] = []
-      if (customFieldNames.length > 0 && lead.dados_personalizados) {
-        try {
-          const dados = typeof lead.dados_personalizados === 'string'
-            ? JSON.parse(lead.dados_personalizados)
-            : lead.dados_personalizados
-
-          customFieldNames.forEach(fieldName => {
-            const valor = dados[fieldName]
-            customValues.push(valor ? String(valor) : '')
-          })
-        } catch (e) {
-          // Se houver erro no parsing, preencher com vazios
-          customFieldNames.forEach(() => customValues.push(''))
-        }
-      } else {
-        // Se não houver dados_personalizados, preencher com vazios
-        customFieldNames.forEach(() => customValues.push(''))
-      }
-
-      return [...baseValues, ...customValues]
+      return [...baseValues]
     })
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
@@ -998,7 +646,7 @@ export default function RelatoriosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium">
-                {userTipoNegocio?.nome === 'b2b' ? 'Com Contato Válido' : 'Com WhatsApp'}
+                {'Com WhatsApp'}
               </p>
               <p className="text-3xl font-bold mt-2">{metrics.comWhatsApp}</p>
               <p className="text-green-100 text-xs mt-1">{metrics.taxaWhatsApp}% do total</p>
@@ -1011,8 +659,7 @@ export default function RelatoriosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">
-                {userTipoNegocio?.nome === 'previdenciario' ? 'Valor Total Estimado' :
-                 userTipoNegocio?.nome === 'b2b' ? 'Receita Total' : 'Valor Total'}
+                {'Valor Total Estimado'}
               </p>
               <p className="text-3xl font-bold mt-2">R$ {metrics.valorTotal.toLocaleString('pt-BR')}</p>
             </div>
@@ -1024,8 +671,7 @@ export default function RelatoriosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-orange-100 text-sm font-medium">
-                {userTipoNegocio?.nome === 'b2b' ? 'Ticket Médio' :
-                 userTipoNegocio?.nome === 'previdenciario' ? 'Valor Médio por Caso' : 'Valor Médio'}
+                {'Valor Médio'}
               </p>
               <p className="text-3xl font-bold mt-2">R$ {parseFloat(metrics.valorMedio).toLocaleString('pt-BR')}</p>
             </div>
@@ -1039,7 +685,7 @@ export default function RelatoriosPage() {
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
             <Zap className="h-6 w-6 mr-2 text-yellow-500" />
-            Métricas Principais - {userTipoNegocio?.nome_exibicao}
+            Métricas Principais
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -1060,10 +706,10 @@ export default function RelatoriosPage() {
               // Ícones baseados no tipo
               const IconComponent =
                 metrica.tipo === 'media' ? DollarSign :
-                metrica.tipo === 'percentual' ? Percent :
-                metrica.tipo === 'tempo_entre_status' ? Clock :
-                metrica.tipo === 'distribuicao' ? BarChart3 :
-                Activity
+                  metrica.tipo === 'percentual' ? Percent :
+                    metrica.tipo === 'tempo_entre_status' ? Clock :
+                      metrica.tipo === 'distribuicao' ? BarChart3 :
+                        Activity
 
               // Formatar valor de forma segura
               let valorFormatado: string | number = '-'
@@ -1438,9 +1084,8 @@ export default function RelatoriosPage() {
             </div>
 
             {/* Crescimento */}
-            <div className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-              metrics.temporal.leadsGrowth >= 0 ? 'border-green-500' : 'border-red-500'
-            }`}>
+            <div className={`bg-white rounded-lg shadow p-6 border-l-4 ${metrics.temporal.leadsGrowth >= 0 ? 'border-green-500' : 'border-red-500'
+              }`}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-gray-600">Crescimento</span>
                 {metrics.temporal.leadsGrowth >= 0 ? (
@@ -1449,16 +1094,14 @@ export default function RelatoriosPage() {
                   <TrendingDown className="h-5 w-5 text-red-600" />
                 )}
               </div>
-              <div className={`text-3xl font-bold mb-1 ${
-                metrics.temporal.leadsGrowth >= 0 ? 'text-green-900' : 'text-red-900'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${metrics.temporal.leadsGrowth >= 0 ? 'text-green-900' : 'text-red-900'
+                }`}>
                 {metrics.temporal.leadsGrowth >= 0 ? '+' : ''}{metrics.temporal.leadsGrowth}%
               </div>
               <div className="text-sm text-gray-500">Variação de leads</div>
               <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className={`text-sm font-medium ${
-                  metrics.temporal.valueGrowth >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <div className={`text-sm font-medium ${metrics.temporal.valueGrowth >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   Receita: {metrics.temporal.valueGrowth >= 0 ? '+' : ''}{metrics.temporal.valueGrowth}%
                 </div>
               </div>
