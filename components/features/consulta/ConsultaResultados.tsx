@@ -74,11 +74,10 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1">Risco</p>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-100 text-red-800' :
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${resultado.empresa.risco === 'ALTO RISCO' ? 'bg-red-100 text-red-800' :
                     resultado.empresa.risco === 'MÉDIO RISCO' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
+                      'bg-green-100 text-green-800'
+                    }`}>
                     {resultado.empresa.risco} (Score: {resultado.empresa.score})
                   </span>
                 </div>
@@ -257,8 +256,8 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
         <div className="space-y-6">
           {/* Verificar se não há nenhum contato */}
           {(!resultado.telefones || resultado.telefones.length === 0) &&
-           (!resultado.enderecos || resultado.enderecos.length === 0) &&
-           (!resultado.emails || resultado.emails.length === 0) ? (
+            (!resultado.enderecos || resultado.enderecos.length === 0) &&
+            (!resultado.emails || resultado.emails.length === 0) ? (
             <div className="text-center py-12">
               <Phone className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-lg font-medium">Nenhum contato encontrado</p>
@@ -355,123 +354,121 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
           ) : null}
 
           {resultado.pessoa && (
-        <div className="space-y-6">
-          {/* Perfil Sociodemográfico */}
-          {resultado.perfilSociodemografico && (
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-              <h4 className="text-xl font-bold mb-4 flex items-center text-gray-900">
-                <BarChart3 className="h-5 w-5 mr-2 text-gray-700" />
-                Perfil Sociodemográfico
-              </h4>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                <p className="text-2xl font-bold text-gray-900">{resultado.perfilSociodemografico.classe}</p>
-                <p className="text-gray-600 text-sm mt-1">{resultado.perfilSociodemografico.segmento}</p>
-                {resultado.perfilSociodemografico.descricao && (
-                  <p className="text-gray-500 text-xs mt-2 italic">{resultado.perfilSociodemografico.descricao}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Score de Risco</p>
-                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.scoreRisco}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Renda Presumida</p>
-                  <p className="font-semibold text-gray-900">R$ {resultado.perfilSociodemografico.rendaPresumida}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Atividade Financeira</p>
-                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.atividadeFinanceira}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Escolaridade</p>
-                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.escolaridade}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Ocupação</p>
-                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.ocupacao}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="text-gray-600 text-xs mb-1">Região</p>
-                  <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.regiao}</p>
-                </div>
-                {resultado.perfilSociodemografico.cboDesc && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 col-span-1 md:col-span-2 lg:col-span-3">
-                    <p className="text-gray-600 text-xs mb-1">CBO (Classificação Brasileira de Ocupações)</p>
-                    <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.cboDesc}</p>
+            <div className="space-y-6">
+              {/* Perfil Sociodemográfico */}
+              {resultado.perfilSociodemografico && (
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                  <h4 className="text-xl font-bold mb-4 flex items-center text-gray-900">
+                    <BarChart3 className="h-5 w-5 mr-2 text-gray-700" />
+                    Perfil Sociodemográfico
+                  </h4>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <p className="text-2xl font-bold text-gray-900">{resultado.perfilSociodemografico.classe}</p>
+                    <p className="text-gray-600 text-sm mt-1">{resultado.perfilSociodemografico.segmento}</p>
+                    {resultado.perfilSociodemografico.descricao && (
+                      <p className="text-gray-500 text-xs mt-2 italic">{resultado.perfilSociodemografico.descricao}</p>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Perfil de Consumo */}
-          {resultado.perfilConsumo && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <CreditCard className="h-5 w-5 mr-2 text-green-600" />
-                Perfil de Consumo
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                {Object.entries(resultado.perfilConsumo).map(([key, value]: [string, any]) => {
-                  const isPositive = value === 'SIM' || value === true
-                  const isScore = key.toLowerCase().includes('score')
-
-                  return (
-                    <div key={key} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${
-                      isScore ? 'bg-blue-50 border-blue-200' :
-                      isPositive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                    }`}>
-                      <span className="text-xs font-medium text-gray-700 capitalize">
-                        {key.replace(/([A-Z])/g, ' $1').trim()}
-                      </span>
-                      <span className={`text-xs font-bold ${
-                        isScore ? 'text-blue-700' :
-                        isPositive ? 'text-green-700' : 'text-gray-500'
-                      }`}>
-                        {String(value)}
-                      </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Score de Risco</p>
+                      <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.scoreRisco}</p>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Pessoas Ligadas */}
-          {resultado.pessoasLigadas && resultado.pessoasLigadas.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-purple-600" />
-                Pessoas Ligadas ({resultado.pessoasLigadas.length})
-              </h4>
-              <div className="space-y-2">
-                {resultado.pessoasLigadas.map((pessoa: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-center bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 hover:bg-purple-100 transition-colors">
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{pessoa.nome}</p>
-                      <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1">
-                        <span>CPF: {pessoa.cpfFormatado}</span>
-                        <span>Idade: {pessoa.idade} anos</span>
-                        <span className="px-2 py-0.5 bg-purple-200 text-purple-800 rounded">
-                          {pessoa.grauParentesco}
-                        </span>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Renda Presumida</p>
+                      <p className="font-semibold text-gray-900">R$ {resultado.perfilSociodemografico.rendaPresumida}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Atividade Financeira</p>
+                      <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.atividadeFinanceira}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Escolaridade</p>
+                      <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.escolaridade}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Ocupação</p>
+                      <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.ocupacao}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-gray-600 text-xs mb-1">Região</p>
+                      <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.regiao}</p>
+                    </div>
+                    {resultado.perfilSociodemografico.cboDesc && (
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 col-span-1 md:col-span-2 lg:col-span-3">
+                        <p className="text-gray-600 text-xs mb-1">CBO (Classificação Brasileira de Ocupações)</p>
+                        <p className="font-semibold text-gray-900">{resultado.perfilSociodemografico.cboDesc}</p>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => consultarDocumento(pessoa.cpf, 'PF')}
-                      disabled={consultando}
-                      className="ml-3 p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Consultar esta pessoa"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Perfil de Consumo */}
+              {resultado.perfilConsumo && (
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-green-600" />
+                    Perfil de Consumo
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {Object.entries(resultado.perfilConsumo).map(([key, value]: [string, any]) => {
+                      const isPositive = value === 'SIM' || value === true
+                      const isScore = key.toLowerCase().includes('score')
+
+                      return (
+                        <div key={key} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${isScore ? 'bg-blue-50 border-blue-200' :
+                          isPositive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                          }`}>
+                          <span className="text-xs font-medium text-gray-700 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                          <span className={`text-xs font-bold ${isScore ? 'text-blue-700' :
+                            isPositive ? 'text-green-700' : 'text-gray-500'
+                            }`}>
+                            {String(value)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Pessoas Ligadas */}
+              {resultado.pessoasLigadas && resultado.pessoasLigadas.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Users className="h-5 w-5 mr-2 text-purple-600" />
+                    Pessoas Ligadas ({resultado.pessoasLigadas.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {resultado.pessoasLigadas.map((pessoa: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 hover:bg-purple-100 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{pessoa.nome}</p>
+                          <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1">
+                            <span>CPF: {pessoa.cpfFormatado}</span>
+                            <span>Idade: {pessoa.idade} anos</span>
+                            <span className="px-2 py-0.5 bg-purple-200 text-purple-800 rounded">
+                              {pessoa.grauParentesco}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => consultarDocumento(pessoa.cpf, 'PF')}
+                          disabled={consultando}
+                          className="ml-3 p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Consultar esta pessoa"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
           )}
         </div>
       )}
@@ -486,42 +483,42 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
               <p className="text-gray-400 text-sm mt-1">Esta pessoa não possui participação em empresas registradas</p>
             </div>
           ) : (
-        resultado.participacaoEmpresarial && resultado.participacaoEmpresarial.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Briefcase className="h-5 w-5 mr-2 text-teal-600" />
-            Participação Empresarial ({resultado.participacaoEmpresarial.length})
-          </h4>
-          <div className="space-y-3">
-            {resultado.participacaoEmpresarial.map((empresa: any, idx: number) => (
-              <div key={idx} className="flex justify-between items-start bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 hover:bg-teal-100 transition-colors">
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">
-                    {empresa.razaoSocial}
-                    {empresa.nomeFantasia && ` (${empresa.nomeFantasia})`}
-                  </p>
-                  <div className="flex items-center space-x-4 text-xs text-gray-600 mt-2">
-                    <span>CNPJ: {empresa.cnpjFormatado}</span>
-                    <span className="px-2 py-0.5 bg-teal-600 text-white rounded font-semibold">
-                      {empresa.participacao}% de participação
-                    </span>
-                  </div>
+            resultado.participacaoEmpresarial && resultado.participacaoEmpresarial.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Briefcase className="h-5 w-5 mr-2 text-teal-600" />
+                  Participação Empresarial ({resultado.participacaoEmpresarial.length})
+                </h4>
+                <div className="space-y-3">
+                  {resultado.participacaoEmpresarial.map((empresa: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 hover:bg-teal-100 transition-colors">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {empresa.razaoSocial}
+                          {empresa.nomeFantasia && ` (${empresa.nomeFantasia})`}
+                        </p>
+                        <div className="flex items-center space-x-4 text-xs text-gray-600 mt-2">
+                          <span>CNPJ: {empresa.cnpjFormatado}</span>
+                          <span className="px-2 py-0.5 bg-teal-600 text-white rounded font-semibold">
+                            {empresa.participacao}% de participação
+                          </span>
+                        </div>
+                      </div>
+                      {parseFloat(empresa.participacao) > 0 && (
+                        <button
+                          onClick={() => consultarDocumento(empresa.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
+                          disabled={consultando}
+                          className="ml-3 p-2 text-teal-600 hover:text-teal-800 hover:bg-teal-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Consultar esta empresa"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                {parseFloat(empresa.participacao) > 0 && (
-                  <button
-                    onClick={() => consultarDocumento(empresa.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
-                    disabled={consultando}
-                    className="ml-3 p-2 text-teal-600 hover:text-teal-800 hover:bg-teal-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Consultar esta empresa"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                )}
               </div>
-            ))}
-          </div>
-        </div>
-        )
+            )
           )}
         </>
       )}
@@ -536,118 +533,118 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
               <p className="text-gray-400 text-sm mt-1">Dados de sócios e funcionários estão disponíveis apenas para Pessoa Jurídica</p>
             </div>
           ) : (
-        resultado.empresa && (
-        <div className="space-y-6">
-          {/* Sócios */}
-          {resultado.receitaFederal?.socios && resultado.receitaFederal.socios.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-cyan-600" />
-                Sócios ({resultado.receitaFederal.socios.length})
-              </h4>
-              <div className="space-y-3">
-                {resultado.receitaFederal.socios.map((socio: any, idx: number) => (
-                  <div key={idx} className="bg-cyan-50 border border-cyan-200 rounded-lg px-4 py-3 hover:bg-cyan-100 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{socio.nomeRazaoSocial}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
-                          <span>Doc: {socio.cpfCnpj}</span>
-                          <span>{socio.qualificacaoDesc}</span>
-                          {socio.dataNascimentoAbertura && <span>Nascimento: {socio.dataNascimentoAbertura}</span>}
-                          {parseFloat(socio.participacao) > 0 && (
-                            <span className="px-2 py-0.5 bg-cyan-600 text-white rounded font-semibold">
-                              {socio.participacao}% de participação
-                            </span>
-                          )}
-                          {socio.dataEntrada && <span>Entrada: {socio.dataEntrada}</span>}
+            resultado.empresa && (
+              <div className="space-y-6">
+                {/* Sócios */}
+                {resultado.receitaFederal?.socios && resultado.receitaFederal.socios.length > 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Users className="h-5 w-5 mr-2 text-cyan-600" />
+                      Sócios ({resultado.receitaFederal.socios.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {resultado.receitaFederal.socios.map((socio: any, idx: number) => (
+                        <div key={idx} className="bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 rounded-lg px-4 py-3 hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900">{socio.nomeRazaoSocial}</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
+                                <span>Doc: {socio.cpfCnpj}</span>
+                                <span>{socio.qualificacaoDesc}</span>
+                                {socio.dataNascimentoAbertura && <span>Nascimento: {socio.dataNascimentoAbertura}</span>}
+                                {parseFloat(socio.participacao) > 0 && (
+                                  <span className="px-2 py-0.5 bg-cyan-600 dark:bg-cyan-700 text-white rounded font-semibold">
+                                    {socio.participacao}% de participação
+                                  </span>
+                                )}
+                                {socio.dataEntrada && <span>Entrada: {socio.dataEntrada}</span>}
+                              </div>
+                              {socio.representanteLegal && (
+                                <p className="text-xs text-blue-600 mt-2 bg-blue-50 inline-block px-2 py-1 rounded">
+                                  Rep. Legal: {socio.representanteLegal.nome} - {socio.representanteLegal.qualificacaoDesc}
+                                </p>
+                              )}
+                            </div>
+                            {socio.cpfCnpj && parseFloat(socio.participacao) > 0 && (
+                              <button
+                                onClick={() => {
+                                  const documento = socio.cpfCnpj.replace(/\D/g, '')
+                                  const tipo = documento.length === 11 ? 'PF' : 'PJ'
+                                  consultarDocumento(documento, tipo)
+                                }}
+                                disabled={consultando}
+                                className="ml-3 p-2 text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Consultar este sócio"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        {socio.representanteLegal && (
-                          <p className="text-xs text-blue-600 mt-2 bg-blue-50 inline-block px-2 py-1 rounded">
-                            Rep. Legal: {socio.representanteLegal.nome} - {socio.representanteLegal.qualificacaoDesc}
-                          </p>
-                        )}
-                      </div>
-                      {socio.cpfCnpj && parseFloat(socio.participacao) > 0 && (
-                        <button
-                          onClick={() => {
-                            const documento = socio.cpfCnpj.replace(/\D/g, '')
-                            const tipo = documento.length === 11 ? 'PF' : 'PJ'
-                            consultarDocumento(documento, tipo)
-                          }}
-                          disabled={consultando}
-                          className="ml-3 p-2 text-cyan-600 hover:text-cyan-800 hover:bg-cyan-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Consultar este sócio"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      )}
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                )}
 
-          {/* CNAEs Secundários */}
-          {resultado.receitaFederal?.cnaesSecundarios && resultado.receitaFederal.cnaesSecundarios.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Building className="h-5 w-5 mr-2 text-indigo-600" />
-                CNAEs Secundários ({resultado.receitaFederal.cnaesSecundarios.length})
-              </h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {resultado.receitaFederal.cnaesSecundarios.map((cnae: any, idx: number) => (
-                  <div key={idx} className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-sm">
-                    <span className="font-semibold text-gray-900">{cnae.cnaeCod}</span>
-                    <span className="text-gray-600 ml-2">- {cnae.cnaeDesc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Funcionários */}
-          {resultado.funcionarios && resultado.funcionarios.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-violet-600" />
-                Funcionários ({resultado.funcionarios.length})
-              </h4>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {resultado.funcionarios.map((funcionario: any, idx: number) => (
-                  <div key={idx} className="bg-violet-50 border border-violet-200 rounded-lg px-4 py-2 hover:bg-violet-100 transition-colors">
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-sm">{funcionario.nome}</p>
-                        <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1">
-                          <span>CPF: {funcionario.cpf}</span>
-                          <span>Admissão: {funcionario.dataAdmissao}</span>
-                          {funcionario.dataDesligamento ? (
-                            <span className="text-red-600">Desligamento: {funcionario.dataDesligamento}</span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-green-600 text-white rounded text-xs font-semibold">ATIVO</span>
-                          )}
+                {/* CNAEs Secundários */}
+                {resultado.receitaFederal?.cnaesSecundarios && resultado.receitaFederal.cnaesSecundarios.length > 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Building className="h-5 w-5 mr-2 text-indigo-600" />
+                      CNAEs Secundários ({resultado.receitaFederal.cnaesSecundarios.length})
+                    </h4>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {resultado.receitaFederal.cnaesSecundarios.map((cnae: any, idx: number) => (
+                        <div key={idx} className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2 text-sm">
+                          <span className="font-semibold text-gray-900">{cnae.cnaeCod}</span>
+                          <span className="text-gray-600 ml-2">- {cnae.cnaeDesc}</span>
                         </div>
-                      </div>
-                      {!funcionario.dataDesligamento && (
-                        <button
-                          onClick={() => consultarDocumento(funcionario.cpf, 'PF')}
-                          disabled={consultando}
-                          className="ml-3 p-2 text-violet-600 hover:text-violet-800 hover:bg-violet-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Consultar este funcionário"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      )}
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Funcionários */}
+                {resultado.funcionarios && resultado.funcionarios.length > 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Users className="h-5 w-5 mr-2 text-violet-600" />
+                      Funcionários ({resultado.funcionarios.length})
+                    </h4>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {resultado.funcionarios.map((funcionario: any, idx: number) => (
+                        <div key={idx} className="bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-800 rounded-lg px-4 py-2 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors">
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900 text-sm">{funcionario.nome}</p>
+                              <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1">
+                                <span>CPF: {funcionario.cpf}</span>
+                                <span>Admissão: {funcionario.dataAdmissao}</span>
+                                {funcionario.dataDesligamento ? (
+                                  <span className="text-red-600">Desligamento: {funcionario.dataDesligamento}</span>
+                                ) : (
+                                  <span className="px-2 py-0.5 bg-green-600 text-white rounded text-xs font-semibold">ATIVO</span>
+                                )}
+                              </div>
+                            </div>
+                            {!funcionario.dataDesligamento && (
+                              <button
+                                onClick={() => consultarDocumento(funcionario.cpf, 'PF')}
+                                disabled={consultando}
+                                className="ml-3 p-2 text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Consultar este funcionário"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-          )
+            )
           )}
         </>
       )}
@@ -700,7 +697,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
           </h4>
           <div className="space-y-3">
             {resultado.historicoProfissional.map((trabalho: any, idx: number) => (
-              <div key={idx} className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 hover:bg-indigo-100 transition-colors">
+              <div key={idx} className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-4 py-3 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900">{trabalho.razaoSocial}</p>
@@ -717,7 +714,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                         <span>Demissão: {trabalho.dataDemissao}</span>
                       )}
                       {trabalho.mediaSalario && (
-                        <span className="font-semibold text-indigo-700">
+                        <span className="font-semibold text-indigo-700 dark:text-indigo-400">
                           Salário Médio: R$ {trabalho.mediaSalario}
                         </span>
                       )}
@@ -732,7 +729,7 @@ export default function ConsultaResultados({ resultado, activeTab, consultarDocu
                     <button
                       onClick={() => consultarDocumento(trabalho.cnpjFormatado.replace(/\D/g, ''), 'PJ')}
                       disabled={consultando}
-                      className="ml-3 p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="ml-3 p-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Consultar esta empresa"
                     >
                       <Eye className="h-4 w-4" />

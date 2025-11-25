@@ -188,21 +188,6 @@ export default function ConsultaPage() {
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro na consulta')
-      }
-
-      setConsultaResult(data.data)
-
-      if (data.usage) {
-        setLimiteInfo(data.usage)
-      }
-
-      window.scrollTo({ top: 400, behavior: 'smooth' })
-
-    } catch (error) {
-      console.error('Erro na consulta:', error)
-      setError(error instanceof Error ? error.message : 'Erro ao realizar consulta')
     } finally {
       setConsultando(false)
     }
