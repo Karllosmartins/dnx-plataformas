@@ -392,7 +392,8 @@ export default function RelatoriosPage() {
       campanhaValores,
       origemCounts,
       timeline,
-      temporal: monthlyComparison
+      temporal: monthlyComparison,
+      funnel: funnelData
     }
   }
 
@@ -680,105 +681,6 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      {/* Métricas Principais Dinâmicas */}
-      {metrics.metricasPrincipais && metrics.metricasPrincipais.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <Zap className="h-6 w-6 mr-2 text-yellow-500" />
-            Métricas Principais
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {metrics.metricasPrincipais.map((metrica: any, index: number) => {
-              // Cores para os cards - usando valores RGB diretos
-              const colors = [
-                { gradient: 'linear-gradient(to bottom right, #06b6d4, #0891b2)' }, // cyan
-                { gradient: 'linear-gradient(to bottom right, #10b981, #059669)' }, // emerald
-                { gradient: 'linear-gradient(to bottom right, #8b5cf6, #7c3aed)' }, // violet
-                { gradient: 'linear-gradient(to bottom right, #f43f5e, #e11d48)' }, // rose
-                { gradient: 'linear-gradient(to bottom right, #f59e0b, #d97706)' }, // amber
-                { gradient: 'linear-gradient(to bottom right, #6366f1, #4f46e5)' }, // indigo
-                { gradient: 'linear-gradient(to bottom right, #ec4899, #db2777)' }, // pink
-                { gradient: 'linear-gradient(to bottom right, #14b8a6, #0d9488)' }, // teal
-              ]
-              const color = colors[index % colors.length]
-
-              // Ícones baseados no tipo
-              const IconComponent =
-                metrica.tipo === 'media' ? DollarSign :
-                  metrica.tipo === 'percentual' ? Percent :
-                    metrica.tipo === 'tempo_entre_status' ? Clock :
-                      metrica.tipo === 'distribuicao' ? BarChart3 :
-                        Activity
-
-              // Formatar valor de forma segura
-              let valorFormatado: string | number = '-'
-
-              if (metrica.tipo === 'media') {
-                if (typeof metrica.valor === 'number') {
-                  valorFormatado = `R$ ${metrica.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                } else if (typeof metrica.valor === 'string') {
-                  const num = parseFloat(metrica.valor)
-                  if (!isNaN(num)) {
-                    valorFormatado = `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                  }
-                }
-              } else if (metrica.tipo === 'percentual') {
-                if (typeof metrica.valor === 'number' || typeof metrica.valor === 'string') {
-                  valorFormatado = `${metrica.valor}%`
-                }
-              } else if (metrica.tipo === 'tempo_entre_status') {
-                if (typeof metrica.valor === 'number' || typeof metrica.valor === 'string') {
-                  valorFormatado = `${metrica.valor} dias`
-                }
-              } else if (metrica.tipo === 'distribuicao') {
-                if (typeof metrica.valor === 'object' && metrica.valor !== null) {
-                  // Para distribuição, mostrar o item mais comum
-                  const entries = Object.entries(metrica.valor)
-                  if (entries.length > 0) {
-                    const [topItem, topCount] = entries.reduce((a, b) =>
-                      ((b[1] as number) > (a[1] as number)) ? b : a
-                    )
-                    valorFormatado = `${topItem}: ${topCount}`
-                  } else {
-                    valorFormatado = 'Sem dados'
-                  }
-                } else if (typeof metrica.valor === 'string' || typeof metrica.valor === 'number') {
-                  valorFormatado = String(metrica.valor)
-                }
-              } else {
-                // Fallback: converter qualquer valor para string
-                if (typeof metrica.valor === 'object' && metrica.valor !== null) {
-                  valorFormatado = 'N/A'
-                } else {
-                  valorFormatado = String(metrica.valor || '-')
-                }
-              }
-
-              return (
-                <div
-                  key={metrica.nome}
-                  className="rounded-lg shadow-lg p-6"
-                  style={{ background: color.gradient }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                        {metrica.label}
-                      </p>
-                      <p className="text-2xl font-bold mt-2" style={{ color: '#ffffff' }}>
-                        {valorFormatado}
-                      </p>
-                    </div>
-                    <IconComponent className="h-10 w-10" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Graficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Grafico de Status - Pie Chart */}
@@ -947,77 +849,6 @@ export default function RelatoriosPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Gráficos de Campos Personalizados */}
-      {metrics.customFields && Object.keys(metrics.customFields).length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <Activity className="h-6 w-6 mr-2 text-purple-600" />
-            Análise de Campos Personalizados
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {Object.entries(metrics.customFields).map(([fieldName, fieldData]) => {
-              // Só renderizar se houver dados
-              if (Object.keys(fieldData).length === 0) return null
-
-              const chartData = Object.entries(fieldData)
-                .map(([value, count]) => ({
-                  name: value,
-                  value: count as number
-                }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 10) // Máximo de 10 itens para não poluir o gráfico
-
-              // Formatando o nome do campo
-              const formattedFieldName = fieldName
-                .replace(/_/g, ' ')
-                .replace(/\b\w/g, l => l.toUpperCase())
-
-              return (
-                <div key={fieldName} className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Target className="h-5 w-5 mr-2 text-purple-600" />
-                    {formattedFieldName}
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={120}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8B5CF6" name={formattedFieldName}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-
-                  {/* Resumo */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total de variações:</span>
-                      <span className="font-semibold text-gray-900">{Object.keys(fieldData).length}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-2">
-                      <span className="text-gray-600">Mais comum:</span>
-                      <span className="font-semibold text-purple-600">
-                        {chartData[0]?.name} ({chartData[0]?.value} leads)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Análise de Funil de Conversão */}
       {metrics.funnel && metrics.funnel.length > 0 && (
