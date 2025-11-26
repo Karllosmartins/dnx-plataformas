@@ -171,36 +171,18 @@ export async function POST(request: NextRequest) {
 
     const workspaceId = userData.current_workspace_id
 
-    // Buscar plano do workspace
+    // Buscar workspace (extração usa limite_consultas)
     const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
       .from('workspaces')
-      .select(`
-        id,
-        plano_id,
-        leads_consumidos,
-        planos (
-          acesso_extracao_leads,
-          limite_leads_mes
-        )
-      `)
+      .select('id, plano_id, consultas_realizadas, limite_consultas')
       .eq('id', workspaceId)
       .single()
 
-    if (workspaceError || !workspace || !workspace.planos) {
-      console.error('Erro ao buscar plano do workspace:', workspaceError)
+    if (workspaceError || !workspace) {
+      console.error('Erro ao buscar workspace:', workspaceError)
       return NextResponse.json(
-        { error: 'Workspace não encontrado ou sem plano ativo' },
+        { error: 'Workspace não encontrado' },
         { status: 404 }
-      )
-    }
-
-    const plano = Array.isArray(workspace.planos) ? workspace.planos[0] : workspace.planos
-
-    // Verificar se o workspace tem acesso à extração de leads
-    if (!plano.acesso_extracao_leads) {
-      return NextResponse.json(
-        { error: 'Seu plano não tem acesso à extração de leads' },
-        { status: 403 }
       )
     }
 
@@ -221,16 +203,16 @@ export async function POST(request: NextRequest) {
     // Calcular quantidade real de leads que serão extraídos
     const quantidadeReal = Math.min(qtdeSolicitada, contagem.total_registros)
 
-    // Verificar limite de leads do workspace
-    const leadsConsumidos = workspace.leads_consumidos || 0
-    const limiteLeads = plano.limite_leads_mes || 0
-    const leadsRestantes = limiteLeads - leadsConsumidos
+    // Verificar limite de consultas do workspace (extração usa consultas)
+    const consultasRealizadas = workspace.consultas_realizadas || 0
+    const limiteConsultas = workspace.limite_consultas || 0
+    const consultasRestantes = limiteConsultas - consultasRealizadas
 
-    if (leadsRestantes < quantidadeReal) {
+    if (consultasRestantes < quantidadeReal) {
       return NextResponse.json(
         {
-          error: 'Leads insuficientes',
-          details: `Você solicitou ${quantidadeReal} leads, mas possui apenas ${leadsRestantes} leads disponíveis.`
+          error: 'Consultas insuficientes',
+          details: `Você solicitou ${quantidadeReal} registros, mas possui apenas ${consultasRestantes} consultas disponíveis.`
         },
         { status: 429 }
       )
@@ -268,16 +250,16 @@ export async function POST(request: NextRequest) {
       throw new Error(`API Profile: ${resultadoExtracao.msg}`)
     }
 
-    // Incrementar contador de leads consumidos do workspace
+    // Incrementar contador de consultas realizadas do workspace
     const { error: updateError } = await getSupabaseAdmin()
       .from('workspaces')
       .update({
-        leads_consumidos: leadsConsumidos + quantidadeReal
+        consultas_realizadas: consultasRealizadas + quantidadeReal
       })
       .eq('id', workspaceId)
 
     if (updateError) {
-      console.error('Erro ao atualizar contador de leads:', updateError)
+      console.error('Erro ao atualizar contador de consultas:', updateError)
       return NextResponse.json(
         { error: 'Erro ao processar extração de leads' },
         { status: 500 }
@@ -303,8 +285,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     // Calcular dados atualizados
-    const leadsConsumidosAtual = leadsConsumidos + quantidadeReal
-    const leadsRestantesAtual = limiteLeads - leadsConsumidosAtual
+    const consultasRealizadasAtual = consultasRealizadas + quantidadeReal
+    const consultasRestantesAtual = limiteConsultas - consultasRealizadasAtual
 
     // 5. Retornar resultado
     return NextResponse.json({
@@ -314,8 +296,8 @@ export async function POST(request: NextRequest) {
       status: 'processando',
       message: 'Extração criada com sucesso!',
       usage: {
-        leadsConsumidos: leadsConsumidosAtual,
-        leadsRestantes: leadsRestantesAtual,
+        consultasRealizadas: consultasRealizadasAtual,
+        consultasRestantes: consultasRestantesAtual,
         quantidadeExtraida: quantidadeReal
       }
     })
