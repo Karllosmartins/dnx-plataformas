@@ -12,7 +12,7 @@ import ExtracaoProgress from '../../components/features/extracao/ExtracaoProgres
 import HistoricoContagens from '../../components/features/extracao/HistoricoContagens'
 import ModalCriarExtracao from '../../components/features/extracao/ModalCriarExtracao'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../lib/supabase'
-import { getProfileApiKey, validateProfileApiKey } from '../../lib/profile'
+import { validateProfileApiKey } from '../../lib/profile'
 import { 
   Target, 
   Search, 
@@ -406,8 +406,15 @@ export default function ExtracaoLeadsPage() {
 
     setLoading(true)
     try {
-      // Buscar API Key usando função utilitária
-      const apiKey = await getProfileApiKey(parseInt(user.id.toString()))
+      // Buscar API Key via endpoint (server-side)
+      const apiKeyResponse = await fetch(`/api/profile/get-api-key?userId=${user.id}`)
+
+      if (!apiKeyResponse.ok) {
+        const error = await apiKeyResponse.json()
+        throw new Error(error.error || 'Erro ao buscar credenciais')
+      }
+
+      const { apiKey } = await apiKeyResponse.json()
 
       if (!validateProfileApiKey(apiKey)) {
         throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
@@ -587,12 +594,19 @@ export default function ExtracaoLeadsPage() {
     removerRegistrosExtraidos: boolean
   }) => {
     if (!user) return
-    
+
     try {
       setLoading(true)
 
-      // Buscar API Key usando função utilitária
-      const apiKey = await getProfileApiKey(parseInt(user.id.toString()))
+      // Buscar API Key via endpoint (server-side)
+      const apiKeyResponse = await fetch(`/api/profile/get-api-key?userId=${user.id}`)
+
+      if (!apiKeyResponse.ok) {
+        const error = await apiKeyResponse.json()
+        throw new Error(error.error || 'Erro ao buscar credenciais')
+      }
+
+      const { apiKey } = await apiKeyResponse.json()
 
       if (!validateProfileApiKey(apiKey)) {
         throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
