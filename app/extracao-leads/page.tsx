@@ -406,8 +406,8 @@ export default function ExtracaoLeadsPage() {
 
     setLoading(true)
     try {
-      // Buscar API Key via endpoint (server-side)
-      const apiKeyResponse = await fetch(`/api/profile/get-api-key?userId=${user.id}`)
+      // Buscar API Key via endpoint (server-side) - mesma para todos
+      const apiKeyResponse = await fetch('/api/profile/get-api-key')
 
       if (!apiKeyResponse.ok) {
         const error = await apiKeyResponse.json()
@@ -417,7 +417,7 @@ export default function ExtracaoLeadsPage() {
       const { apiKey } = await apiKeyResponse.json()
 
       if (!validateProfileApiKey(apiKey)) {
-        throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
+        throw new Error('API Key da Profile não encontrada.')
       }
 
       const response = await fetch('/api/profile-proxy?endpoint=/Auth', {
@@ -598,8 +598,8 @@ export default function ExtracaoLeadsPage() {
     try {
       setLoading(true)
 
-      // Buscar API Key via endpoint (server-side)
-      const apiKeyResponse = await fetch(`/api/profile/get-api-key?userId=${user.id}`)
+      // Buscar API Key via endpoint (server-side) - mesma para todos
+      const apiKeyResponse = await fetch('/api/profile/get-api-key')
 
       if (!apiKeyResponse.ok) {
         const error = await apiKeyResponse.json()
@@ -609,7 +609,7 @@ export default function ExtracaoLeadsPage() {
       const { apiKey } = await apiKeyResponse.json()
 
       if (!validateProfileApiKey(apiKey)) {
-        throw new Error('API Key da Profile não encontrada. Configure suas credenciais em Usuários.')
+        throw new Error('API Key da Profile não encontrada.')
       }
 
       // Chamar API de extração com dados do modal

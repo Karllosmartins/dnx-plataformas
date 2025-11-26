@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getProfileApiKey } from '../../../../lib/profile'
 
 // Marcar como dinâmico para evitar erro de pré-renderização
@@ -6,23 +6,17 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/profile/get-api-key
- * Busca a API Key do Profile para o usuário atual
+ * Retorna a API Key do Profile da variável de ambiente
+ * (mesma API Key para todos os usuários)
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId é obrigatório' }, { status: 400 })
-    }
-
-    // Buscar API Key usando função utilitária (server-side)
-    const apiKey = await getProfileApiKey(parseInt(userId))
+    // Buscar API Key da variável de ambiente (server-side)
+    const apiKey = getProfileApiKey()
 
     if (!apiKey || apiKey.trim() === '') {
       return NextResponse.json(
-        { error: 'API Key da Profile não encontrada. Configure suas credenciais em Usuários.' },
+        { error: 'API Key da Profile não encontrada nas variáveis de ambiente' },
         { status: 404 }
       )
     }
