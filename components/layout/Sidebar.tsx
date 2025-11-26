@@ -45,6 +45,7 @@ const navigation = [
   { name: 'Extração Leads', href: '/extracao-leads', icon: Target, feature: 'extracaoLeads' as const },
   { name: 'Integrações', href: '/integracoes', icon: Plug, feature: 'integracoes' as const },
   { name: 'Arquivos', href: '/arquivos', icon: FileText, feature: 'arquivos' as const },
+  { name: 'Configurações', href: '/configuracoes-admin', icon: Settings, feature: 'usuarios' as const, adminOnly: true },
 ]
 
 interface SidebarProps {

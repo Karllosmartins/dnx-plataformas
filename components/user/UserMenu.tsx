@@ -13,9 +13,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Settings,
@@ -24,8 +21,6 @@ import {
   LogOut,
   ChevronDown,
   CreditCard,
-  Shield,
-  Building2,
 } from 'lucide-react'
 import { MembersDialog } from './MembersDialog'
 
@@ -133,8 +128,7 @@ function UserMenuContent({
   onOpenMembers: () => void
   onOpenAccount: () => void
 }) {
-  const router = useRouter()
-  const isAdmin = user.role === 'admin'
+  const canManageMembers = user.role === 'admin'
 
   return (
     <>
@@ -154,41 +148,17 @@ function UserMenuContent({
           <span>Minha Conta</span>
         </DropdownMenuItem>
 
-        {isAdmin && (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="cursor-pointer">
-              <Shield className="mr-2 h-4 w-4" />
-              <span>Administração</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push('/dashboard/admin')}
-              >
-                <Building2 className="mr-2 h-4 w-4" />
-                <span>Workspaces</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={onOpenMembers}>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Gerenciar Membros</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push('/dashboard/planos')}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Planos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push('/configuracoes-admin')}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+        {canManageMembers && (
+          <DropdownMenuItem className="cursor-pointer" onClick={onOpenMembers}>
+            <Users className="mr-2 h-4 w-4" />
+            <span>Gerenciar Membros</span>
+          </DropdownMenuItem>
         )}
+
+        <DropdownMenuItem className="cursor-pointer">
+          <CreditCard className="mr-2 h-4 w-4" />
+          <span>Plano e Faturamento</span>
+        </DropdownMenuItem>
       </DropdownMenuGroup>
 
       <DropdownMenuSeparator />

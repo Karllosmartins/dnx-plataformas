@@ -33,7 +33,6 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
           name,
           slug,
           plano_id,
-          owner_id,
           settings,
           created_at,
           updated_at,
@@ -43,7 +42,6 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
           leads_consumidos,
           consultas_realizadas,
           instancias_ativas,
-          plano_customizado,
           planos (
             nome
           )
@@ -73,24 +71,12 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
           .select('*', { count: 'exact', head: true })
           .eq('workspace_id', ws.id)
 
-        // Buscar dados do owner
-        let ownerData = null
-        if (ws.owner_id) {
-          const { data: owner } = await supabase
-            .from('users')
-            .select('id, name, email, cpf, telefone')
-            .eq('id', ws.owner_id)
-            .single()
-          ownerData = owner
-        }
-
         return {
           ...ws,
           plano_nome: ws?.planos?.nome || 'Básico',
           leads_consumidos: leadsCount || 0,
           instancias_ativas: instancesCount || 0,
-          current_user_role: m.role,
-          users: ownerData // Adiciona dados do owner
+          current_user_role: m.role
         }
       })
     )
@@ -189,16 +175,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId
-    const {
-      name,
-      slug,
-      plano_id,
-      owner_id,
-      limite_leads,
-      limite_consultas,
-      limite_instancias,
-      plano_customizado
-    }: any = req.body
+    const { name, slug }: CreateWorkspaceRequest = req.body
 
     if (!name) {
       throw ApiError.badRequest('Nome e obrigatorio', 'MISSING_NAME')
@@ -207,26 +184,14 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     // Gerar slug se não fornecido
     const finalSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
 
-    // Determinar o owner (admin pode definir, senão é o usuário atual)
-    const finalOwnerId = owner_id || parseInt(userId || '0')
-
     // Criar workspace
-    const insertData: any = {
-      name,
-      slug: finalSlug,
-      settings: {},
-      owner_id: finalOwnerId
-    }
-
-    if (plano_id) insertData.plano_id = plano_id
-    if (limite_leads !== undefined) insertData.limite_leads = limite_leads
-    if (limite_consultas !== undefined) insertData.limite_consultas = limite_consultas
-    if (limite_instancias !== undefined) insertData.limite_instancias = limite_instancias
-    if (plano_customizado !== undefined) insertData.plano_customizado = plano_customizado
-
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
-      .insert(insertData)
+      .insert({
+        name,
+        slug: finalSlug,
+        settings: {}
+      })
       .select()
       .single()
 
@@ -238,12 +203,12 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       throw ApiError.internal('Erro ao criar workspace', 'CREATE_WORKSPACE_ERROR')
     }
 
-    // Adicionar owner como membro
+    // Adicionar usuário como owner
     const { error: memberError } = await supabase
       .from('workspace_members')
       .insert({
         workspace_id: workspace.id,
-        user_id: finalOwnerId,
+        user_id: parseInt(userId || '0'),
         role: 'owner',
         permissions: {
           leads: { create: true, read: true, update: true, delete: true },
@@ -257,13 +222,13 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       logger.error({ error: memberError }, 'Failed to add owner to workspace')
     }
 
-    // Atualizar current_workspace_id do owner
+    // Atualizar current_workspace_id do usuário
     await supabase
       .from('users')
       .update({ current_workspace_id: workspace.id })
-      .eq('id', finalOwnerId)
+      .eq('id', parseInt(userId || '0'))
 
-    logger.info({ workspaceId: workspace.id, ownerId: finalOwnerId }, 'Workspace created')
+    logger.info({ workspaceId: workspace.id, userId }, 'Workspace created')
     ApiResponse.created(res, workspace)
 
   } catch (error) {
@@ -276,43 +241,23 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params
     const userId = req.user?.userId
-    const {
-      name,
-      settings,
-      plano_id,
-      owner_id,
-      limite_leads,
-      limite_consultas,
-      limite_instancias,
-      plano_customizado
-    } = req.body
+    const { name, settings } = req.body
 
-    // Admin pode atualizar qualquer workspace, outros precisam ser owner/admin do workspace
-    const isAdmin = req.user?.role === 'admin'
+    // Verificar se usuário é owner ou admin
+    const { data: membership } = await supabase
+      .from('workspace_members')
+      .select('role')
+      .eq('workspace_id', id)
+      .eq('user_id', parseInt(userId || '0'))
+      .single()
 
-    if (!isAdmin) {
-      // Verificar se usuário é owner ou admin do workspace
-      const { data: membership } = await supabase
-        .from('workspace_members')
-        .select('role')
-        .eq('workspace_id', id)
-        .eq('user_id', parseInt(userId || '0'))
-        .single()
-
-      if (!membership || !['owner', 'admin'].includes(membership.role)) {
-        throw ApiError.forbidden('Apenas owners e admins podem atualizar workspace', 'INSUFFICIENT_PERMISSIONS')
-      }
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+      throw ApiError.forbidden('Apenas owners e admins podem atualizar workspace', 'INSUFFICIENT_PERMISSIONS')
     }
 
-    const updateData: any = {}
+    const updateData: Partial<Workspace> = {}
     if (name !== undefined) updateData.name = name
     if (settings !== undefined) updateData.settings = settings
-    if (plano_id !== undefined) updateData.plano_id = plano_id
-    if (owner_id !== undefined) updateData.owner_id = owner_id
-    if (limite_leads !== undefined) updateData.limite_leads = limite_leads
-    if (limite_consultas !== undefined) updateData.limite_consultas = limite_consultas
-    if (limite_instancias !== undefined) updateData.limite_instancias = limite_instancias
-    if (plano_customizado !== undefined) updateData.plano_customizado = plano_customizado
 
     const { data: workspace, error } = await supabase
       .from('workspaces')
