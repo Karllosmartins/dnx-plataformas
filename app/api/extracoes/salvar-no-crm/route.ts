@@ -69,6 +69,8 @@ function parseCSV(csvContent: string): Record<string, string>[] {
   // Primeira linha = cabeçalho
   const cabecalho = linhas[0].split('\t').map(col => col.trim())
 
+  console.log('📋 Cabeçalho detectado:', cabecalho.slice(0, 5)) // Primeiras 5 colunas
+
   const dados: Record<string, string>[] = []
 
   // Processar linhas de dados
@@ -140,13 +142,21 @@ export async function POST(request: NextRequest) {
 
       if (dados.length === 0) continue
 
-      // Detectar tipo baseado nas colunas
+      // Detectar tipo baseado nas colunas (case-insensitive)
       const primeiroRegistro = dados[0]
-      const isCNPJ = 'CNPJ' in primeiroRegistro
-      const isSocios = 'cpf' in primeiroRegistro && 'cpfFormatado' in primeiroRegistro
-      const isCPF = 'CPF' in primeiroRegistro && !isSocios
+      const colunas = Object.keys(primeiroRegistro)
+
+      // Converter para maiúsculas para comparação
+      const colunasUpper = colunas.map(c => c.toUpperCase())
+
+      const isCNPJ = colunasUpper.includes('CNPJ')
+      const temCpf = colunas.some(c => c.toLowerCase() === 'cpf')
+      const temCpfFormatado = colunas.some(c => c.toLowerCase() === 'cpfformatado')
+      const isSocios = temCpf && temCpfFormatado
+      const isCPF = colunasUpper.includes('CPF') && !isSocios
 
       console.log(`📄 Processando arquivo: ${entry.entryName}`)
+      console.log(`   Colunas disponíveis:`, colunas.join(', '))
       console.log(`   Tipo detectado: ${isCNPJ ? 'CNPJ' : isSocios ? 'Sócios' : isCPF ? 'CPF' : 'Desconhecido'}`)
       console.log(`   Total de registros: ${dados.length}`)
 
