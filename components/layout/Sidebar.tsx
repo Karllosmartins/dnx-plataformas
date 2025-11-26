@@ -221,11 +221,6 @@ function SidebarContent({
       return false
     }
 
-    // Verificar adminOnly
-    if (item.adminOnly) {
-      return false
-    }
-
     // Verificar permissão do workspace
     return hasWorkspaceFeatureAccess(workspaceWithPlan, item.feature)
   })
