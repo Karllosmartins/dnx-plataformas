@@ -113,6 +113,14 @@ export default function AdminWorkspacesPage() {
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null)
   const [formData, setFormData] = useState<WorkspaceForm>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [showNewUserForm, setShowNewUserForm] = useState(false)
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    cpf: '',
+    telefone: '',
+    password: ''
+  })
 
   const fetchData = async () => {
     setLoading(true)
@@ -265,6 +273,45 @@ export default function AdminWorkspacesPage() {
     }
   }
 
+  const handleCreateUser = async () => {
+    if (!newUserData.name || !newUserData.email || !newUserData.password) {
+      alert('Nome, email e senha são obrigatórios')
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          name: newUserData.name,
+          email: newUserData.email,
+          cpf: newUserData.cpf,
+          telefone: newUserData.telefone,
+          password: newUserData.password,
+          role: 'user'
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Atualizar lista de usuários
+      await fetchUsers()
+
+      // Selecionar o novo usuário automaticamente
+      setFormData(prev => ({ ...prev, owner_id: data.id }))
+
+      // Limpar formulário e fechar
+      setNewUserData({ name: '', email: '', cpf: '', telefone: '', password: '' })
+      setShowNewUserForm(false)
+
+      alert('Usuário criado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error)
+      alert('Erro ao criar usuário: ' + (error as any).message)
+    }
+  }
+
   useEffect(() => {
     if (user && hasFeatureAccess(user as any, 'usuarios')) {
       fetchData()
@@ -368,9 +415,19 @@ export default function AdminWorkspacesPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="owner" className="block text-sm font-medium text-gray-700">
-                  Proprietário *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="owner" className="block text-sm font-medium text-gray-700">
+                    Proprietário *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewUserForm(!showNewUserForm)}
+                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {showNewUserForm ? 'Fechar' : 'Criar Novo Usuário'}
+                  </button>
+                </div>
                 <select
                   id="owner"
                   value={formData.owner_id || ''}
@@ -384,6 +441,101 @@ export default function AdminWorkspacesPage() {
                     </option>
                   ))}
                 </select>
+
+                {/* Formulário de Novo Usuário */}
+                {showNewUserForm && (
+                  <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Criar Novo Usuário</h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Nome *
+                        </label>
+                        <input
+                          type="text"
+                          value={newUserData.name}
+                          onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Nome completo"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Email *
+                        </label>
+                        <input
+                          type="email"
+                          value={newUserData.email}
+                          onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="email@exemplo.com"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          CPF
+                        </label>
+                        <input
+                          type="text"
+                          value={newUserData.cpf}
+                          onChange={(e) => setNewUserData(prev => ({ ...prev, cpf: e.target.value }))}
+                          placeholder="000.000.000-00"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Telefone
+                        </label>
+                        <input
+                          type="text"
+                          value={newUserData.telefone}
+                          onChange={(e) => setNewUserData(prev => ({ ...prev, telefone: e.target.value }))}
+                          placeholder="(00) 00000-0000"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Senha *
+                        </label>
+                        <input
+                          type="password"
+                          value={newUserData.password}
+                          onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="••••••••"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewUserForm(false)
+                          setNewUserData({ name: '', email: '', cpf: '', telefone: '', password: '' })
+                        }}
+                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateUser}
+                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                      >
+                        <Save className="h-3 w-3" />
+                        Criar e Selecionar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
