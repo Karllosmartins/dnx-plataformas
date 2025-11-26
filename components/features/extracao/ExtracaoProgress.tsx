@@ -59,9 +59,10 @@ export default function ExtracaoProgress({
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const jaExtraidoRef = useRef(false) // Para evitar múltiplas tentativas
 
-  // Função para salvar extrações no banco de dados
+  // Função para salvar extrações no banco de dados (MANUAL - não é mais automática)
   const salvarExtracoesNoBanco = async () => {
     if (jaExtraidoRef.current) {
+      setMensagemSalvamento('Leads já foram salvos no CRM')
       return
     }
 
@@ -70,121 +71,32 @@ export default function ExtracaoProgress({
     setMensagemSalvamento('Salvando leads no banco de dados...')
 
     try {
-      // Buscar arquivo de extração
-      const downloadUrl = `/api/extracoes/download?idExtracao=${idExtracaoAPI}&apiKey=${encodeURIComponent(apiKey)}`
+      // Chamar API que processa o ZIP e salva no banco
+      const response = await fetch('/api/extracoes/salvar-no-crm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          idExtracaoAPI,
+          userId,
+          apiKey,
+          nomeArquivo
+        })
+      })
 
-      const fileResponse = await fetch(downloadUrl)
-
-      if (!fileResponse.ok) {
-        const errorText = await fileResponse.text()
-        throw new Error(`Erro ao buscar arquivo: ${fileResponse.status} - ${errorText}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao salvar no CRM')
       }
 
-      // Obter conteúdo do arquivo
-      const fileContent = await fileResponse.text()
+      const resultado = await response.json()
 
-      // Parsing: dividir por linhas e extrair dados
-      // Esperamos formato CSV com cabeçalho (ignorar primeira linha)
-      const linhas = fileContent.trim().split('\n')
-
-      if (linhas.length < 2) {
-        throw new Error('Arquivo vazio ou sem dados válidos')
-      }
-
-      let totalSalvos = 0
-      let totalDuplicados = 0
-      let totalErros = 0
-
-      // Processar cada linha (ignorar cabeçalho)
-      for (let i = 1; i < linhas.length; i++) {
-        try {
-          const linha = linhas[i].trim()
-          if (!linha) {
-            continue
-          }
-
-          // Parsing simples: supor formato "nome,telefone" ou CSV mais complexo
-          // Se for CSV, pode ter vírgulas dentro de aspas, então fazer parsing robusto
-          const campos = linha.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
-
-          if (campos.length < 2) {
-            continue
-          }
-
-          const nomeLead = campos[0]?.trim() || 'Sem nome'
-          const telefoneBruto = campos[1]?.trim() || ''
-
-          // Formatar telefone: remover caracteres não numéricos
-          const telefoneNumerico = telefoneBruto.replace(/\D/g, '')
-
-          if (!telefoneNumerico || telefoneNumerico.length < 10) {
-            totalErros++
-            continue
-          }
-
-          // Formatar telefone: (XX) 99999-9999 ou (XX) 9999-9999
-          let numeroFormatado: string
-          if (telefoneNumerico.length === 11) {
-            // Com 9 dígito
-            numeroFormatado = `(${telefoneNumerico.slice(0, 2)}) ${telefoneNumerico.slice(2, 7)}-${telefoneNumerico.slice(7)}`
-          } else if (telefoneNumerico.length === 10) {
-            // Sem 9 dígito
-            numeroFormatado = `(${telefoneNumerico.slice(0, 2)}) ${telefoneNumerico.slice(2, 6)}-${telefoneNumerico.slice(6)}`
-          } else {
-            totalErros++
-            continue
-          }
-
-          // Verificar duplicata
-          const { data: existingLead, error: searchError } = await supabase
-            .from('leads')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('numero_formatado', numeroFormatado)
-            .maybeSingle()
-
-          if (searchError) {
-            totalErros++
-            continue
-          }
-
-          if (existingLead) {
-            totalDuplicados++
-            continue
-          }
-
-          // Salvar novo lead
-          const { error: insertError } = await supabase
-            .from('leads')
-            .insert({
-              user_id: userId,
-              nome_cliente: nomeLead,
-              numero_formatado: numeroFormatado,
-              nome_campanha: nomeArquivo, // Usar nome da extração como campanha
-              origem: 'Extração de Leads',
-              email_usuario: null,
-              nome_empresa: null,
-              cpf_cnpj: null,
-              ativo: true,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single()
-
-          if (insertError) {
-            totalErros++
-            continue
-          }
-
-          totalSalvos++
-        } catch (lineError) {
-          totalErros++
-        }
-      }
-
-      const mensagem = `Salvamento concluido! Leads salvos: ${totalSalvos}, Duplicados: ${totalDuplicados}, Erros: ${totalErros}`
+      const mensagem = `Salvamento concluído! Leads salvos: ${resultado.totalSalvos}, Duplicados: ${resultado.totalDuplicados}, Erros: ${resultado.totalErros}`
       setMensagemSalvamento(mensagem)
     } catch (error) {
+      // Em caso de erro, permitir tentar novamente
+      jaExtraidoRef.current = false
       const mensagemErro = `Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
       setMensagemSalvamento(mensagemErro)
     } finally {
@@ -227,10 +139,7 @@ export default function ExtracaoProgress({
             intervalRef.current = null
           }
 
-          // Salvar no banco quando completar com sucesso
-          if (data.extracao.status === 'Processado' || data.extracao.status === 'Finalizada') {
-            await salvarExtracoesNoBanco()
-          }
+          // NÃO salvar automaticamente - usuário deve clicar em "Salvar no CRM"
         }
       } else {
         // Se erro 404, pode ser que a extração não existe na API - parar polling
@@ -382,11 +291,22 @@ export default function ExtracaoProgress({
             {getStatusIcon()}
             <div className="flex-1">
               <div className="font-semibold">{getStatusText()}</div>
-              {status.dataFinalizacao && (
-                <div className="text-sm opacity-75">
-                  Concluída em: {new Date(status.dataFinalizacao).toLocaleString('pt-BR')}
-                </div>
-              )}
+              {status.dataFinalizacao && (() => {
+                try {
+                  // Tentar parsear a data de várias formas
+                  const data = new Date(status.dataFinalizacao)
+                  if (!isNaN(data.getTime())) {
+                    return (
+                      <div className="text-sm opacity-75">
+                        Concluída em: {data.toLocaleString('pt-BR')}
+                      </div>
+                    )
+                  }
+                } catch (error) {
+                  console.error('Erro ao parsear data:', error)
+                }
+                return null
+              })()}
               {status.qtdeRetorno && (
                 <div className="text-sm opacity-75">
                   Registros extraídos: {status.qtdeRetorno.toLocaleString('pt-BR')}
@@ -421,45 +341,71 @@ export default function ExtracaoProgress({
           )}
 
           {/* Botões */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
-            {status.status === 'Processado' || status.status === 'Finalizada' ? (
-              <button
-                onClick={handleDownload}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold flex items-center justify-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Fazer Download
-              </button>
-            ) : status.status === 'Erro' || status.status === 'Cancelada' ? (
-              <div className="flex-1 text-center text-red-600 py-2">
-                {status.status === 'Erro' ? 'Erro no processamento. Tente novamente.' : 'Extração cancelada.'}
-              </div>
-            ) : (
-              <button
-                onClick={() => verificarStatus(true)}
-                disabled={consultandoManual}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-semibold flex items-center justify-center gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${consultandoManual ? 'animate-spin' : ''}`} />
-                {consultandoManual ? 'Consultando...' : 'Consultar Status'}
-              </button>
-            )}
+          <div className="space-y-2 pt-4 border-t border-gray-200">
+            {/* Linha 1: Botões principais baseados no status */}
+            <div className="flex gap-2">
+              {status.status === 'Processado' || status.status === 'Finalizada' ? (
+                <>
+                  <button
+                    onClick={salvarExtracoesNoBanco}
+                    disabled={salvandoNoBanco || jaExtraidoRef.current}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
+                    title={jaExtraidoRef.current ? 'Leads já salvos no CRM' : 'Salvar leads no CRM'}
+                  >
+                    {salvandoNoBanco ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        {jaExtraidoRef.current ? 'Já Salvo no CRM' : 'Salvar no CRM'}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download ZIP
+                  </button>
+                </>
+              ) : status.status === 'Erro' || status.status === 'Cancelada' ? (
+                <div className="flex-1 text-center text-red-600 py-2 font-medium">
+                  {status.status === 'Erro' ? 'Erro no processamento. Tente novamente.' : 'Extração cancelada.'}
+                </div>
+              ) : (
+                <button
+                  onClick={() => verificarStatus(true)}
+                  disabled={consultandoManual}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-semibold flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${consultandoManual ? 'animate-spin' : ''}`} />
+                  {consultandoManual ? 'Consultando...' : 'Consultar Status'}
+                </button>
+              )}
+            </div>
 
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-              title="Remover extração da lista"
-            >
-              <X className="h-4 w-4" />
-              Deletar
-            </button>
+            {/* Linha 2: Botões secundários */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 text-sm"
+                title="Remover extração da lista"
+              >
+                <X className="h-4 w-4" />
+                Deletar
+              </button>
 
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Fechar
-            </button>
+              <button
+                onClick={onClose}
+                className="flex-1 border border-gray-300 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
 
           {/* Atualização automática */}
