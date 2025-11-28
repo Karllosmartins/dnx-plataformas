@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Download,
   ExternalLink,
-  Trash2
+  Trash2,
+  RotateCcw
 } from 'lucide-react'
 
 interface HistoricoContagensProps {
@@ -28,14 +29,15 @@ interface ContagemComExtracoes extends ContagemProfile {
   extracoes_profile?: ExtracaoProfile[]
 }
 
-export default function HistoricoContagens({ 
-  apiConfig, 
-  authenticateAPI, 
-  loading 
+export default function HistoricoContagens({
+  apiConfig,
+  authenticateAPI,
+  loading
 }: HistoricoContagensProps) {
   const { user } = useAuth()
   const [contagens, setContagens] = useState<ContagemComExtracoes[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [atualizandoExtracoes, setAtualizandoExtracoes] = useState<Set<number>>(new Set())
 
   // Carregar histórico de contagens
   const loadHistorico = async () => {
@@ -58,10 +60,138 @@ export default function HistoricoContagens({
       }
 
       setContagens(contagensBanco || [])
+
+      // Verificar e atualizar status de extrações pendentes automaticamente
+      const extracoesPendentes = (contagensBanco || [])
+        .flatMap(c => c.extracoes_profile || [])
+        .filter(e => e.status === 'processando' && e.id_extracao_api)
+
+      if (extracoesPendentes.length > 0) {
+        // Atualizar status em background
+        atualizarStatusExtracoesPendentes(extracoesPendentes)
+      }
     } catch (error) {
       console.error('Erro ao carregar histórico:', error)
     } finally {
       setLoadingHistorico(false)
+    }
+  }
+
+  // Verificar e atualizar status de uma extração específica
+  const atualizarStatusExtracao = async (extracao: ExtracaoProfile) => {
+    if (!user || !extracao.id_extracao_api) return
+
+    // Marcar como atualizando
+    setAtualizandoExtracoes(prev => new Set(prev).add(extracao.id))
+
+    try {
+      // Buscar apiKey do usuário
+      const { data: config } = await supabase
+        .from('configuracoes_credenciais')
+        .select('apikeydados')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!config?.apikeydados) {
+        console.error('API Key não encontrada')
+        return
+      }
+
+      // Chamar API para verificar status
+      const response = await fetch('/api/extracoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          extracaoId: extracao.id,
+          userId: user.id,
+          apiKey: config.apikeydados,
+          idExtracaoAPI: extracao.id_extracao_api
+        })
+      })
+
+      if (response.ok) {
+        // Recarregar histórico para refletir as mudanças
+        await loadHistoricoSemVerificacao()
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status da extração:', error)
+    } finally {
+      setAtualizandoExtracoes(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(extracao.id)
+        return newSet
+      })
+    }
+  }
+
+  // Atualizar status de múltiplas extrações pendentes (em background)
+  const atualizarStatusExtracoesPendentes = async (extracoes: ExtracaoProfile[]) => {
+    if (!user) return
+
+    try {
+      // Buscar apiKey do usuário
+      const { data: config } = await supabase
+        .from('configuracoes_credenciais')
+        .select('apikeydados')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!config?.apikeydados) return
+
+      // Atualizar cada extração pendente
+      for (const extracao of extracoes) {
+        if (!extracao.id_extracao_api) continue
+
+        setAtualizandoExtracoes(prev => new Set(prev).add(extracao.id))
+
+        try {
+          await fetch('/api/extracoes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              extracaoId: extracao.id,
+              userId: user.id,
+              apiKey: config.apikeydados,
+              idExtracaoAPI: extracao.id_extracao_api
+            })
+          })
+        } catch (err) {
+          console.error('Erro ao atualizar extração:', extracao.id, err)
+        } finally {
+          setAtualizandoExtracoes(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(extracao.id)
+            return newSet
+          })
+        }
+      }
+
+      // Recarregar histórico após atualizar todas
+      await loadHistoricoSemVerificacao()
+    } catch (error) {
+      console.error('Erro ao atualizar extrações pendentes:', error)
+    }
+  }
+
+  // Carregar histórico sem verificar pendentes (para evitar loop)
+  const loadHistoricoSemVerificacao = async () => {
+    if (!user) return
+
+    try {
+      const { data: contagensBanco, error } = await supabase
+        .from('contagens_profile')
+        .select(`
+          *,
+          extracoes_profile (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (!error) {
+        setContagens(contagensBanco || [])
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar histórico:', error)
     }
   }
 
@@ -298,7 +428,14 @@ export default function HistoricoContagens({
                                 </button>
                               )}
                               {extracao.status === 'processando' && (
-                                <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
+                                <button
+                                  onClick={() => atualizarStatusExtracao(extracao)}
+                                  disabled={atualizandoExtracoes.has(extracao.id)}
+                                  className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                  title="Verificar status na API"
+                                >
+                                  <RotateCcw className={`h-3 w-3 ${atualizandoExtracoes.has(extracao.id) ? 'animate-spin' : ''}`} />
+                                </button>
                               )}
                               {extracao.status === 'erro' && (
                                 <AlertCircle className="h-3 w-3 text-red-600" />
