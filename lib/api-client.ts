@@ -430,3 +430,113 @@ export const camposApi = {
     return apiClient.delete(`/campos/${id}`)
   }
 }
+
+// ============================================
+// APIs Admin - Gestão de Usuários e Workspaces
+// ============================================
+
+export const adminUsersApi = {
+  list() {
+    return apiClient.get('/admin/users')
+  },
+
+  get(id: string) {
+    return apiClient.get(`/admin/users/${id}`)
+  },
+
+  create(data: {
+    name: string
+    email: string
+    password: string
+    role?: 'admin' | 'user'
+    workspace_id: string
+    workspace_role?: 'owner' | 'admin' | 'member' | 'viewer'
+    cpf?: string
+    telefone?: string
+  }) {
+    return apiClient.post('/admin/users', data)
+  },
+
+  update(id: string, data: {
+    name?: string
+    email?: string
+    password?: string
+    role?: 'admin' | 'user'
+    active?: boolean
+    cpf?: string
+    telefone?: string
+    workspace_id?: string
+    workspace_role?: string
+  }) {
+    return apiClient.put(`/admin/users/${id}`, data)
+  },
+
+  delete(id: string) {
+    return apiClient.delete(`/admin/users/${id}`)
+  }
+}
+
+export const adminWorkspacesApi = {
+  list() {
+    return apiClient.get('/admin/workspaces')
+  },
+
+  get(id: string) {
+    return apiClient.get(`/admin/workspaces/${id}`)
+  },
+
+  create(data: {
+    name: string
+    slug: string
+    plano_id?: number
+    ativo?: boolean
+    owner_id?: number
+    limite_leads?: number
+    limite_consultas?: number
+    limite_instancias?: number
+    // Credenciais
+    openai_api_token?: string
+    gemini_api_key?: string
+    elevenlabs_api_key?: string
+    elevenlabs_voice_id?: string
+    datecode_username?: string
+    datecode_password?: string
+  }) {
+    return apiClient.post('/admin/workspaces', data)
+  },
+
+  update(id: string, data: {
+    name?: string
+    slug?: string
+    plano_id?: number
+    ativo?: boolean
+    owner_id?: number
+    limite_leads?: number
+    limite_consultas?: number
+    limite_instancias?: number
+    // Credenciais
+    openai_api_token?: string
+    gemini_api_key?: string
+    elevenlabs_api_key?: string
+    elevenlabs_voice_id?: string
+    datecode_username?: string
+    datecode_password?: string
+    // Permissões customizadas
+    plano_customizado?: Record<string, unknown>
+  }) {
+    return apiClient.put(`/admin/workspaces/${id}`, data)
+  },
+
+  delete(id: string) {
+    return apiClient.delete(`/admin/workspaces/${id}`)
+  },
+
+  // Membros
+  listMembers(workspaceId: string) {
+    return apiClient.get(`/admin/workspaces/${workspaceId}/members`)
+  },
+
+  addMember(workspaceId: string, data: { user_id: number; role?: string }) {
+    return apiClient.post(`/admin/workspaces/${workspaceId}/members`, data)
+  }
+}

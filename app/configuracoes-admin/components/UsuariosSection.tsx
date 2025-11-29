@@ -8,7 +8,6 @@ import { Users, Edit, Save, X, Shield, UserX, Plus, Settings, Lock, Bot, Mic, Gl
 export default function UsuariosSection() {
   const [usuarios, setUsuarios] = useState<UsuarioComPlano[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
-  const [tiposNegocio, setTiposNegocio] = useState<Array<{id: number, nome: string, nome_exibicao: string}>>([])
   const [workspaces, setWorkspaces] = useState<Array<{id: string, name: string, slug: string, plano_nome: string, leads_consumidos: number, instancias_ativas: number, created_at: string}>>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<number | null>(null)
@@ -21,7 +20,6 @@ export default function UsuariosSection() {
   useEffect(() => {
     fetchUsuarios()
     fetchPlanos()
-    fetchTiposNegocio()
     fetchTools()
     fetchWorkspaces()
   }, [])
@@ -35,29 +33,7 @@ export default function UsuariosSection() {
 
       if (error) throw error
 
-      // Buscar tipos de negócio para cada usuário
-      const usuariosComTipos = await Promise.all(
-        (data || []).map(async (usuario) => {
-          const { data: tiposData } = await supabase
-            .from('user_tipos_negocio')
-            .select(`
-              tipos_negocio (
-                id,
-                nome,
-                nome_exibicao
-              )
-            `)
-            .eq('user_id', usuario.id)
-            .eq('ativo', true)
-
-          return {
-            ...usuario,
-            tipos_negocio_selecionados: tiposData?.map((item: any) => item.tipos_negocio).filter(Boolean) || []
-          }
-        })
-      )
-
-      setUsuarios(usuariosComTipos)
+      setUsuarios(data || [])
     } catch (error) {
       console.error('Erro ao buscar usuários:', error)
     }
@@ -76,21 +52,6 @@ export default function UsuariosSection() {
       console.error('Erro ao buscar planos:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchTiposNegocio = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tipos_negocio')
-        .select('id, nome, nome_exibicao')
-        .eq('ativo', true)
-        .order('ordem, nome_exibicao')
-
-      if (error) throw error
-      setTiposNegocio(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar tipos de negócio:', error)
     }
   }
 
@@ -245,7 +206,6 @@ export default function UsuariosSection() {
     inicio_expediente?: number
     fim_expediente?: number
     numero_instancias?: number
-    tipos_negocio?: string[]
     crm_url?: string
     crm_usuario?: string
     crm_senha?: string
@@ -282,9 +242,8 @@ export default function UsuariosSection() {
     [key: string]: any // Para permitir outros campos da view
   }) => {
     try {
-      // Separar tipos_negocio e campos que NÃO pertencem à tabela users
+      // Separar campos que NÃO pertencem à tabela users
       const {
-        tipos_negocio,
         // Campos que não existem na tabela users (serão ignorados)
         delay_entre_mensagens,
         delay_apos_intervencao,
@@ -337,52 +296,6 @@ export default function UsuariosSection() {
 
       if (error) throw error
 
-      // Se tipos_negocio foi fornecido, atualizar relacionamentos
-      if (tipos_negocio !== undefined) {
-        // Desativar todos os tipos existentes
-        await supabase
-          .from('user_tipos_negocio')
-          .update({ ativo: false })
-          .eq('user_id', userId)
-
-        // Ativar ou criar os tipos selecionados
-        for (const tipoNome of tipos_negocio) {
-          // Buscar ID do tipo
-          const { data: tipoData } = await supabase
-            .from('tipos_negocio')
-            .select('id')
-            .eq('nome', tipoNome)
-            .single()
-
-          if (tipoData) {
-            // Verificar se já existe o relacionamento
-            const { data: existingRelation } = await supabase
-              .from('user_tipos_negocio')
-              .select('id')
-              .eq('user_id', userId)
-              .eq('tipo_negocio_id', tipoData.id)
-              .single()
-
-            if (existingRelation) {
-              // Reativar relacionamento existente
-              await supabase
-                .from('user_tipos_negocio')
-                .update({ ativo: true })
-                .eq('id', existingRelation.id)
-            } else {
-              // Criar novo relacionamento
-              await supabase
-                .from('user_tipos_negocio')
-                .insert({
-                  user_id: userId,
-                  tipo_negocio_id: tipoData.id,
-                  ativo: true
-                })
-            }
-          }
-        }
-      }
-
       await fetchUsuarios()
       setEditingUser(null)
       alert('Usuário atualizado com sucesso!')
@@ -400,6 +313,9 @@ export default function UsuariosSection() {
     plano_id?: number
     cpf?: string
     telefone?: string
+    // Workspace
+    workspace_id: string
+    workspace_role: 'owner' | 'admin' | 'member' | 'viewer'
     // Configurações operacionais
     delay_entre_mensagens?: number
     delay_apos_intervencao?: number
@@ -408,8 +324,6 @@ export default function UsuariosSection() {
     numero_instancias?: number
     limite_leads?: number
     limite_consultas?: number
-    // Tipos de negócio
-    tipos_negocio?: string[]
     // Integração CRM
     crm_url?: string
     crm_usuario?: string
@@ -437,39 +351,36 @@ export default function UsuariosSection() {
     ativo?: boolean
   }) => {
     try {
-      // 1. Criar usuário na tabela users (apenas campos que existem nela)
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
+      // Usar a nova API admin para criar o usuário com workspace
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: userData.name,
           email: userData.email,
           password: userData.password,
           role: userData.role,
-          plano_id: userData.plano_id,
+          workspace_id: userData.workspace_id,
+          workspace_role: userData.workspace_role,
           cpf: userData.cpf || null,
-          telefone: userData.telefone || null,
-          active: userData.ativo !== false,
-          numero_instancias: userData.numero_instancias || 1,
-          limite_leads: userData.limite_leads || 100,
-          limite_consultas: userData.limite_consultas || 50
+          telefone: userData.telefone || null
         })
+      })
 
-      if (userError) throw userError
+      const result = await response.json()
 
-      // Buscar o usuário recém-criado
-      const { data: newUser, error: fetchError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userData.email)
-        .single()
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao criar usuário')
+      }
 
-      if (fetchError || !newUser) throw fetchError || new Error('Usuário não encontrado')
+      const newUserId = result.data.id
 
-      // 2. Criar configurações na tabela configuracoes_credenciais (upsert para evitar conflito)
+      // Criar configurações na tabela configuracoes_credenciais
       const { error: configError } = await supabase
         .from('configuracoes_credenciais')
         .upsert({
-          user_id: newUser.id,
+          user_id: newUserId,
+          workspace_id: userData.workspace_id,
           cliente: userData.nome_cliente_empresa || userData.name,
           // Configurações operacionais
           delay_entre_mensagens_em_segundos: userData.delay_entre_mensagens || 30,
@@ -502,27 +413,8 @@ export default function UsuariosSection() {
           onConflict: 'user_id'
         })
 
-      if (configError) throw configError
-
-      // 3. Criar vínculos de tipos de negócio se houver
-      if (userData.tipos_negocio && userData.tipos_negocio.length > 0) {
-        for (const tipoNome of userData.tipos_negocio) {
-          const { data: tipoData } = await supabase
-            .from('tipos_negocio')
-            .select('id')
-            .eq('nome', tipoNome)
-            .single()
-
-          if (tipoData) {
-            await supabase
-              .from('user_tipos_negocio')
-              .insert({
-                user_id: newUser.id,
-                tipo_negocio_id: tipoData.id,
-                ativo: true
-              })
-          }
-        }
+      if (configError) {
+        console.error('Erro ao criar configurações:', configError)
       }
 
       await fetchUsuarios()
@@ -530,7 +422,7 @@ export default function UsuariosSection() {
       alert('Usuário criado com sucesso!')
     } catch (error) {
       console.error('Erro ao criar usuário:', error)
-      alert('Erro ao criar usuário')
+      alert(error instanceof Error ? error.message : 'Erro ao criar usuário')
     }
   }
 
@@ -564,7 +456,7 @@ export default function UsuariosSection() {
         {showNewUser && (
           <NovoUsuarioCard
             planos={planos}
-            tiposNegocio={tiposNegocio}
+            workspaces={workspaces}
             onSave={handleCreateUser}
             onCancel={() => setShowNewUser(false)}
           />
@@ -575,7 +467,6 @@ export default function UsuariosSection() {
             key={usuario.id}
             usuario={usuario}
             planos={planos}
-            tiposNegocio={tiposNegocio}
             isEditing={editingUser === usuario.id}
             onEdit={() => setEditingUser(usuario.id)}
             onCancel={() => setEditingUser(null)}
@@ -670,7 +561,6 @@ export default function UsuariosSection() {
 interface UsuarioCardProps {
   usuario: UsuarioComPlano
   planos: Plano[]
-  tiposNegocio: Array<{id: number, nome: string, nome_exibicao: string}>
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
@@ -689,7 +579,6 @@ interface UsuarioCardProps {
     inicio_expediente?: number
     fim_expediente?: number
     numero_instancias?: number
-    tipos_negocio?: string[]
     crm_url?: string
     crm_usuario?: string
     crm_senha?: string
@@ -714,7 +603,6 @@ interface UsuarioCardProps {
 function UsuarioCard({
   usuario,
   planos,
-  tiposNegocio,
   isEditing,
   onEdit,
   onCancel,
@@ -741,8 +629,6 @@ function UsuarioCard({
     numero_instancias: (usuario as any).numero_instancias || 1,
     limite_leads: (usuario as any).limite_leads || 100,
     limite_consultas: (usuario as any).limite_consultas || 50,
-    // Tipos de negócio (array de nomes)
-    tipos_negocio: (usuario as any).tipos_negocio_selecionados?.map((t: any) => t.nome) || [],
     // Integração CRM
     crm_url: (usuario as any).crm_url || '',
     crm_usuario: (usuario as any).crm_usuario || '',
@@ -768,15 +654,6 @@ function UsuarioCard({
     firecrawl_api_key: (usuario as any).firecrawl_api_key || ''
   })
 
-  const toggleTipoNegocio = (tipo: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tipos_negocio: prev.tipos_negocio.includes(tipo)
-        ? prev.tipos_negocio.filter((t: string) => t !== tipo)
-        : [...prev.tipos_negocio, tipo]
-    }))
-  }
-
   const handleSave = async () => {
     // Atualizar plano se mudou
     if (selectedPlan !== usuario.plano_id && selectedPlan) {
@@ -789,9 +666,6 @@ function UsuarioCard({
     }
 
     // Atualizar outros dados se mudaram
-    const tiposOriginais = (usuario as any).tipos_negocio_selecionados?.map((t: any) => t.nome) || []
-    const tiposChanged = JSON.stringify(formData.tipos_negocio.sort()) !== JSON.stringify(tiposOriginais.sort())
-
     const hasChanges =
       formData.name !== usuario.name ||
       formData.email !== usuario.email ||
@@ -820,10 +694,9 @@ function UsuarioCard({
       formData.api_key_dados !== ((usuario as any).api_key_dados || '') ||
       formData.elevenlabs_api_key !== ((usuario as any).elevenlabs_api_key || '') ||
       formData.elevenlabs_voice_id !== ((usuario as any).elevenlabs_voice_id || '') ||
-      formData.firecrawl_api_key !== ((usuario as any).firecrawl_api_key || '') ||
-      tiposChanged
+      formData.firecrawl_api_key !== ((usuario as any).firecrawl_api_key || '')
 
-    if (hasChanges || tiposChanged) {
+    if (hasChanges) {
       // Enviar apenas os campos que existem na tabela users
       const updateData: any = {}
 
@@ -835,11 +708,6 @@ function UsuarioCard({
       if (formData.limite_leads !== (usuario as any).limite_leads) updateData.limite_leads = formData.limite_leads
       if (formData.limite_consultas !== (usuario as any).limite_consultas) updateData.limite_consultas = formData.limite_consultas
       if (formData.numero_instancias !== (usuario as any).numero_instancias) updateData.numero_instancias = formData.numero_instancias
-
-      // Tipos de negócio (sempre enviar se mudou)
-      if (tiposChanged) {
-        updateData.tipos_negocio = formData.tipos_negocio
-      }
 
       await onUpdateUser(usuario.id, updateData)
     } else {
@@ -886,20 +754,6 @@ function UsuarioCard({
                 </span>
               )}
             </div>
-            {/* Tipos de Negócio */}
-            {(usuario as any).tipos_negocio_selecionados && (usuario as any).tipos_negocio_selecionados.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium">Negócios:</span>
-                {(usuario as any).tipos_negocio_selecionados.map((tipo: any) => (
-                  <span
-                    key={tipo.id}
-                    className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800"
-                  >
-                    {tipo.nome_exibicao}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -936,7 +790,6 @@ function UsuarioCard({
   const tabs = [
     { id: 'basico', label: 'Informações Básicas', icon: Users },
     { id: 'operacional', label: 'Config. Operacionais', icon: Clock },
-    { id: 'negocios', label: 'Tipos de Negócio', icon: Building },
     { id: 'crm', label: 'Integração CRM', icon: Database },
     { id: 'drive', label: 'Google Drive', icon: Globe },
     { id: 'cliente', label: 'Info do Cliente', icon: Building },
@@ -1158,28 +1011,6 @@ function UsuarioCard({
                     className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'negocios' && (
-            <div>
-              <div className="flex items-center mb-4">
-                <Building className="h-5 w-5 mr-2 text-gray-600" />
-                <h4 className="text-lg font-medium text-gray-900">Tipos de Negócio</h4>
-              </div>
-              <div className="space-y-3">
-                {tiposNegocio.map((tipo) => (
-                  <label key={tipo.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.tipos_negocio.includes(tipo.nome)}
-                      onChange={() => toggleTipoNegocio(tipo.nome)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{tipo.nome_exibicao}</span>
-                  </label>
-                ))}
               </div>
             </div>
           )}
@@ -1539,7 +1370,7 @@ function UsuarioCard({
 
 interface NovoUsuarioCardProps {
   planos: Plano[]
-  tiposNegocio: Array<{id: number, nome: string, nome_exibicao: string}>
+  workspaces: Array<{id: string, name: string, slug: string}>
   onSave: (userData: {
     name: string
     email: string
@@ -1548,6 +1379,9 @@ interface NovoUsuarioCardProps {
     plano_id?: number
     cpf?: string
     telefone?: string
+    // Workspace
+    workspace_id: string
+    workspace_role: 'owner' | 'admin' | 'member' | 'viewer'
     // Configurações operacionais
     delay_entre_mensagens?: number
     delay_apos_intervencao?: number
@@ -1556,8 +1390,6 @@ interface NovoUsuarioCardProps {
     numero_instancias?: number
     limite_leads?: number
     limite_consultas?: number
-    // Tipos de negócio
-    tipos_negocio?: string[]
     // Integração CRM
     crm_url?: string
     crm_usuario?: string
@@ -1587,7 +1419,7 @@ interface NovoUsuarioCardProps {
   onCancel: () => void
 }
 
-function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuarioCardProps) {
+function NovoUsuarioCard({ planos, workspaces, onSave, onCancel }: NovoUsuarioCardProps) {
   const [activeTab, setActiveTab] = useState('basico')
   const [formData, setFormData] = useState({
     // Informações básicas
@@ -1599,6 +1431,9 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
     cpf: '',
     telefone: '',
     ativo: true,
+    // Workspace
+    workspace_id: '',
+    workspace_role: 'member' as 'owner' | 'admin' | 'member' | 'viewer',
     // Configurações operacionais
     delay_entre_mensagens: 30,
     delay_apos_intervencao: 0,
@@ -1607,8 +1442,6 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
     numero_instancias: 1,
     limite_leads: 100,
     limite_consultas: 50,
-    // Tipos de negócio
-    tipos_negocio: [] as string[],
     // Integração CRM
     crm_url: '',
     crm_usuario: '',
@@ -1636,7 +1469,12 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
 
   const handleSubmit = () => {
     if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
-      alert('Preencha todos os campos obrigatórios')
+      alert('Preencha todos os campos obrigatórios (Nome, Email e Senha)')
+      return
+    }
+
+    if (!formData.workspace_id) {
+      alert('Selecione um workspace para o usuário')
       return
     }
 
@@ -1649,6 +1487,9 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
       cpf: formData.cpf || undefined,
       telefone: formData.telefone || undefined,
       ativo: formData.ativo,
+      // Workspace
+      workspace_id: formData.workspace_id,
+      workspace_role: formData.workspace_role,
       // Configurações operacionais
       delay_entre_mensagens: formData.delay_entre_mensagens,
       delay_apos_intervencao: formData.delay_apos_intervencao,
@@ -1657,8 +1498,6 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
       numero_instancias: formData.numero_instancias,
       limite_leads: formData.limite_leads,
       limite_consultas: formData.limite_consultas,
-      // Tipos de negócio
-      tipos_negocio: formData.tipos_negocio.length > 0 ? formData.tipos_negocio : undefined,
       // Integração CRM
       crm_url: formData.crm_url || undefined,
       crm_usuario: formData.crm_usuario || undefined,
@@ -1685,19 +1524,9 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
     })
   }
 
-  const toggleTipoNegocio = (tipo: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tipos_negocio: prev.tipos_negocio.includes(tipo)
-        ? prev.tipos_negocio.filter((t: string) => t !== tipo)
-        : [...prev.tipos_negocio, tipo]
-    }))
-  }
-
   const tabs = [
     { id: 'basico', label: 'Informações Básicas', icon: Users },
     { id: 'operacional', label: 'Config. Operacionais', icon: Clock },
-    { id: 'negocios', label: 'Tipos de Negócio', icon: Building },
     { id: 'crm', label: 'Integração CRM', icon: Database },
     { id: 'drive', label: 'Google Drive', icon: Globe },
     { id: 'cliente', label: 'Info do Cliente', icon: Building },
@@ -1814,6 +1643,41 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
                 >
                   <option value="user">Usuário</option>
                   <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Workspace *
+                </label>
+                <select
+                  value={formData.workspace_id}
+                  onChange={(e) => setFormData({ ...formData, workspace_id: e.target.value })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecionar workspace...</option>
+                  {workspaces.map((ws) => (
+                    <option key={ws.id} value={ws.id}>
+                      {ws.name} ({ws.slug})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Função no Workspace
+                </label>
+                <select
+                  value={formData.workspace_role}
+                  onChange={(e) => setFormData({ ...formData, workspace_role: e.target.value as 'owner' | 'admin' | 'member' | 'viewer' })}
+                  className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="member">Membro</option>
+                  <option value="admin">Admin do Workspace</option>
+                  <option value="owner">Proprietário</option>
+                  <option value="viewer">Visualizador</option>
                 </select>
               </div>
 
@@ -1947,28 +1811,6 @@ function NovoUsuarioCard({ planos, tiposNegocio, onSave, onCancel }: NovoUsuario
                     className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'negocios' && (
-            <div>
-              <div className="flex items-center mb-4">
-                <Building className="h-5 w-5 mr-2 text-gray-600" />
-                <h4 className="text-lg font-medium text-gray-900">Tipos de Negócio</h4>
-              </div>
-              <div className="space-y-3">
-                {tiposNegocio.map((tipo) => (
-                  <label key={tipo.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.tipos_negocio.includes(tipo.nome)}
-                      onChange={() => toggleTipoNegocio(tipo.nome)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{tipo.nome_exibicao}</span>
-                  </label>
-                ))}
               </div>
             </div>
           )}
