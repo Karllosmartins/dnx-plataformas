@@ -81,11 +81,6 @@ interface UserTool {
   tools?: Tool
 }
 
-interface AgenteIA {
-  id: number
-  nome: string
-}
-
 interface Workspace {
   id: string
   name: string
@@ -133,7 +128,6 @@ export default function WorkspacesSection() {
   const [allUsers, setAllUsers] = useState<Usuario[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
   const [allTools, setAllTools] = useState<Tool[]>([])
-  const [allAgentes, setAllAgentes] = useState<AgenteIA[]>([])
   const [loading, setLoading] = useState(true)
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null)
   const [showNewWorkspace, setShowNewWorkspace] = useState(false)
@@ -143,7 +137,6 @@ export default function WorkspacesSection() {
     fetchPlanos()
     fetchAllUsers()
     fetchAllTools()
-    fetchAllAgentes()
   }, [])
 
   const fetchWorkspaces = async () => {
@@ -289,20 +282,6 @@ export default function WorkspacesSection() {
       setAllTools(data || [])
     } catch (error) {
       console.error('Erro ao buscar tools:', error)
-    }
-  }
-
-  const fetchAllAgentes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('agentes_ia')
-        .select('id, nome')
-        .order('nome')
-
-      if (error) throw error
-      setAllAgentes(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar agentes:', error)
     }
   }
 
@@ -629,22 +608,6 @@ export default function WorkspacesSection() {
     }
   }
 
-  const handleUpdateToolAgente = async (userToolId: number, agenteId: number | null) => {
-    try {
-      const { error } = await supabase
-        .from('user_tools')
-        .update({ agente_id: agenteId })
-        .eq('id', userToolId)
-
-      if (error) throw error
-
-      await fetchWorkspaces()
-    } catch (error) {
-      console.error('Erro ao atualizar agente da tool:', error)
-      alert(error instanceof Error ? error.message : 'Erro ao atualizar agente')
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -690,7 +653,6 @@ export default function WorkspacesSection() {
             planos={planos}
             allUsers={allUsers}
             allTools={allTools}
-            allAgentes={allAgentes}
             isEditing={editingWorkspace === workspace.id}
             onEdit={() => setEditingWorkspace(workspace.id)}
             onCancel={() => setEditingWorkspace(null)}
@@ -703,7 +665,6 @@ export default function WorkspacesSection() {
             onAddTool={handleAddTool}
             onRemoveTool={handleRemoveTool}
             onToggleToolActive={handleToggleToolActive}
-            onUpdateToolAgente={handleUpdateToolAgente}
           />
         ))}
 
@@ -729,7 +690,6 @@ interface WorkspaceCardProps {
   planos: Plano[]
   allUsers: Usuario[]
   allTools: Tool[]
-  allAgentes: AgenteIA[]
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
@@ -742,7 +702,6 @@ interface WorkspaceCardProps {
   onAddTool: (workspaceId: string, toolId: number) => void
   onRemoveTool: (userToolId: number) => void
   onToggleToolActive: (userToolId: number, isActive: boolean) => void
-  onUpdateToolAgente: (userToolId: number, agenteId: number | null) => void
 }
 
 function WorkspaceCard({
@@ -750,7 +709,6 @@ function WorkspaceCard({
   planos,
   allUsers,
   allTools,
-  allAgentes,
   isEditing,
   onEdit,
   onCancel,
@@ -762,8 +720,7 @@ function WorkspaceCard({
   onUpdateMemberRole,
   onAddTool,
   onRemoveTool,
-  onToggleToolActive,
-  onUpdateToolAgente
+  onToggleToolActive
 }: WorkspaceCardProps) {
   const [activeTab, setActiveTab] = useState('basico')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
@@ -1243,25 +1200,6 @@ function WorkspaceCard({
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                        </div>
-                        {/* Seletor de agente */}
-                        <div className="ml-11">
-                          <label className="text-xs text-gray-500 block mb-1">Agente IA associado:</label>
-                          <select
-                            value={userTool.agente_id || ''}
-                            onChange={(e) => onUpdateToolAgente(
-                              userTool.id,
-                              e.target.value ? parseInt(e.target.value) : null
-                            )}
-                            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white w-48"
-                          >
-                            <option value="">Nenhum agente</option>
-                            {allAgentes.map((agente) => (
-                              <option key={agente.id} value={agente.id}>
-                                {agente.nome}
-                              </option>
-                            ))}
-                          </select>
                         </div>
                       </div>
                     ))}

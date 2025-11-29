@@ -8,18 +8,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "type-check": "turbo run type-check",
-    "dev:web": "npm run dev --workspace=@dnx/web",
-    "build:web": "npm run build --workspace=@dnx/web",
-    "start:web": "npm run start --workspace=@dnx/web",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "dev:api": "npm run dev --workspace=@dnx/api",
     "build:api": "npm run build --workspace=@dnx/api",
-    "start:api": "npm run start --workspace=@dnx/api",
-    "deploy:build": "npm run lint && npm run type-check && npm run build",
-    "deploy:start": "NODE_ENV=production npm start"
+    "start:api": "npm run start --workspace=@dnx/api"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
