@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { adminWorkspacesApi } from '../../../lib/api-client'
 import {
   Building,
   Edit,
@@ -20,7 +19,13 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  UserPlus,
+  UserMinus,
+  Crown,
+  ToggleLeft,
+  ToggleRight,
+  Wrench
 } from 'lucide-react'
 
 interface Plano {
@@ -39,9 +44,46 @@ interface Plano {
   acesso_consulta: boolean
   acesso_integracoes: boolean
   acesso_arquivos: boolean
+  produtos: boolean
   limite_leads: number
   limite_consultas: number
   limite_instancias: number
+}
+
+interface Membro {
+  id: number
+  user_id: number
+  role: string
+  joined_at: string
+  users: {
+    id: number
+    name: string
+    email: string
+    role: string
+    active: boolean
+  }
+}
+
+// Tipos para Tools
+interface Tool {
+  id: number
+  type: string
+  nome: string
+  descricao?: string
+}
+
+interface UserTool {
+  id: number
+  workspace_id: string
+  tool_id: number
+  agente_id?: number
+  is_active: boolean
+  tools?: Tool
+}
+
+interface AgenteIA {
+  id: number
+  nome: string
 }
 
 interface Workspace {
@@ -59,6 +101,7 @@ interface Workspace {
   instancias_ativas: number
   created_at: string
   updated_at: string
+  plano_customizado?: Record<string, boolean>
   planos?: Plano
   config_credenciais?: {
     openai_api_token?: string
@@ -73,12 +116,24 @@ interface Workspace {
       password?: string
     }
   }
-  total_membros: number
+  membros?: Membro[]
+  user_tools?: UserTool[]
+}
+
+interface Usuario {
+  id: number
+  name: string
+  email: string
+  role: string
+  active: boolean
 }
 
 export default function WorkspacesSection() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [allUsers, setAllUsers] = useState<Usuario[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
+  const [allTools, setAllTools] = useState<Tool[]>([])
+  const [allAgentes, setAllAgentes] = useState<AgenteIA[]>([])
   const [loading, setLoading] = useState(true)
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null)
   const [showNewWorkspace, setShowNewWorkspace] = useState(false)
@@ -86,16 +141,107 @@ export default function WorkspacesSection() {
   useEffect(() => {
     fetchWorkspaces()
     fetchPlanos()
+    fetchAllUsers()
+    fetchAllTools()
+    fetchAllAgentes()
   }, [])
 
   const fetchWorkspaces = async () => {
     try {
-      const response = await fetch('/api/admin/workspaces')
-      const result = await response.json()
+      // Buscar todos os workspaces com suas informações
+      const { data: workspacesData, error } = await supabase
+        .from('workspaces')
+        .select(`
+          *,
+          planos (
+            id,
+            nome,
+            descricao,
+            acesso_dashboard,
+            acesso_crm,
+            acesso_whatsapp,
+            acesso_disparo_simples,
+            acesso_disparo_ia,
+            acesso_agentes_ia,
+            acesso_extracao_leads,
+            acesso_enriquecimento,
+            acesso_usuarios,
+            acesso_consulta,
+            acesso_integracoes,
+            acesso_arquivos,
+            produtos,
+            limite_leads,
+            limite_consultas,
+            limite_instancias
+          )
+        `)
+        .order('name')
 
-      if (result.success && result.data) {
-        setWorkspaces(result.data)
-      }
+      if (error) throw error
+
+      // Buscar membros, credenciais para cada workspace
+      const workspacesComDados = await Promise.all(
+        (workspacesData || []).map(async (ws) => {
+          // Membros
+          const { data: membros } = await supabase
+            .from('workspace_members')
+            .select(`
+              id,
+              user_id,
+              role,
+              joined_at,
+              users (
+                id,
+                name,
+                email,
+                role,
+                active
+              )
+            `)
+            .eq('workspace_id', ws.id)
+
+          // Credenciais
+          const { data: configCred } = await supabase
+            .from('configuracoes_credenciais')
+            .select('*')
+            .eq('workspace_id', ws.id)
+            .single()
+
+          const { data: credDiversas } = await supabase
+            .from('credencias_diversas')
+            .select('*')
+            .eq('workspace_id', ws.id)
+            .single()
+
+          // User tools do workspace
+          const { data: userTools } = await supabase
+            .from('user_tools')
+            .select(`
+              id,
+              workspace_id,
+              tool_id,
+              agente_id,
+              is_active,
+              tools (
+                id,
+                type,
+                nome,
+                descricao
+              )
+            `)
+            .eq('workspace_id', ws.id)
+
+          return {
+            ...ws,
+            membros: membros || [],
+            config_credenciais: configCred || null,
+            credenciais_diversas: credDiversas || null,
+            user_tools: userTools || []
+          }
+        })
+      )
+
+      setWorkspaces(workspacesComDados)
     } catch (error) {
       console.error('Erro ao buscar workspaces:', error)
     } finally {
@@ -118,25 +264,93 @@ export default function WorkspacesSection() {
     }
   }
 
-  const handleCreateWorkspace = async (workspaceData: Partial<Workspace> & {
-    openai_api_token?: string
-    gemini_api_key?: string
-    elevenlabs_api_key?: string
-    elevenlabs_voice_id?: string
-    datecode_username?: string
-    datecode_password?: string
-  }) => {
+  const fetchAllUsers = async () => {
     try {
-      const response = await fetch('/api/admin/workspaces', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workspaceData)
-      })
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, active')
+        .order('name')
 
-      const result = await response.json()
+      if (error) throw error
+      setAllUsers(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error)
+    }
+  }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao criar workspace')
+  const fetchAllTools = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tools')
+        .select('id, type, nome, descricao')
+        .order('nome')
+
+      if (error) throw error
+      setAllTools(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar tools:', error)
+    }
+  }
+
+  const fetchAllAgentes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agentes_ia')
+        .select('id, nome')
+        .order('nome')
+
+      if (error) throw error
+      setAllAgentes(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar agentes:', error)
+    }
+  }
+
+  const handleCreateWorkspace = async (workspaceData: any) => {
+    try {
+      // Criar workspace
+      const { data: newWs, error: wsError } = await supabase
+        .from('workspaces')
+        .insert({
+          name: workspaceData.name,
+          slug: workspaceData.slug,
+          plano_id: workspaceData.plano_id || null,
+          ativo: workspaceData.ativo ?? true,
+          limite_leads: workspaceData.limite_leads || 1000,
+          limite_consultas: workspaceData.limite_consultas || 100,
+          limite_instancias: workspaceData.limite_instancias || 1,
+          plano_customizado: workspaceData.plano_customizado || null
+        })
+        .select()
+        .single()
+
+      if (wsError) throw wsError
+
+      // Criar credenciais se fornecidas
+      if (workspaceData.openai_api_token || workspaceData.gemini_api_key || workspaceData.elevenlabs_api_key) {
+        await supabase
+          .from('configuracoes_credenciais')
+          .insert({
+            workspace_id: newWs.id,
+            cliente: workspaceData.name,
+            openai_api_token: workspaceData.openai_api_token || null,
+            gemini_api_key: workspaceData.gemini_api_key || null,
+            apikey_elevenlabs: workspaceData.elevenlabs_api_key || null,
+            id_voz_elevenlabs: workspaceData.elevenlabs_voice_id || null
+          })
+      }
+
+      // Criar credenciais datecode se fornecidas
+      if (workspaceData.datecode_username || workspaceData.datecode_password) {
+        await supabase
+          .from('credencias_diversas')
+          .insert({
+            workspace_id: newWs.id,
+            datecode: {
+              username: workspaceData.datecode_username || '',
+              password: workspaceData.datecode_password || ''
+            }
+          })
       }
 
       await fetchWorkspaces()
@@ -148,25 +362,92 @@ export default function WorkspacesSection() {
     }
   }
 
-  const handleUpdateWorkspace = async (id: string, workspaceData: Partial<Workspace> & {
-    openai_api_token?: string
-    gemini_api_key?: string
-    elevenlabs_api_key?: string
-    elevenlabs_voice_id?: string
-    datecode_username?: string
-    datecode_password?: string
-  }) => {
+  const handleUpdateWorkspace = async (id: string, workspaceData: any) => {
     try {
-      const response = await fetch(`/api/admin/workspaces/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workspaceData)
-      })
+      // Atualizar workspace
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      }
 
-      const result = await response.json()
+      if (workspaceData.name !== undefined) updateData.name = workspaceData.name
+      if (workspaceData.slug !== undefined) updateData.slug = workspaceData.slug
+      if (workspaceData.plano_id !== undefined) updateData.plano_id = workspaceData.plano_id
+      if (workspaceData.ativo !== undefined) updateData.ativo = workspaceData.ativo
+      if (workspaceData.limite_leads !== undefined) updateData.limite_leads = workspaceData.limite_leads
+      if (workspaceData.limite_consultas !== undefined) updateData.limite_consultas = workspaceData.limite_consultas
+      if (workspaceData.limite_instancias !== undefined) updateData.limite_instancias = workspaceData.limite_instancias
+      if (workspaceData.plano_customizado !== undefined) updateData.plano_customizado = workspaceData.plano_customizado
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao atualizar workspace')
+      const { error: wsError } = await supabase
+        .from('workspaces')
+        .update(updateData)
+        .eq('id', id)
+
+      if (wsError) throw wsError
+
+      // Atualizar credenciais
+      const hasCredenciais = workspaceData.openai_api_token !== undefined ||
+                            workspaceData.gemini_api_key !== undefined ||
+                            workspaceData.elevenlabs_api_key !== undefined ||
+                            workspaceData.elevenlabs_voice_id !== undefined
+
+      if (hasCredenciais) {
+        const { data: existingConfig } = await supabase
+          .from('configuracoes_credenciais')
+          .select('id')
+          .eq('workspace_id', id)
+          .single()
+
+        const configData: any = {}
+        if (workspaceData.openai_api_token !== undefined) configData.openai_api_token = workspaceData.openai_api_token || null
+        if (workspaceData.gemini_api_key !== undefined) configData.gemini_api_key = workspaceData.gemini_api_key || null
+        if (workspaceData.elevenlabs_api_key !== undefined) configData.apikey_elevenlabs = workspaceData.elevenlabs_api_key || null
+        if (workspaceData.elevenlabs_voice_id !== undefined) configData.id_voz_elevenlabs = workspaceData.elevenlabs_voice_id || null
+
+        if (existingConfig) {
+          await supabase
+            .from('configuracoes_credenciais')
+            .update(configData)
+            .eq('id', existingConfig.id)
+        } else {
+          await supabase
+            .from('configuracoes_credenciais')
+            .insert({
+              workspace_id: id,
+              cliente: workspaceData.name || 'Workspace',
+              ...configData
+            })
+        }
+      }
+
+      // Atualizar datecode
+      const hasDatecode = workspaceData.datecode_username !== undefined || workspaceData.datecode_password !== undefined
+
+      if (hasDatecode) {
+        const { data: existingCred } = await supabase
+          .from('credencias_diversas')
+          .select('id, datecode')
+          .eq('workspace_id', id)
+          .single()
+
+        const datecodeData = {
+          username: workspaceData.datecode_username ?? existingCred?.datecode?.username ?? '',
+          password: workspaceData.datecode_password ?? existingCred?.datecode?.password ?? ''
+        }
+
+        if (existingCred) {
+          await supabase
+            .from('credencias_diversas')
+            .update({ datecode: datecodeData })
+            .eq('id', existingCred.id)
+        } else {
+          await supabase
+            .from('credencias_diversas')
+            .insert({
+              workspace_id: id,
+              datecode: datecodeData
+            })
+        }
       }
 
       await fetchWorkspaces()
@@ -180,18 +461,12 @@ export default function WorkspacesSection() {
 
   const handleToggleAtivo = async (id: string, ativo: boolean) => {
     try {
-      const response = await fetch(`/api/admin/workspaces/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ativo })
-      })
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ ativo, updated_at: new Date().toISOString() })
+        .eq('id', id)
 
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao atualizar status')
-      }
-
+      if (error) throw error
       await fetchWorkspaces()
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
@@ -205,20 +480,168 @@ export default function WorkspacesSection() {
     }
 
     try {
-      const response = await fetch(`/api/admin/workspaces/${id}`, {
-        method: 'DELETE'
-      })
+      // Remover membros
+      await supabase.from('workspace_members').delete().eq('workspace_id', id)
+      // Remover credenciais
+      await supabase.from('configuracoes_credenciais').delete().eq('workspace_id', id)
+      await supabase.from('credencias_diversas').delete().eq('workspace_id', id)
+      // Remover workspace
+      const { error } = await supabase.from('workspaces').delete().eq('id', id)
 
-      if (response.status === 204 || response.ok) {
-        await fetchWorkspaces()
-        alert('Workspace excluído com sucesso!')
-      } else {
-        const result = await response.json()
-        throw new Error(result.error || 'Erro ao excluir workspace')
-      }
+      if (error) throw error
+
+      await fetchWorkspaces()
+      alert('Workspace excluído com sucesso!')
     } catch (error) {
       console.error('Erro ao excluir workspace:', error)
       alert(error instanceof Error ? error.message : 'Erro ao excluir workspace')
+    }
+  }
+
+  const handleAddMember = async (workspaceId: string, userId: number, role: string = 'member') => {
+    try {
+      const { error } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id: workspaceId,
+          user_id: userId,
+          role
+        })
+
+      if (error) {
+        if (error.code === '23505') {
+          alert('Este usuário já é membro do workspace')
+          return
+        }
+        throw error
+      }
+
+      await fetchWorkspaces()
+      alert('Membro adicionado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao adicionar membro:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao adicionar membro')
+    }
+  }
+
+  const handleRemoveMember = async (workspaceId: string, memberId: number) => {
+    if (!confirm('Tem certeza que deseja remover este membro do workspace?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workspace_members')
+        .delete()
+        .eq('id', memberId)
+
+      if (error) throw error
+
+      await fetchWorkspaces()
+      alert('Membro removido com sucesso!')
+    } catch (error) {
+      console.error('Erro ao remover membro:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao remover membro')
+    }
+  }
+
+  const handleUpdateMemberRole = async (memberId: number, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('workspace_members')
+        .update({ role: newRole })
+        .eq('id', memberId)
+
+      if (error) throw error
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao atualizar role:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar role')
+    }
+  }
+
+  // Funções para gerenciar tools do workspace
+  const handleAddTool = async (workspaceId: string, toolId: number) => {
+    try {
+      // Precisamos de um user_id - pegar o primeiro admin/owner do workspace ou usar um padrão
+      const workspace = workspaces.find(w => w.id === workspaceId)
+      const owner = workspace?.membros?.find(m => m.role === 'owner')
+      const userId = owner?.user_id || 24 // fallback para user 24 se não tiver owner
+
+      const { error } = await supabase
+        .from('user_tools')
+        .insert({
+          workspace_id: workspaceId,
+          tool_id: toolId,
+          user_id: userId,
+          is_active: true
+        })
+
+      if (error) {
+        if (error.code === '23505') {
+          alert('Esta tool já está adicionada ao workspace')
+          return
+        }
+        throw error
+      }
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao adicionar tool:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao adicionar tool')
+    }
+  }
+
+  const handleRemoveTool = async (userToolId: number) => {
+    if (!confirm('Tem certeza que deseja remover esta tool do workspace?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_tools')
+        .delete()
+        .eq('id', userToolId)
+
+      if (error) throw error
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao remover tool:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao remover tool')
+    }
+  }
+
+  const handleToggleToolActive = async (userToolId: number, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('user_tools')
+        .update({ is_active: isActive })
+        .eq('id', userToolId)
+
+      if (error) throw error
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao atualizar status da tool:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar status')
+    }
+  }
+
+  const handleUpdateToolAgente = async (userToolId: number, agenteId: number | null) => {
+    try {
+      const { error } = await supabase
+        .from('user_tools')
+        .update({ agente_id: agenteId })
+        .eq('id', userToolId)
+
+      if (error) throw error
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao atualizar agente da tool:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar agente')
     }
   }
 
@@ -265,12 +688,22 @@ export default function WorkspacesSection() {
             key={workspace.id}
             workspace={workspace}
             planos={planos}
+            allUsers={allUsers}
+            allTools={allTools}
+            allAgentes={allAgentes}
             isEditing={editingWorkspace === workspace.id}
             onEdit={() => setEditingWorkspace(workspace.id)}
             onCancel={() => setEditingWorkspace(null)}
             onSave={handleUpdateWorkspace}
             onToggleAtivo={handleToggleAtivo}
             onDelete={handleDeleteWorkspace}
+            onAddMember={handleAddMember}
+            onRemoveMember={handleRemoveMember}
+            onUpdateMemberRole={handleUpdateMemberRole}
+            onAddTool={handleAddTool}
+            onRemoveTool={handleRemoveTool}
+            onToggleToolActive={handleToggleToolActive}
+            onUpdateToolAgente={handleUpdateToolAgente}
           />
         ))}
 
@@ -294,26 +727,50 @@ export default function WorkspacesSection() {
 interface WorkspaceCardProps {
   workspace: Workspace
   planos: Plano[]
+  allUsers: Usuario[]
+  allTools: Tool[]
+  allAgentes: AgenteIA[]
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
   onSave: (id: string, data: any) => void
   onToggleAtivo: (id: string, ativo: boolean) => void
   onDelete: (id: string) => void
+  onAddMember: (workspaceId: string, userId: number, role: string) => void
+  onRemoveMember: (workspaceId: string, memberId: number) => void
+  onUpdateMemberRole: (memberId: number, role: string) => void
+  onAddTool: (workspaceId: string, toolId: number) => void
+  onRemoveTool: (userToolId: number) => void
+  onToggleToolActive: (userToolId: number, isActive: boolean) => void
+  onUpdateToolAgente: (userToolId: number, agenteId: number | null) => void
 }
 
 function WorkspaceCard({
   workspace,
   planos,
+  allUsers,
+  allTools,
+  allAgentes,
   isEditing,
   onEdit,
   onCancel,
   onSave,
   onToggleAtivo,
-  onDelete
+  onDelete,
+  onAddMember,
+  onRemoveMember,
+  onUpdateMemberRole,
+  onAddTool,
+  onRemoveTool,
+  onToggleToolActive,
+  onUpdateToolAgente
 }: WorkspaceCardProps) {
   const [activeTab, setActiveTab] = useState('basico')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  const [selectedUserId, setSelectedUserId] = useState<string>('')
+  const [selectedRole, setSelectedRole] = useState<string>('member')
+  const [selectedToolId, setSelectedToolId] = useState<string>('')
+
   const [formData, setFormData] = useState({
     name: workspace.name,
     slug: workspace.slug,
@@ -353,10 +810,15 @@ function WorkspaceCard({
     })
   }
 
+  // Usuários que NÃO são membros deste workspace
+  const availableUsers = allUsers.filter(
+    user => !workspace.membros?.some(m => m.user_id === user.id)
+  )
+
   if (!isEditing) {
     return (
       <div className={`border rounded-lg p-4 bg-white hover:shadow-md transition-shadow ${!workspace.ativo ? 'opacity-60 border-gray-300' : 'border-gray-200'}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
           <div className="flex-1">
             <div className="flex items-center mb-2">
               <h3 className="font-medium text-gray-900 mr-3">{workspace.name}</h3>
@@ -376,22 +838,45 @@ function WorkspaceCard({
               </span>
               <span className="text-xs text-gray-500 flex items-center">
                 <Users className="h-3 w-3 mr-1" />
-                {workspace.total_membros} membro{workspace.total_membros !== 1 ? 's' : ''}
+                {workspace.membros?.length || 0} membro{(workspace.membros?.length || 0) !== 1 ? 's' : ''}
               </span>
             </div>
+
+            {/* Membros do workspace */}
+            {workspace.membros && workspace.membros.length > 0 && (
+              <div className="mb-3">
+                <span className="text-xs text-gray-500 font-medium block mb-1">Membros:</span>
+                <div className="flex flex-wrap gap-1">
+                  {workspace.membros.map(membro => (
+                    <span
+                      key={membro.id}
+                      className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
+                        membro.role === 'owner' ? 'bg-yellow-100 text-yellow-800' :
+                        membro.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {membro.role === 'owner' && <Crown className="h-3 w-3 mr-1" />}
+                      {membro.users?.name || 'Usuário'}
+                      <span className="ml-1 opacity-60">({membro.role})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4 text-xs text-gray-500 mt-3">
               <div>
                 <span className="block font-medium">Leads</span>
-                <span>{workspace.leads_consumidos} / {workspace.limite_leads}</span>
+                <span>{workspace.leads_consumidos || 0} / {workspace.limite_leads}</span>
               </div>
               <div>
                 <span className="block font-medium">Consultas</span>
-                <span>{workspace.consultas_realizadas} / {workspace.limite_consultas}</span>
+                <span>{workspace.consultas_realizadas || 0} / {workspace.limite_consultas}</span>
               </div>
               <div>
                 <span className="block font-medium">Instâncias</span>
-                <span>{workspace.instancias_ativas} / {workspace.limite_instancias}</span>
+                <span>{workspace.instancias_ativas || 0} / {workspace.limite_instancias}</span>
               </div>
             </div>
 
@@ -456,8 +941,15 @@ function WorkspaceCard({
     )
   }
 
+  // Tools que ainda não foram adicionadas ao workspace
+  const availableTools = allTools.filter(
+    tool => !workspace.user_tools?.some(ut => ut.tool_id === tool.id)
+  )
+
   const tabs = [
     { id: 'basico', label: 'Informações', icon: Building },
+    { id: 'membros', label: 'Membros', icon: Users },
+    { id: 'tools', label: 'Tools', icon: Wrench },
     { id: 'limites', label: 'Limites', icon: Settings },
     { id: 'credenciais', label: 'APIs de IA', icon: Bot },
     { id: 'elevenlabs', label: 'ElevenLabs', icon: Mic },
@@ -471,7 +963,7 @@ function WorkspaceCard({
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon
               return (
@@ -484,7 +976,7 @@ function WorkspaceCard({
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className="h-4 w-4 mr-2" />
+                  <Icon className="h-4 w-4 mr-1" />
                   {tab.label}
                 </button>
               )
@@ -522,7 +1014,7 @@ function WorkspaceCard({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Plano
+                  Plano Base
                 </label>
                 <select
                   value={formData.plano_id}
@@ -536,6 +1028,7 @@ function WorkspaceCard({
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">O plano define as permissões base. Use a aba "Permissões" para customizar.</p>
               </div>
 
               <div className="flex items-center">
@@ -550,6 +1043,240 @@ function WorkspaceCard({
                   Workspace Ativo
                 </label>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'membros' && (
+            <div className="space-y-4">
+              <div className="flex items-center mb-4">
+                <Users className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Membros do Workspace</h4>
+              </div>
+
+              {/* Adicionar novo membro */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar Membro
+                </h5>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione um usuário...</option>
+                    {availableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-32 text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="member">Membro</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (selectedUserId) {
+                        onAddMember(workspace.id, parseInt(selectedUserId), selectedRole)
+                        setSelectedUserId('')
+                      }
+                    }}
+                    disabled={!selectedUserId}
+                    className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de membros */}
+              <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
+                {workspace.membros && workspace.membros.length > 0 ? (
+                  workspace.membros.map((membro) => (
+                    <div key={membro.id} className="p-3 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                          membro.role === 'owner' ? 'bg-yellow-100' :
+                          membro.role === 'admin' ? 'bg-purple-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {membro.role === 'owner' ? (
+                            <Crown className="h-4 w-4 text-yellow-600" />
+                          ) : (
+                            <Users className="h-4 w-4 text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{membro.users?.name}</p>
+                          <p className="text-xs text-gray-500">{membro.users?.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={membro.role}
+                          onChange={(e) => onUpdateMemberRole(membro.id, e.target.value)}
+                          className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="member">Membro</option>
+                          <option value="admin">Admin</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                        <button
+                          onClick={() => onRemoveMember(workspace.id, membro.id)}
+                          className="p-1 text-red-600 hover:text-red-800"
+                          title="Remover membro"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    Nenhum membro neste workspace
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'tools' && (
+            <div className="space-y-4">
+              <div className="flex items-center mb-4">
+                <Wrench className="h-5 w-5 mr-2 text-gray-600" />
+                <h4 className="text-lg font-medium text-gray-900">Tools do Workspace</h4>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Gerencie quais tools/funções este workspace tem acesso. Você pode ativar/desativar cada tool e associar a um agente IA.
+              </p>
+
+              {/* Adicionar nova tool */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Tool
+                </h5>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedToolId}
+                    onChange={(e) => setSelectedToolId(e.target.value)}
+                    className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione uma tool...</option>
+                    {availableTools.map((tool) => (
+                      <option key={tool.id} value={tool.id}>
+                        {tool.nome} ({tool.type})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (selectedToolId) {
+                        onAddTool(workspace.id, parseInt(selectedToolId))
+                        setSelectedToolId('')
+                      }
+                    }}
+                    disabled={!selectedToolId}
+                    className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de tools do workspace */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                {workspace.user_tools && workspace.user_tools.length > 0 ? (
+                  <div className="divide-y divide-gray-200">
+                    {workspace.user_tools.map((userTool) => (
+                      <div key={userTool.id} className="p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                              userTool.is_active ? 'bg-green-100' : 'bg-gray-100'
+                            }`}>
+                              <Wrench className={`h-4 w-4 ${userTool.is_active ? 'text-green-600' : 'text-gray-400'}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {userTool.tools?.nome || `Tool #${userTool.tool_id}`}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {userTool.tools?.type} - {userTool.tools?.descricao?.substring(0, 60)}...
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Toggle ativo/inativo */}
+                            <button
+                              onClick={() => onToggleToolActive(userTool.id, !userTool.is_active)}
+                              className={`p-1 rounded ${
+                                userTool.is_active
+                                  ? 'text-green-600 hover:text-green-800'
+                                  : 'text-gray-400 hover:text-gray-600'
+                              }`}
+                              title={userTool.is_active ? 'Desativar' : 'Ativar'}
+                            >
+                              {userTool.is_active ? (
+                                <ToggleRight className="h-6 w-6" />
+                              ) : (
+                                <ToggleLeft className="h-6 w-6" />
+                              )}
+                            </button>
+                            {/* Remover */}
+                            <button
+                              onClick={() => onRemoveTool(userTool.id)}
+                              className="p-1 text-red-600 hover:text-red-800"
+                              title="Remover tool"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        {/* Seletor de agente */}
+                        <div className="ml-11">
+                          <label className="text-xs text-gray-500 block mb-1">Agente IA associado:</label>
+                          <select
+                            value={userTool.agente_id || ''}
+                            onChange={(e) => onUpdateToolAgente(
+                              userTool.id,
+                              e.target.value ? parseInt(e.target.value) : null
+                            )}
+                            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white w-48"
+                          >
+                            <option value="">Nenhum agente</option>
+                            {allAgentes.map((agente) => (
+                              <option key={agente.id} value={agente.id}>
+                                {agente.nome}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    Nenhuma tool adicionada a este workspace
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-400 mt-2">
+                Total de tools: {workspace.user_tools?.length || 0} |
+                Ativas: {workspace.user_tools?.filter(ut => ut.is_active).length || 0}
+              </p>
             </div>
           )}
 
@@ -768,6 +1495,7 @@ interface NovoWorkspaceCardProps {
 function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps) {
   const [activeTab, setActiveTab] = useState('basico')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -826,7 +1554,7 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon
               return (
@@ -839,7 +1567,7 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className="h-4 w-4 mr-2" />
+                  <Icon className="h-4 w-4 mr-1" />
                   {tab.label}
                 </button>
               )
@@ -883,7 +1611,7 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Plano
+                  Plano Base
                 </label>
                 <select
                   value={formData.plano_id}
@@ -1014,12 +1742,12 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
             <div className="space-y-4">
               <div className="flex items-center mb-4">
                 <Mic className="h-5 w-5 mr-2 text-gray-600" />
-                <h4 className="text-lg font-medium text-gray-900">ElevenLabs (Sintese de Voz)</h4>
+                <h4 className="text-lg font-medium text-gray-900">ElevenLabs</h4>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  API Key ElevenLabs
+                  API Key
                 </label>
                 <div className="relative">
                   <input
@@ -1058,7 +1786,7 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
             <div className="space-y-4">
               <div className="flex items-center mb-4">
                 <Database className="h-5 w-5 mr-2 text-gray-600" />
-                <h4 className="text-lg font-medium text-gray-900">Datecode (Consulta de Dados)</h4>
+                <h4 className="text-lg font-medium text-gray-900">Datecode</h4>
               </div>
 
               <div>
