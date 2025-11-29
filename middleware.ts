@@ -50,7 +50,7 @@ const ROUTE_PRIORITY = [
 const PUBLIC_ROUTES: string[] = []
 
 // Rotas de admin que sempre passam
-const ADMIN_ROUTES = ['/admin', '/configuracoes-admin']
+const ADMIN_ROUTES = ['/admin', '/dashboard/admin']
 
 async function verifyToken(token: string) {
   try {
@@ -118,9 +118,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Bloquear página de configurações obsoleta
-  if (pathname === '/configuracoes') {
-    return NextResponse.redirect(new URL('/configuracoes-admin', request.url))
+  // Redirecionar páginas de configurações antigas para dashboard/admin
+  if (pathname === '/configuracoes' || pathname === '/configuracoes-admin') {
+    return NextResponse.redirect(new URL('/dashboard/admin', request.url))
   }
 
   const token = request.cookies.get('auth-token')?.value

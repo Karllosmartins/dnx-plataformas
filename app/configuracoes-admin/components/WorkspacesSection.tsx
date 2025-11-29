@@ -1114,7 +1114,7 @@ function WorkspaceCard({
                 <h4 className="text-lg font-medium text-gray-900">Tools do Workspace</h4>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Gerencie quais tools/funções este workspace tem acesso. Você pode ativar/desativar cada tool e associar a um agente IA.
+                Selecione quais tools/funções estarão disponíveis para este workspace. O usuário poderá depois configurar quais agentes usam cada tool na aba Agentes IA.
               </p>
 
               {/* Adicionar nova tool */}

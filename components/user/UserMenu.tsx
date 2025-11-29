@@ -181,10 +181,10 @@ function UserMenuContent({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer"
-                onClick={() => router.push('/configuracoes-admin')}
+                onClick={() => router.push('/dashboard/admin')}
               >
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
+                <span>Workspaces</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
