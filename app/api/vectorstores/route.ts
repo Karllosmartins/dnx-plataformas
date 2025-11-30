@@ -7,17 +7,17 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const workspaceId = searchParams.get('workspaceId')
     const agentId = searchParams.get('agentId')
 
-    if (!userId || !agentId) {
-      return NextResponse.json({ error: 'userId e agentId são obrigatórios' }, { status: 400 })
+    if (!workspaceId || !agentId) {
+      return NextResponse.json({ error: 'workspaceId e agentId são obrigatórios' }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('user_agent_vectorstore')
       .select('*')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .single()
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       hasVectorStore: !!data,
       vectorStore: data || null
     })
@@ -39,19 +39,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, agentId, vectorStoreName } = body
+    const { workspaceId, agentId, vectorStoreName } = body
 
-    if (!userId || !agentId || !vectorStoreName) {
-      return NextResponse.json({ 
-        error: 'userId, agentId e vectorStoreName são obrigatórios' 
+    if (!workspaceId || !agentId || !vectorStoreName) {
+      return NextResponse.json({
+        error: 'workspaceId, agentId e vectorStoreName são obrigatórios'
       }, { status: 400 })
     }
 
-    // 1. Buscar token OpenAI do usuário
+    // 1. Buscar token OpenAI do workspace
     const { data: config, error: configError } = await supabase
       .from('configuracoes_credenciais')
       .select('openai_api_token')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (configError) {
@@ -95,13 +95,13 @@ export async function POST(request: NextRequest) {
     const { data: savedData, error: saveError } = await supabase
       .from('user_agent_vectorstore')
       .upsert({
-        user_id: parseInt(userId),
+        workspace_id: workspaceId,
         agent_id: parseInt(agentId),
         vectorstore_id: vectorStoreData.id,
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'user_id,agent_id,vectorstore_id'
+        onConflict: 'workspace_id,agent_id,vectorstore_id'
       })
       .select()
       .maybeSingle()
@@ -141,21 +141,21 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, agentId, isActive } = body
+    const { workspaceId, agentId, isActive } = body
 
-    if (!userId || !agentId || typeof isActive !== 'boolean') {
-      return NextResponse.json({ 
-        error: 'userId, agentId e isActive são obrigatórios' 
+    if (!workspaceId || !agentId || typeof isActive !== 'boolean') {
+      return NextResponse.json({
+        error: 'workspaceId, agentId e isActive são obrigatórios'
       }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('user_agent_vectorstore')
-      .update({ 
+      .update({
         is_active: isActive,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .select()
       .single()
@@ -179,19 +179,19 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, agentId, vectorStoreId } = body
+    const { workspaceId, agentId, vectorStoreId } = body
 
-    if (!userId || !agentId || !vectorStoreId) {
-      return NextResponse.json({ 
-        error: 'userId, agentId e vectorStoreId são obrigatórios' 
+    if (!workspaceId || !agentId || !vectorStoreId) {
+      return NextResponse.json({
+        error: 'workspaceId, agentId e vectorStoreId são obrigatórios'
       }, { status: 400 })
     }
 
-    // 1. Buscar token OpenAI do usuário
+    // 1. Buscar token OpenAI do workspace
     const { data: config, error: configError } = await supabase
       .from('configuracoes_credenciais')
       .select('openai_api_token')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (configError) {
@@ -224,7 +224,7 @@ export async function DELETE(request: NextRequest) {
     const { error: deleteError } = await supabase
       .from('user_agent_vectorstore')
       .delete()
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .eq('vectorstore_id', vectorStoreId)
 

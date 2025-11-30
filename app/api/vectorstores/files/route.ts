@@ -7,23 +7,23 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const workspaceId = searchParams.get('workspaceId')
     const agentId = searchParams.get('agentId')
 
-    if (!userId || !agentId) {
-      return NextResponse.json({ error: 'userId e agentId são obrigatórios' }, { status: 400 })
+    if (!workspaceId || !agentId) {
+      return NextResponse.json({ error: 'workspaceId e agentId são obrigatórios' }, { status: 400 })
     }
 
-    // 1. Buscar token OpenAI
+    // 1. Buscar token OpenAI do workspace
     const { data: config, error: configError } = await supabase
       .from('configuracoes_credenciais')
       .select('openai_api_token')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (configError || !config?.openai_api_token) {
-      return NextResponse.json({ 
-        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.' 
+      return NextResponse.json({
+        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.'
       }, { status: 400 })
     }
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const { data: vectorStore, error: vectorError } = await supabase
       .from('user_agent_vectorstore')
       .select('vectorstore_id')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .eq('is_active', true)
       .single()
@@ -76,24 +76,24 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, agentId, fileId } = body
+    const { workspaceId, agentId, fileId } = body
 
-    if (!userId || !agentId || !fileId) {
-      return NextResponse.json({ 
-        error: 'userId, agentId e fileId são obrigatórios' 
+    if (!workspaceId || !agentId || !fileId) {
+      return NextResponse.json({
+        error: 'workspaceId, agentId e fileId são obrigatórios'
       }, { status: 400 })
     }
 
-    // 1. Buscar token OpenAI
+    // 1. Buscar token OpenAI do workspace
     const { data: config, error: configError } = await supabase
       .from('configuracoes_credenciais')
       .select('openai_api_token')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (configError || !config?.openai_api_token) {
-      return NextResponse.json({ 
-        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.' 
+      return NextResponse.json({
+        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.'
       }, { status: 400 })
     }
 
@@ -101,7 +101,7 @@ export async function DELETE(request: NextRequest) {
     const { data: vectorStore, error: vectorError } = await supabase
       .from('user_agent_vectorstore')
       .select('vectorstore_id')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .eq('is_active', true)
       .single()

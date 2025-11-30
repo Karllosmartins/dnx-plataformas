@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../shared/AuthWrapper'
+import { useWorkspaceContext } from '../../../contexts/WorkspaceContext'
 import { supabase, UserAgentVectorStore } from '../../../lib/supabase'
 import { 
   Database, 
@@ -33,6 +34,7 @@ interface VectorStoreFile {
 
 export default function VectorStoreManager({ agentId }: VectorStoreManagerProps) {
   const { user } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
   const [vectorStore, setVectorStore] = useState<UserAgentVectorStore | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -43,17 +45,17 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
   const [showCreateForm, setShowCreateForm] = useState(false)
 
   useEffect(() => {
-    if (user && agentId) {
+    if (user && agentId && workspaceId) {
       checkVectorStore()
     }
-  }, [user, agentId])
+  }, [user, agentId, workspaceId])
 
   const checkVectorStore = async () => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/vectorstores?userId=${user.id}&agentId=${agentId}`)
+      const response = await fetch(`/api/vectorstores?workspaceId=${workspaceId}&agentId=${agentId}`)
       const data = await response.json()
       
       if (data.hasVectorStore && data.vectorStore) {
@@ -70,10 +72,10 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
   }
 
   const loadFiles = async () => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     try {
-      const response = await fetch(`/api/vectorstores/files?userId=${user.id}&agentId=${agentId}`)
+      const response = await fetch(`/api/vectorstores/files?workspaceId=${workspaceId}&agentId=${agentId}`)
       const data = await response.json()
       
       if (data.success) {
@@ -85,7 +87,7 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
   }
 
   const createVectorStore = async () => {
-    if (!user || !vectorStoreName.trim()) return
+    if (!user || !workspaceId || !vectorStoreName.trim()) return
 
     setCreating(true)
     try {
@@ -93,7 +95,7 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          workspaceId: workspaceId,
           agentId: agentId,
           vectorStoreName: vectorStoreName.trim()
         })
@@ -122,14 +124,14 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
   }
 
   const toggleVectorStore = async () => {
-    if (!user || !vectorStore) return
+    if (!user || !workspaceId || !vectorStore) return
 
     try {
       const response = await fetch('/api/vectorstores', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          workspaceId: workspaceId,
           agentId: agentId,
           isActive: !vectorStore.is_active
         })
@@ -150,13 +152,13 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
 
   const uploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file || !user) return
+    if (!file || !user || !workspaceId) return
 
     setUploading(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('userId', user.id)
+      formData.append('workspaceId', workspaceId)
       formData.append('agentId', agentId.toString())
 
       const response = await fetch('/api/vectorstores/upload', {
@@ -192,7 +194,7 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user?.id,
+          workspaceId: workspaceId,
           agentId: agentId,
           fileId: fileId
         })

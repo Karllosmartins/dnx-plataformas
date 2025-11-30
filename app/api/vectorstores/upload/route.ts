@@ -8,25 +8,25 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const userId = formData.get('userId') as string
+    const workspaceId = formData.get('workspaceId') as string
     const agentId = formData.get('agentId') as string
 
-    if (!file || !userId || !agentId) {
-      return NextResponse.json({ 
-        error: 'Arquivo, userId e agentId são obrigatórios' 
+    if (!file || !workspaceId || !agentId) {
+      return NextResponse.json({
+        error: 'Arquivo, workspaceId e agentId são obrigatórios'
       }, { status: 400 })
     }
 
-    // 1. Buscar token OpenAI e vector store ID
+    // 1. Buscar token OpenAI do workspace
     const { data: config, error: configError } = await supabase
       .from('configuracoes_credenciais')
       .select('openai_api_token')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (configError || !config?.openai_api_token) {
-      return NextResponse.json({ 
-        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.' 
+      return NextResponse.json({
+        error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.'
       }, { status: 400 })
     }
 
@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
     const { data: vectorStore, error: vectorError } = await supabase
       .from('user_agent_vectorstore')
       .select('vectorstore_id')
-      .eq('user_id', parseInt(userId))
+      .eq('workspace_id', workspaceId)
       .eq('agent_id', parseInt(agentId))
       .eq('is_active', true)
       .single()
 
     if (vectorError || !vectorStore?.vectorstore_id) {
-      return NextResponse.json({ 
-        error: 'Vector store não encontrado. Crie um vector store primeiro.' 
+      return NextResponse.json({
+        error: 'Vector store não encontrado. Crie um vector store primeiro.'
       }, { status: 400 })
     }
 
