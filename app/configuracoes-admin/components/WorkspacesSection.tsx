@@ -131,6 +131,7 @@ export default function WorkspacesSection() {
   const [loading, setLoading] = useState(true)
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null)
   const [showNewWorkspace, setShowNewWorkspace] = useState(false)
+  const [toolsModalWorkspace, setToolsModalWorkspace] = useState<string | null>(null)
 
   useEffect(() => {
     fetchWorkspaces()
@@ -608,6 +609,44 @@ export default function WorkspacesSection() {
     }
   }
 
+  // Toggle tool para workspace (adiciona se não existe, ativa/desativa se existe)
+  const handleToggleToolForWorkspace = async (workspaceId: string, toolId: number, currentlyActive: boolean) => {
+    try {
+      const workspace = workspaces.find(w => w.id === workspaceId)
+      const existingUserTool = workspace?.user_tools?.find(ut => ut.tool_id === toolId)
+
+      if (existingUserTool) {
+        // Atualizar is_active
+        const { error } = await supabase
+          .from('user_tools')
+          .update({ is_active: !currentlyActive })
+          .eq('id', existingUserTool.id)
+
+        if (error) throw error
+      } else {
+        // Adicionar nova tool
+        const owner = workspace?.membros?.find(m => m.role === 'owner')
+        const userId = owner?.user_id || 24
+
+        const { error } = await supabase
+          .from('user_tools')
+          .insert({
+            workspace_id: workspaceId,
+            tool_id: toolId,
+            user_id: userId,
+            is_active: true
+          })
+
+        if (error) throw error
+      }
+
+      await fetchWorkspaces()
+    } catch (error) {
+      console.error('Erro ao toggle tool:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar tool')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -662,9 +701,7 @@ export default function WorkspacesSection() {
             onAddMember={handleAddMember}
             onRemoveMember={handleRemoveMember}
             onUpdateMemberRole={handleUpdateMemberRole}
-            onAddTool={handleAddTool}
-            onRemoveTool={handleRemoveTool}
-            onToggleToolActive={handleToggleToolActive}
+            onOpenTools={(id) => setToolsModalWorkspace(id)}
           />
         ))}
 
@@ -681,6 +718,17 @@ export default function WorkspacesSection() {
           </div>
         )}
       </div>
+
+      {/* Modal de Tools */}
+      {toolsModalWorkspace && (
+        <ToolsModal
+          workspace={workspaces.find(w => w.id === toolsModalWorkspace)!}
+          allTools={allTools}
+          onClose={() => setToolsModalWorkspace(null)}
+          onToggleTool={handleToggleToolForWorkspace}
+          onRefresh={fetchWorkspaces}
+        />
+      )}
     </div>
   )
 }
@@ -699,9 +747,7 @@ interface WorkspaceCardProps {
   onAddMember: (workspaceId: string, userId: number, role: string) => void
   onRemoveMember: (workspaceId: string, memberId: number) => void
   onUpdateMemberRole: (memberId: number, role: string) => void
-  onAddTool: (workspaceId: string, toolId: number) => void
-  onRemoveTool: (userToolId: number) => void
-  onToggleToolActive: (userToolId: number, isActive: boolean) => void
+  onOpenTools: (workspaceId: string) => void
 }
 
 function WorkspaceCard({
@@ -718,15 +764,12 @@ function WorkspaceCard({
   onAddMember,
   onRemoveMember,
   onUpdateMemberRole,
-  onAddTool,
-  onRemoveTool,
-  onToggleToolActive
+  onOpenTools
 }: WorkspaceCardProps) {
   const [activeTab, setActiveTab] = useState('basico')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [selectedUserId, setSelectedUserId] = useState<string>('')
   const [selectedRole, setSelectedRole] = useState<string>('member')
-  const [selectedToolId, setSelectedToolId] = useState<string>('')
 
   const [formData, setFormData] = useState({
     name: workspace.name,
@@ -866,31 +909,30 @@ function WorkspaceCard({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => onToggleAtivo(workspace.id, !workspace.ativo)}
-              className={`p-2 rounded ${
-                workspace.ativo
-                  ? 'text-red-600 hover:text-red-800'
-                  : 'text-green-600 hover:text-green-800'
-              }`}
-              title={workspace.ativo ? 'Desativar workspace' : 'Ativar workspace'}
-            >
-              {workspace.ativo ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-            </button>
+          <div className="flex flex-col space-y-2">
             <button
               onClick={onEdit}
-              className="text-blue-600 hover:text-blue-800 p-2 rounded"
+              className="flex items-center px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200"
               title="Editar workspace"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </button>
+            <button
+              onClick={() => onOpenTools(workspace.id)}
+              className="flex items-center px-3 py-1.5 text-sm text-green-600 bg-green-50 hover:bg-green-100 rounded border border-green-200"
+              title="Gerenciar tools do workspace"
+            >
+              <Wrench className="h-4 w-4 mr-2" />
+              Tools
             </button>
             <button
               onClick={() => onDelete(workspace.id)}
-              className="text-red-600 hover:text-red-800 p-2 rounded"
+              className="flex items-center px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200"
               title="Excluir workspace"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
             </button>
           </div>
         </div>
@@ -898,15 +940,9 @@ function WorkspaceCard({
     )
   }
 
-  // Tools que ainda não foram adicionadas ao workspace
-  const availableTools = allTools.filter(
-    tool => !workspace.user_tools?.some(ut => ut.tool_id === tool.id)
-  )
-
   const tabs = [
     { id: 'basico', label: 'Informações', icon: Building },
     { id: 'membros', label: 'Membros', icon: Users },
-    { id: 'tools', label: 'Tools', icon: Wrench },
     { id: 'limites', label: 'Limites', icon: Settings },
     { id: 'credenciais', label: 'APIs de IA', icon: Bot },
     { id: 'elevenlabs', label: 'ElevenLabs', icon: Mic },
@@ -1104,117 +1140,6 @@ function WorkspaceCard({
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'tools' && (
-            <div className="space-y-4">
-              <div className="flex items-center mb-4">
-                <Wrench className="h-5 w-5 mr-2 text-gray-600" />
-                <h4 className="text-lg font-medium text-gray-900">Tools do Workspace</h4>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Selecione quais tools/funções estarão disponíveis para este workspace. O usuário poderá depois configurar quais agentes usam cada tool na aba Agentes IA.
-              </p>
-
-              {/* Adicionar nova tool */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Tool
-                </h5>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedToolId}
-                    onChange={(e) => setSelectedToolId(e.target.value)}
-                    className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Selecione uma tool...</option>
-                    {availableTools.map((tool) => (
-                      <option key={tool.id} value={tool.id}>
-                        {tool.nome} ({tool.type})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => {
-                      if (selectedToolId) {
-                        onAddTool(workspace.id, parseInt(selectedToolId))
-                        setSelectedToolId('')
-                      }
-                    }}
-                    disabled={!selectedToolId}
-                    className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </button>
-                </div>
-              </div>
-
-              {/* Lista de tools do workspace */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                {workspace.user_tools && workspace.user_tools.length > 0 ? (
-                  <div className="divide-y divide-gray-200">
-                    {workspace.user_tools.map((userTool) => (
-                      <div key={userTool.id} className="p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                              userTool.is_active ? 'bg-green-100' : 'bg-gray-100'
-                            }`}>
-                              <Wrench className={`h-4 w-4 ${userTool.is_active ? 'text-green-600' : 'text-gray-400'}`} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {userTool.tools?.nome || `Tool #${userTool.tool_id}`}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {userTool.tools?.type} - {userTool.tools?.descricao?.substring(0, 60)}...
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {/* Toggle ativo/inativo */}
-                            <button
-                              onClick={() => onToggleToolActive(userTool.id, !userTool.is_active)}
-                              className={`p-1 rounded ${
-                                userTool.is_active
-                                  ? 'text-green-600 hover:text-green-800'
-                                  : 'text-gray-400 hover:text-gray-600'
-                              }`}
-                              title={userTool.is_active ? 'Desativar' : 'Ativar'}
-                            >
-                              {userTool.is_active ? (
-                                <ToggleRight className="h-6 w-6" />
-                              ) : (
-                                <ToggleLeft className="h-6 w-6" />
-                              )}
-                            </button>
-                            {/* Remover */}
-                            <button
-                              onClick={() => onRemoveTool(userTool.id)}
-                              className="p-1 text-red-600 hover:text-red-800"
-                              title="Remover tool"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-gray-500 text-sm">
-                    Nenhuma tool adicionada a este workspace
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs text-gray-400 mt-2">
-                Total de tools: {workspace.user_tools?.length || 0} |
-                Ativas: {workspace.user_tools?.filter(ut => ut.is_active).length || 0}
-              </p>
             </div>
           )}
 
@@ -1780,6 +1705,97 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
             <Save className="h-4 w-4 mr-1" />
             Criar Workspace
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal de Tools
+interface ToolsModalProps {
+  workspace: Workspace
+  allTools: Tool[]
+  onClose: () => void
+  onToggleTool: (workspaceId: string, toolId: number, currentlyActive: boolean) => void
+  onRefresh: () => void
+}
+
+function ToolsModal({ workspace, allTools, onClose, onToggleTool }: ToolsModalProps) {
+  // Criar um mapa de tools ativas para o workspace
+  const activeToolsMap = new Map(
+    workspace.user_tools?.map(ut => [ut.tool_id, ut.is_active]) || []
+  )
+
+  const isToolActive = (toolId: number): boolean => {
+    return activeToolsMap.get(toolId) || false
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Atribuir Ferramentas ao Workspace</h2>
+            <p className="text-sm text-gray-500">Selecione quais ferramentas este workspace poderá usar nos agentes</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Grid de Tools */}
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {allTools.map((tool) => {
+              const isActive = isToolActive(tool.id)
+              return (
+                <div
+                  key={tool.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    isActive
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${
+                      isActive ? 'text-green-800' : 'text-gray-900'
+                    }`}>
+                      {tool.nome}
+                    </p>
+                    <p className={`text-xs ${
+                      isActive ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {tool.type}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onToggleTool(workspace.id, tool.id, isActive)}
+                    className={`ml-3 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      isActive ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        isActive ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {allTools.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <Wrench className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+              <p>Nenhuma ferramenta cadastrada no sistema</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
