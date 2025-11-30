@@ -393,3 +393,70 @@ export async function PUT(request: NextRequest) {
     )
   }
 }
+
+// =====================================================
+// DELETE - Desconectar instância WhatsApp
+// =====================================================
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { instanceId, action } = body
+
+    if (!instanceId) {
+      return NextResponse.json(
+        { error: 'instanceId é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    // Buscar instância
+    const { data: instancia, error } = await getSupabaseAdmin()
+      .from('instancia_whtats')
+      .select('*')
+      .eq('id', instanceId)
+      .single()
+
+    if (error || !instancia) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Se é API oficial, não permite desconectar
+    if (instancia.is_official_api) {
+      return NextResponse.json(
+        { error: 'Não é possível desconectar a API oficial' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar credenciais
+    if (!instancia.apikey || !instancia.baseurl) {
+      return NextResponse.json(
+        { error: 'Instância não possui credenciais configuradas' },
+        { status: 400 }
+      )
+    }
+
+    const uazapiClient = createUazapiInstance(instancia.apikey, instancia.baseurl)
+
+    // Desconectar via UAZAPI
+    console.log('Desconectando instância:', instancia.instancia)
+    const disconnectResult = await uazapiClient.disconnect()
+    console.log('Resultado da desconexão:', disconnectResult)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Instância desconectada com sucesso'
+    })
+
+  } catch (error) {
+    console.error('Erro ao desconectar instância:', error)
+
+    return NextResponse.json(
+      { error: 'Erro ao desconectar instância', details: (error as Error).message },
+      { status: 500 }
+    )
+  }
+}

@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
-import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Trash2, RotateCcw, Plus, Globe } from 'lucide-react'
+import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Trash2, RotateCcw, Plus, Globe, LogOut } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,6 +48,7 @@ export default function WhatsAppPage() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [connecting, setConnecting] = useState<number | null>(null)
+  const [disconnecting, setDisconnecting] = useState<number | null>(null)
   const [showQrCode, setShowQrCode] = useState(false)
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null)
 
@@ -220,6 +221,45 @@ export default function WhatsAppPage() {
     setTimeout(() => clearInterval(pollInterval), 300000)
   }
 
+  const disconnectInstance = async (instance: WhatsAppInstance) => {
+    if (instance.isOfficialApi) {
+      alert('Não é possível desconectar a API oficial.')
+      return
+    }
+
+    if (!confirm('Tem certeza que deseja desconectar esta instância?')) {
+      return
+    }
+
+    setDisconnecting(instance.id)
+
+    try {
+      const response = await fetch('/api/whatsapp/create-instance', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId: instance.id, action: 'disconnect' })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao desconectar')
+      }
+
+      // Atualizar status na lista
+      setInstances(prev => prev.map(inst =>
+        inst.id === instance.id ? { ...inst, status: 'disconnected', profileName: '', profilePicUrl: '' } : inst
+      ))
+
+      alert('WhatsApp desconectado com sucesso!')
+
+    } catch (error) {
+      alert(`Erro ao desconectar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setDisconnecting(null)
+    }
+  }
+
   const canCreateMore = () => {
     const maxInstances = workspaceInfo?.limite_instancias || 1
     return instances.length < maxInstances
@@ -346,6 +386,18 @@ export default function WhatsAppPage() {
                       >
                         <QrCode className="h-4 w-4 mr-2" />
                         Ver QR Code
+                      </Button>
+                    )}
+
+                    {!instance.isOfficialApi && instance.status === 'connected' && (
+                      <Button
+                        onClick={() => disconnectInstance(instance)}
+                        disabled={disconnecting === instance.id}
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        {disconnecting === instance.id ? 'Desconectando...' : 'Desconectar'}
                       </Button>
                     )}
                   </div>
