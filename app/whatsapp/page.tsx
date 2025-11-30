@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
-import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Trash2, RotateCcw, Plus } from 'lucide-react'
+import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Trash2, RotateCcw, Plus, Globe } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,13 +23,17 @@ import {
 } from '@/components/ui/dialog'
 
 interface WhatsAppInstance {
-  id: string
+  id: number
   instanceName: string
-  status: 'created' | 'connecting' | 'connected' | 'disconnected'
+  status: string
+  isOfficialApi: boolean
   qrCode?: string
   pairCode?: string
   profileName?: string
   profilePicUrl?: string
+  wabaId?: string
+  phoneId?: string
+  error?: string
 }
 
 interface WorkspaceInfo {
@@ -43,11 +47,11 @@ export default function WhatsAppPage() {
   const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [connecting, setConnecting] = useState(false)
+  const [connecting, setConnecting] = useState<number | null>(null)
   const [showQrCode, setShowQrCode] = useState(false)
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null)
 
-  // Formulário - apenas nome conforme documentação UAZAPI
+  // Formulário
   const [nome, setNome] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
 
@@ -72,28 +76,12 @@ export default function WhatsAppPage() {
         })
       }
 
-      // Buscar status das instâncias via API
+      // Buscar instâncias via API
       const response = await fetch(`/api/whatsapp/create-instance?userId=${user?.id}&workspaceId=${workspaceId}`)
       const data = await response.json()
 
-      if (data.success) {
-        if (data.hasInstance && data.isConnected) {
-          setInstances([{
-            id: '1',
-            instanceName: data.data.instanceName,
-            status: 'connected',
-            profileName: data.data.profileName,
-            profilePicUrl: data.data.profilePicUrl
-          }])
-        } else if (data.hasInstance && !data.isConnected) {
-          setInstances([{
-            id: '1',
-            instanceName: data.data.instanceName,
-            status: data.data.status === 'connecting' ? 'connecting' : 'disconnected',
-            qrCode: data.data.qrCode,
-            pairCode: data.data.pairCode
-          }])
-        }
+      if (data.success && data.instances) {
+        setInstances(data.instances)
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
@@ -111,7 +99,6 @@ export default function WhatsAppPage() {
     setCreating(true)
 
     try {
-      // Criar nome da instância (slug)
       const instanceName = nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
 
       const response = await fetch('/api/whatsapp/create-instance', {
@@ -130,15 +117,11 @@ export default function WhatsAppPage() {
         throw new Error(data.error || 'Erro ao criar instância')
       }
 
-      // Adicionar nova instância à lista
-      setInstances([{
-        id: data.data?.instanceData?.id || '1',
-        instanceName: data.data?.instanceName || instanceName,
-        status: 'created'
-      }])
-
       setShowCreateForm(false)
       setNome('')
+
+      // Recarregar lista
+      await loadData()
 
       alert('Instância criada com sucesso! Clique em "Conectar" para gerar o QR Code.')
 
@@ -150,12 +133,21 @@ export default function WhatsAppPage() {
   }
 
   const connectInstance = async (instance: WhatsAppInstance) => {
-    setConnecting(true)
+    if (instance.isOfficialApi) {
+      alert('Esta é uma instância da API oficial do WhatsApp e não requer QR Code.')
+      return
+    }
+
+    setConnecting(instance.id)
     setSelectedInstance(instance)
 
     try {
-      // Buscar QR Code via API
-      const response = await fetch(`/api/whatsapp/create-instance?userId=${user?.id}&workspaceId=${workspaceId}`)
+      const response = await fetch('/api/whatsapp/create-instance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId: instance.id })
+      })
+
       const data = await response.json()
 
       if (!data.success) {
@@ -163,33 +155,33 @@ export default function WhatsAppPage() {
       }
 
       if (data.isConnected) {
+        // Atualizar status na lista
         setInstances(prev => prev.map(inst =>
-          inst.id === instance.id ? { ...inst, status: 'connected' } : inst
+          inst.id === instance.id ? {
+            ...inst,
+            status: 'connected',
+            profileName: data.data?.profileName,
+            profilePicUrl: data.data?.profilePicUrl
+          } : inst
         ))
         alert('WhatsApp já está conectado!')
         return
       }
 
-      // Atualizar com QR Code
+      // Mostrar QR Code
       let qrCodeData = data.data?.qrCode
       if (qrCodeData && !qrCodeData.startsWith('data:image')) {
         qrCodeData = `data:image/png;base64,${qrCodeData}`
       }
 
-      setInstances(prev => prev.map(inst =>
-        inst.id === instance.id
-          ? { ...inst, status: 'connecting', qrCode: qrCodeData, pairCode: data.data?.pairCode }
-          : inst
-      ))
-
-      setSelectedInstance(prev => prev ? {
-        ...prev,
+      setSelectedInstance({
+        ...instance,
         status: 'connecting',
         qrCode: qrCodeData,
         pairCode: data.data?.pairCode
-      } : null)
+      })
 
-      if (qrCodeData) {
+      if (qrCodeData || data.data?.pairCode) {
         setShowQrCode(true)
         startConnectionPolling(instance)
       } else {
@@ -199,7 +191,7 @@ export default function WhatsAppPage() {
     } catch (error) {
       alert(`Erro ao conectar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     } finally {
-      setConnecting(false)
+      setConnecting(null)
     }
   }
 
@@ -209,19 +201,14 @@ export default function WhatsAppPage() {
         const response = await fetch(`/api/whatsapp/create-instance?userId=${user?.id}&workspaceId=${workspaceId}`)
         const data = await response.json()
 
-        if (data.success && data.isConnected) {
-          setInstances(prev => prev.map(inst =>
-            inst.id === instance.id ? {
-              ...inst,
-              status: 'connected',
-              profileName: data.data?.profileName,
-              profilePicUrl: data.data?.profilePicUrl
-            } : inst
-          ))
-
-          setShowQrCode(false)
-          alert('WhatsApp conectado com sucesso!')
-          clearInterval(pollInterval)
+        if (data.success && data.instances) {
+          const updatedInstance = data.instances.find((i: WhatsAppInstance) => i.id === instance.id)
+          if (updatedInstance && updatedInstance.status === 'connected') {
+            setInstances(data.instances)
+            setShowQrCode(false)
+            alert('WhatsApp conectado com sucesso!')
+            clearInterval(pollInterval)
+          }
         }
       } catch (error) {
         // Continue polling
@@ -237,14 +224,20 @@ export default function WhatsAppPage() {
     return instances.length < maxInstances
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (instance: WhatsAppInstance) => {
+    if (instance.isOfficialApi) {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><Globe className="h-3 w-3 mr-1" /> API Oficial</Badge>
+    }
+
+    switch (instance.status) {
       case 'connected':
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="h-3 w-3 mr-1" /> Conectado</Badge>
       case 'connecting':
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><AlertCircle className="h-3 w-3 mr-1" /> Conectando...</Badge>
       case 'created':
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><Smartphone className="h-3 w-3 mr-1" /> Criado</Badge>
+      case 'erro':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><AlertCircle className="h-3 w-3 mr-1" /> Erro</Badge>
       default:
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><WifiOff className="h-3 w-3 mr-1" /> Desconectado</Badge>
     }
@@ -268,11 +261,11 @@ export default function WhatsAppPage() {
             WhatsApp
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Gerencie suas conexões WhatsApp
+            Gerencie suas conexões WhatsApp ({instances.length}/{workspaceInfo?.limite_instancias || 1})
           </p>
         </div>
 
-        {canCreateMore() && instances.length === 0 && (
+        {canCreateMore() && (
           <Button onClick={() => setShowCreateForm(true)} className="bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4 mr-2" />
             Nova Instância
@@ -307,6 +300,8 @@ export default function WhatsAppPage() {
                     <div className="p-2 bg-green-100 rounded-lg">
                       {instance.profilePicUrl ? (
                         <img src={instance.profilePicUrl} alt="Profile" className="h-6 w-6 rounded-full" />
+                      ) : instance.isOfficialApi ? (
+                        <Globe className="h-6 w-6 text-blue-600" />
                       ) : (
                         <Smartphone className="h-6 w-6 text-green-600" />
                       )}
@@ -315,35 +310,37 @@ export default function WhatsAppPage() {
                       <CardTitle className="text-lg">
                         {instance.profileName || instance.instanceName}
                       </CardTitle>
-                      <p className="text-sm text-gray-500">{instance.instanceName}</p>
-                      <div className="mt-1">
-                        {getStatusBadge(instance.status)}
+                      {instance.profileName && instance.profileName !== instance.instanceName && (
+                        <p className="text-sm text-gray-500">{instance.instanceName}</p>
+                      )}
+                      <div className="mt-1 flex items-center gap-2">
+                        {getStatusBadge(instance)}
+                        {instance.error && (
+                          <span className="text-xs text-red-500">{instance.error}</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {(instance.status === 'created' || instance.status === 'disconnected') && (
+                    {!instance.isOfficialApi && (instance.status === 'created' || instance.status === 'disconnected' || instance.status === 'erro') && (
                       <Button
                         onClick={() => connectInstance(instance)}
-                        disabled={connecting}
+                        disabled={connecting === instance.id}
                         variant={instance.status === 'disconnected' ? 'outline' : 'default'}
                         className={instance.status === 'created' ? 'bg-green-600 hover:bg-green-700' : ''}
                       >
-                        {instance.status === 'disconnected' ? (
-                          <><RotateCcw className="h-4 w-4 mr-2" />{connecting ? 'Reconectando...' : 'Reconectar'}</>
+                        {instance.status === 'disconnected' || instance.status === 'erro' ? (
+                          <><RotateCcw className="h-4 w-4 mr-2" />{connecting === instance.id ? 'Reconectando...' : 'Reconectar'}</>
                         ) : (
-                          <><QrCode className="h-4 w-4 mr-2" />{connecting ? 'Gerando...' : 'Conectar'}</>
+                          <><QrCode className="h-4 w-4 mr-2" />{connecting === instance.id ? 'Gerando...' : 'Conectar'}</>
                         )}
                       </Button>
                     )}
 
-                    {instance.status === 'connecting' && (
+                    {!instance.isOfficialApi && instance.status === 'connecting' && (
                       <Button
-                        onClick={() => {
-                          setSelectedInstance(instance)
-                          setShowQrCode(true)
-                        }}
+                        onClick={() => connectInstance(instance)}
                         variant="outline"
                       >
                         <QrCode className="h-4 w-4 mr-2" />
@@ -380,6 +377,9 @@ export default function WhatsAppPage() {
                 <p className="text-sm text-gray-500 mb-2">Ou use o código de pareamento:</p>
                 <p className="text-2xl font-mono font-bold tracking-wider">{selectedInstance.pairCode}</p>
               </div>
+            )}
+            {!selectedInstance?.qrCode && !selectedInstance?.pairCode && (
+              <p className="text-gray-500">Gerando QR Code...</p>
             )}
           </div>
           <DialogFooter>

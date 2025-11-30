@@ -119,6 +119,20 @@ export async function POST(request: NextRequest) {
         throw updateError
       }
 
+      // Salvar também na tabela instancia_whtats
+      await getSupabaseAdmin()
+        .from('instancia_whtats')
+        .upsert({
+          user_id: parseInt(userId),
+          workspace_id: workspaceId || null,
+          instancia: instanceName,
+          apikey: instanceToken,
+          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
+          is_official_api: false
+        }, {
+          onConflict: 'workspace_id,instancia'
+        })
+
       return NextResponse.json({
         success: true,
         message: 'Instância WhatsApp criada e configuração atualizada',
@@ -153,13 +167,32 @@ export async function POST(request: NextRequest) {
         throw insertError
       }
 
+      // Salvar também na tabela instancia_whtats
+      const { data: newInstancia, error: instanciaError } = await getSupabaseAdmin()
+        .from('instancia_whtats')
+        .insert({
+          user_id: parseInt(userId),
+          workspace_id: workspaceId || null,
+          instancia: instanceName,
+          apikey: instanceToken,
+          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
+          is_official_api: false
+        })
+        .select()
+        .single()
+
+      if (instanciaError) {
+        console.error('Erro ao salvar em instancia_whtats:', instanciaError)
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Instância WhatsApp criada com sucesso',
         data: {
           instanceName: instanceName,
           instanceData: uazapiResponse.data,
-          configData: newConfig
+          configData: newConfig,
+          instanciaId: newInstancia?.id
         }
       })
     }
@@ -175,7 +208,7 @@ export async function POST(request: NextRequest) {
 }
 
 // =====================================================
-// GET - Verificar status da criação da instância
+// GET - Listar instâncias do workspace
 // =====================================================
 export async function GET(request: NextRequest) {
   try {
@@ -190,95 +223,182 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar configuração do usuário/workspace
-    let configQuery = getSupabaseAdmin()
-      .from('configuracoes_credenciais')
+    // Buscar todas as instâncias da tabela instancia_whtats
+    let query = getSupabaseAdmin()
+      .from('instancia_whtats')
       .select('*')
+      .order('created_at', { ascending: false })
 
     if (workspaceId) {
-      configQuery = configQuery.eq('workspace_id', workspaceId)
+      query = query.eq('workspace_id', workspaceId)
     } else {
-      configQuery = configQuery.eq('user_id', userId)
+      query = query.eq('user_id', parseInt(userId))
     }
 
-    const { data: config, error } = await configQuery.single()
+    const { data: instancias, error } = await query
 
-    if (error || !config) {
+    if (error) {
+      throw error
+    }
+
+    if (!instancias || instancias.length === 0) {
       return NextResponse.json({
         success: true,
-        hasInstance: false,
-        data: null
+        instances: []
       })
     }
 
-    // Verificar se instância, apikey e baseurl estão preenchidos
-    if (config.instancia && config.apikey && config.baseurl) {
-      try {
-        const uazapiClient = createUazapiInstance(config.apikey, config.baseurl)
-
-        const instanceStatus = await uazapiClient.getStatus()
-
-        // UAZAPI retorna status: connected, disconnected, connecting
-        if (instanceStatus.success && instanceStatus.data?.status === 'connected') {
-          return NextResponse.json({
-            success: true,
-            hasInstance: true,
-            isConnected: true,
-            data: {
-              instanceName: config.instancia,
-              baseurl: config.baseurl,
-              status: 'connected',
-              profileName: instanceStatus.data?.profileName,
-              profilePicUrl: instanceStatus.data?.profilePicUrl,
-              created_at: config.created_at
-            }
-          })
-        } else {
-          // Se desconectado, gerar QR Code
-          const connectResult = await uazapiClient.connect()
-
-          return NextResponse.json({
-            success: true,
-            hasInstance: true,
-            isConnected: false,
-            data: {
-              instanceName: config.instancia,
-              baseurl: config.baseurl,
-              status: instanceStatus.data?.status || 'disconnected',
-              qrCode: connectResult.data?.qrcode,
-              pairCode: connectResult.data?.paircode,
-              created_at: config.created_at
-            }
-          })
+    // Para cada instância, verificar status
+    const instancesWithStatus = await Promise.all(
+      instancias.map(async (inst) => {
+        // Se é API oficial do WhatsApp, não verificar via UAZAPI
+        if (inst.is_official_api) {
+          return {
+            id: inst.id,
+            instanceName: inst.instancia || '',
+            status: 'connected', // API oficial sempre "conectada"
+            isOfficialApi: true,
+            wabaId: inst.waba_id,
+            phoneId: inst.id_telefone,
+            created_at: inst.created_at
+          }
         }
 
-      } catch (uazapiError) {
-        console.error('Erro ao verificar instância UAZAPI:', uazapiError)
-        return NextResponse.json({
-          success: true,
-          hasInstance: true,
-          isConnected: false,
-          data: {
-            instanceName: config.instancia,
-            baseurl: config.baseurl,
-            status: 'erro',
-            error: (uazapiError as Error).message
+        // Instância UAZAPI - verificar status
+        if (inst.apikey && inst.baseurl) {
+          try {
+            const uazapiClient = createUazapiInstance(inst.apikey, inst.baseurl)
+            const statusResult = await uazapiClient.getStatus()
+
+            const status = statusResult.success ? statusResult.data?.status : 'erro'
+
+            return {
+              id: inst.id,
+              instanceName: inst.instancia || '',
+              status: status,
+              isOfficialApi: false,
+              profileName: statusResult.data?.profileName,
+              profilePicUrl: statusResult.data?.profilePicUrl,
+              created_at: inst.created_at
+            }
+          } catch (err) {
+            return {
+              id: inst.id,
+              instanceName: inst.instancia || '',
+              status: 'erro',
+              isOfficialApi: false,
+              error: (err as Error).message,
+              created_at: inst.created_at
+            }
           }
-        })
-      }
-    }
+        }
+
+        return {
+          id: inst.id,
+          instanceName: inst.instancia || '',
+          status: 'created',
+          isOfficialApi: false,
+          created_at: inst.created_at
+        }
+      })
+    )
 
     return NextResponse.json({
       success: true,
-      hasInstance: false,
-      data: null
+      instances: instancesWithStatus
     })
 
   } catch (error) {
-    console.error('Erro ao verificar instância:', error)
+    console.error('Erro ao listar instâncias:', error)
 
     return NextResponse.json(
-      { error: 'Erro ao verificar instância', details: (error as Error).message },
+      { error: 'Erro ao listar instâncias', details: (error as Error).message },
+      { status: 500 }
+    )
+  }
+}
+
+// =====================================================
+// PUT - Gerar QR Code para conectar instância
+// =====================================================
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { instanceId } = body
+
+    if (!instanceId) {
+      return NextResponse.json(
+        { error: 'instanceId é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    // Buscar instância
+    const { data: instancia, error } = await getSupabaseAdmin()
+      .from('instancia_whtats')
+      .select('*')
+      .eq('id', instanceId)
+      .single()
+
+    if (error || !instancia) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Se é API oficial, não precisa de QR Code
+    if (instancia.is_official_api) {
+      return NextResponse.json({
+        success: true,
+        isOfficialApi: true,
+        message: 'API oficial não requer QR Code'
+      })
+    }
+
+    // Gerar QR Code via UAZAPI
+    if (!instancia.apikey || !instancia.baseurl) {
+      return NextResponse.json(
+        { error: 'Instância não possui credenciais configuradas' },
+        { status: 400 }
+      )
+    }
+
+    const uazapiClient = createUazapiInstance(instancia.apikey, instancia.baseurl)
+
+    // Verificar status primeiro
+    const statusResult = await uazapiClient.getStatus()
+
+    if (statusResult.success && statusResult.data?.status === 'connected') {
+      return NextResponse.json({
+        success: true,
+        isConnected: true,
+        data: {
+          status: 'connected',
+          profileName: statusResult.data?.profileName,
+          profilePicUrl: statusResult.data?.profilePicUrl
+        }
+      })
+    }
+
+    // Gerar QR Code
+    const connectResult = await uazapiClient.connect()
+
+    return NextResponse.json({
+      success: true,
+      isConnected: false,
+      data: {
+        status: statusResult.data?.status || 'disconnected',
+        qrCode: connectResult.data?.qrcode,
+        pairCode: connectResult.data?.paircode
+      }
+    })
+
+  } catch (error) {
+    console.error('Erro ao conectar instância:', error)
+
+    return NextResponse.json(
+      { error: 'Erro ao conectar instância', details: (error as Error).message },
       { status: 500 }
     )
   }
