@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { adminWorkspacesApi, adminUsersApi, adminToolsApi } from '../../../lib/api-client'
 import {
   Building,
   Edit,
@@ -143,13 +142,14 @@ export default function WorkspacesSection() {
 
   const fetchWorkspaces = async () => {
     try {
-      // Usar API admin para buscar todos os workspaces
-      const response = await adminWorkspacesApi.list()
+      // Usar API local para buscar todos os workspaces
+      const response = await fetch('/api/admin/workspaces')
+      const data = await response.json()
 
-      if (response.success && response.data) {
-        setWorkspaces(response.data as Workspace[])
+      if (data.success && data.data) {
+        setWorkspaces(data.data as Workspace[])
       } else {
-        console.error('Erro ao buscar workspaces:', response.error)
+        console.error('Erro ao buscar workspaces:', data.error)
       }
     } catch (error) {
       console.error('Erro ao buscar workspaces:', error)
@@ -175,11 +175,13 @@ export default function WorkspacesSection() {
 
   const fetchAllUsers = async () => {
     try {
-      const response = await adminUsersApi.list()
-      if (response.success && response.data) {
-        setAllUsers(response.data as Usuario[])
+      // Usar API local para buscar todos os usuários
+      const response = await fetch('/api/admin/users')
+      const data = await response.json()
+      if (data.success && data.data) {
+        setAllUsers(data.data as Usuario[])
       } else {
-        console.error('Erro ao buscar usuários:', response.error)
+        console.error('Erro ao buscar usuários:', data.error)
       }
     } catch (error) {
       console.error('Erro ao buscar usuários:', error)
@@ -188,11 +190,13 @@ export default function WorkspacesSection() {
 
   const fetchAllTools = async () => {
     try {
-      const response = await adminToolsApi.list()
-      if (response.success && response.data) {
-        setAllTools(response.data as Tool[])
+      // Usar API local para buscar todas as tools
+      const response = await fetch('/api/admin/tools')
+      const data = await response.json()
+      if (data.success && data.data) {
+        setAllTools(data.data as Tool[])
       } else {
-        console.error('Erro ao buscar tools:', response.error)
+        console.error('Erro ao buscar tools:', data.error)
       }
     } catch (error) {
       console.error('Erro ao buscar tools:', error)
