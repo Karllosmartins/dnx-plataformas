@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
-import { User } from '../../lib/auth'
 import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw, Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -34,11 +33,15 @@ interface WhatsAppInstance {
   apiKey?: string
 }
 
+interface WorkspaceInfo {
+  limite_instancias: number
+}
+
 export default function WhatsAppPage() {
   const { user } = useAuth()
   const { workspaceId } = useWorkspaceContext()
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
-  const [userInfo, setUserInfo] = useState<(User & { numero_instancias?: number }) | null>(null)
+  const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [connecting, setConnecting] = useState(false)
@@ -87,16 +90,16 @@ export default function WhatsAppPage() {
 
   const loadUserInstances = async () => {
     try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('numero_instancias')
-        .eq('id', parseInt(user?.id || '0'))
+      // Buscar limite de instâncias do workspace
+      const { data: workspaceData, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('limite_instancias')
+        .eq('id', workspaceId)
         .single()
 
-      if (!userError && user) {
-        setUserInfo({
-          ...user,
-          numero_instancias: userData?.numero_instancias
+      if (!workspaceError && workspaceData) {
+        setWorkspaceInfo({
+          limite_instancias: workspaceData.limite_instancias || 1
         })
       }
 
@@ -343,7 +346,7 @@ export default function WhatsAppPage() {
   }
 
   const canCreateMore = () => {
-    const maxInstances = userInfo?.numero_instancias || 1
+    const maxInstances = workspaceInfo?.limite_instancias || 1
     return instances.length < maxInstances
   }
 
