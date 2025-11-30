@@ -233,17 +233,19 @@ export async function GET(request: NextRequest) {
             const statusResult = await uazapiClient.getStatus()
 
             const status = statusResult.success ? statusResult.data?.status : 'erro'
+            console.log(`Status da instância ${inst.instancia}:`, status, statusResult.data)
 
             return {
               id: inst.id,
               instanceName: inst.instancia || '',
-              status: status,
+              status: status || 'disconnected',
               isOfficialApi: false,
               profileName: statusResult.data?.profileName,
               profilePicUrl: statusResult.data?.profilePicUrl,
               created_at: inst.created_at
             }
           } catch (err) {
+            console.error(`Erro ao verificar status de ${inst.instancia}:`, err)
             return {
               id: inst.id,
               instanceName: inst.instancia || '',
@@ -330,7 +332,9 @@ export async function PUT(request: NextRequest) {
 
     // Verificar status primeiro
     const statusResult = await uazapiClient.getStatus()
+    console.log('Status atual da instância:', statusResult.data?.status)
 
+    // Se já está conectado, retornar sucesso
     if (statusResult.success && statusResult.data?.status === 'connected') {
       return NextResponse.json({
         success: true,
@@ -343,14 +347,27 @@ export async function PUT(request: NextRequest) {
       })
     }
 
+    // Desconectar primeiro para garantir QR Code fresco
+    try {
+      console.log('Desconectando instância para gerar novo QR Code...')
+      await uazapiClient.disconnect()
+    } catch (disconnectError) {
+      console.log('Erro ao desconectar (pode ser ignorado):', disconnectError)
+    }
+
+    // Aguardar um pouco antes de conectar
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     // Gerar QR Code
+    console.log('Conectando para gerar QR Code...')
     const connectResult = await uazapiClient.connect()
+    console.log('Resultado da conexão:', connectResult)
 
     return NextResponse.json({
       success: true,
       isConnected: false,
       data: {
-        status: statusResult.data?.status || 'disconnected',
+        status: 'connecting',
         qrCode: connectResult.data?.qrcode,
         pairCode: connectResult.data?.paircode
       }
