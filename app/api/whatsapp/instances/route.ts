@@ -1,12 +1,15 @@
 // =====================================================
 // API ROUTES - INSTÂNCIAS WHATSAPP
-// Gerenciamento de instâncias WhatsApp via Evolution API
+// Gerenciamento de instâncias WhatsApp via UAZAPI
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
+import { createUazapiClientFromDb, createUazapiAdmin, createUazapiInstance, DEFAULT_UAZAPI_CONFIG } from '../../../../lib/uazapi'
 import type { ConfiguracaoCredenciais, InstanciaWhatsapp, User } from '../../../../lib/supabase'
+
+// URL do webhook para receber mensagens
+const WEBHOOK_URL = 'https://webhooks.dnmarketing.com.br/webhook/233c6d7a-0a0a-498e-8e47-1b47a3876b63uazapi'
 
 // =====================================================
 // GET - Listar instâncias do usuário
@@ -50,23 +53,23 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    // Para cada instância, verificar status na Evolution API
+    // Para cada instância, verificar status na UAZAPI
     const instanciasComStatus = await Promise.all(
       (instancias || []).map(async (instancia) => {
         try {
           const config = instancia.configuracoes_credenciais
-          const evolutionClient = createEvolutionClient({
-            baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-            masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-            instanceName: config?.instancia || instancia.instancia,
-            apiKey: config?.apikey
+          const uazapiClient = createUazapiClientFromDb({
+            baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+            apikey: config?.apikey || '',
+            instancia: config?.instancia || instancia.instancia
           })
 
-          const status = await evolutionClient.getConnectionState(instancia.instancia)
+          const status = await uazapiClient.getStatus()
 
           return {
             ...instancia,
-            status_conexao_real: status.success ? status.data?.state : 'unknown'
+            // UAZAPI retorna: disconnected, connecting, connected
+            status_conexao_real: status.success ? status.data?.status : 'unknown'
           }
         } catch (error) {
           return {
@@ -154,37 +157,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se instância já existe na Evolution API
-    const evolutionClient = createEvolutionClient({
-      baseUrl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-      masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-      instanceName: instanciaNome
+    // Criar instância na UAZAPI
+    const uazapiAdmin = createUazapiAdmin(
+      baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+      DEFAULT_UAZAPI_CONFIG.adminToken
+    )
+
+    const uazapiResult = await uazapiAdmin.createInstance({
+      name: instanciaNome,
+      systemName: nomeInstancia,
+      adminField01: userId,
+      adminField02: workspaceId || ''
     })
 
-    try {
-      const existingInstance = await evolutionClient.getConnectionState(instanciaNome)
-      if (existingInstance) {
-        return NextResponse.json(
-          { error: 'Nome da instância já existe na Evolution API' },
-          { status: 400 }
-        )
-      }
-    } catch (error) {
-      // Se erro 404, significa que não existe, pode prosseguir
-      if ((error as any)?.response?.status !== 404) {
-
-      } else {
-
-      }
+    if (!uazapiResult.success) {
+      return NextResponse.json(
+        { error: 'Erro ao criar instância na UAZAPI', details: uazapiResult.error },
+        { status: 400 }
+      )
     }
 
-    // Criar instância na Evolution API
-    const instanceConfig = {
-      instanceName: instanciaNome,
-      qrcode: true
-    }
-
-    const evolutionInstance = await evolutionClient.createInstance(instanceConfig)
+    // Token da instância retornado pela UAZAPI
+    const instanceToken = uazapiResult.data?.token || apikey
 
     // Criar configuração de credenciais
     const { data: configData, error: configError } = await getSupabaseAdmin()
@@ -192,9 +186,9 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         workspace_id: workspaceId || null,
-        baseurl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
+        baseurl: baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
         instancia: instanciaNome,
-        apikey: apikey || evolutionInstance.data?.apikey,
+        apikey: instanceToken,
         cliente: user.name,
         model: 'gpt-4o',
         type_tool_supabase: 'OpenAi',
@@ -219,8 +213,8 @@ export async function POST(request: NextRequest) {
         config_id: configData.id,
         nome_instancia: nomeInstancia,
         instancia: instanciaNome,
-        apikey: apikey || evolutionInstance.data?.apikey,
-        baseurl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
+        apikey: instanceToken,
+        baseurl: baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
         status_conexao: 'desconectado',
         ativo: true
       })
@@ -231,12 +225,36 @@ export async function POST(request: NextRequest) {
       throw instanciaError
     }
 
+    // Configurar webhook da instância para receber mensagens
+    let webhookConfigured = false
+    if (instanceToken) {
+      try {
+        const uazapiInstance = createUazapiInstance(
+          instanceToken,
+          baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl
+        )
+
+        const webhookResult = await uazapiInstance.setWebhook({
+          url: WEBHOOK_URL,
+          enabled: true,
+          events: ['messages'],
+          excludeMessages: ['isGroupYes', 'wasSentByApi'] // Excluir grupos e mensagens enviadas pela API (evita loop)
+        })
+
+        webhookConfigured = webhookResult.success
+      } catch (webhookError) {
+        console.error('Erro ao configurar webhook:', webhookError)
+        // Continua mesmo se falhar - a instância foi criada
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Instância criada com sucesso',
       data: {
         instancia: instanciaData,
-        evolution_response: evolutionInstance
+        uazapi_response: uazapiResult.data,
+        webhook_configured: webhookConfigured
       }
     })
 
@@ -334,20 +352,18 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Deletar instância da Evolution API
+    // Deletar instância da UAZAPI
     try {
       const config = instancia.configuracoes_credenciais
-      const evolutionClient = createEvolutionClient({
-        baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-        masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-        instanceName: instancia.instancia,
-        apiKey: config?.apikey
+      const uazapiClient = createUazapiClientFromDb({
+        baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+        apikey: config?.apikey || '',
+        instancia: instancia.instancia
       })
 
-      await evolutionClient.deleteInstance(instancia.instancia)
+      await uazapiClient.delete()
     } catch (error) {
-
-      // Continua mesmo se falhar na Evolution API
+      // Continua mesmo se falhar na UAZAPI
     }
 
     // Marcar como inativa no banco (não deletar para manter histórico)

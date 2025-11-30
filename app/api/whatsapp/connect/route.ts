@@ -1,11 +1,11 @@
 // =====================================================
 // API ROUTES - CONECTAR/DESCONECTAR WHATSAPP
-// Gerenciar conexão das instâncias WhatsApp
+// Gerenciar conexão das instâncias WhatsApp (UAZAPI)
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
+import { createUazapiClientFromDb, DEFAULT_UAZAPI_CONFIG } from '../../../../lib/uazapi'
 
 // =====================================================
 // POST - Conectar instância (gerar QR Code)
@@ -43,19 +43,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Conectar via Evolution API
+    // Conectar via UAZAPI
     const config = instancia.configuracoes_credenciais
-    const evolutionClient = createEvolutionClient({
-      baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-      masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-      instanceName: instancia.instancia,
-      apiKey: config?.apikey
+    const uazapiClient = createUazapiClientFromDb({
+      baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+      apikey: config?.apikey || '',
+      instancia: instancia.instancia
     })
 
     // Verificar status atual
-    const currentStatus = await evolutionClient.getConnectionState(instancia.instancia)
-    
-    if (currentStatus.success && currentStatus.data?.state === 'open') {
+    const currentStatus = await uazapiClient.getStatus()
+
+    // UAZAPI retorna: disconnected, connecting, connected
+    if (currentStatus.success && currentStatus.data?.status === 'connected') {
       return NextResponse.json({
         success: true,
         message: 'Instância já está conectada',
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Gerar QR Code para conexão
-    const connectionResult = await evolutionClient.connectInstance(instancia.instancia)
+    const connectionResult = await uazapiClient.connect()
 
     // Atualizar status no banco
     await getSupabaseAdmin()
@@ -133,16 +133,15 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Desconectar via Evolution API
+    // Desconectar via UAZAPI
     const config = instancia.configuracoes_credenciais
-    const evolutionClient = createEvolutionClient({
-      baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-      masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-      instanceName: instancia.instancia,
-      apiKey: config?.apikey
+    const uazapiClient = createUazapiClientFromDb({
+      baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+      apikey: config?.apikey || '',
+      instancia: instancia.instancia
     })
 
-    await evolutionClient.logoutInstance(instancia.instancia)
+    await uazapiClient.disconnect()
 
     // Atualizar status no banco
     await getSupabaseAdmin()

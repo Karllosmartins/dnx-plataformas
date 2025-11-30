@@ -8,7 +8,6 @@ import { useAuth } from '../../components/shared/AuthWrapper'
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
 import { User } from '../../lib/auth'
-import { evolutionAPI } from '../../lib/evolution-api'
 import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw, Plus } from 'lucide-react'
 
 interface WhatsAppInstance {
@@ -32,7 +31,7 @@ export default function WhatsAppPage() {
   const [connecting, setConnecting] = useState(false)
   const [showQrCode, setShowQrCode] = useState(false)
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null)
-  
+
   // Formulário
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -46,26 +45,29 @@ export default function WhatsAppPage() {
     }
   }, [user, workspaceId])
 
+  // Verificar status de cada instância via API
   const checkInstancesStatus = async (instancesToCheck: WhatsAppInstance[]) => {
     for (const instance of instancesToCheck) {
       try {
-        const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-        
-        if (statusResponse.success && statusResponse.data) {
+        const response = await fetch(`/api/whatsapp/status?instanceId=${instance.id}`)
+        const data = await response.json()
+
+        if (data.success && data.data) {
           let status: 'created' | 'connecting' | 'connected' | 'disconnected' = 'disconnected'
 
-          // Mapear estados da Evolution API para nossos estados
-          if (statusResponse.data.state === 'open') {
+          // Mapear estados da UAZAPI para nossos estados
+          // UAZAPI retorna: connected, disconnected, connecting
+          if (data.data.status_conexao === 'conectado' || data.data.api_status?.data?.status === 'connected') {
             status = 'connected'
-          } else if (statusResponse.data.state === 'connecting') {
+          } else if (data.data.api_status?.data?.status === 'connecting') {
             status = 'connecting'
-          } else if (statusResponse.data.state === 'close') {
+          } else {
             status = 'disconnected'
           }
 
           // Atualizar estado local
           setInstances(prev => prev.map(inst =>
-            inst.instanceName === instance.instanceName
+            inst.id === instance.id
               ? { ...inst, status }
               : inst
           ))
@@ -134,54 +136,83 @@ export default function WhatsAppPage() {
       const telefoneClean = telefone.replace(/\D/g, '')
       const instanceName = nome.toLowerCase().replace(/\s+/g, '') + telefoneClean
 
-      // Criar instância na Evolution API
-      await evolutionAPI.createInstance({
-        instanceName,
-        token: senha,
-        nome,
-        telefone: telefoneClean
+      // Criar instância via API route (que usa UAZAPI)
+      const response = await fetch('/api/whatsapp/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          workspaceId,
+          nomeInstancia: nome,
+          instanciaNome: instanceName,
+          apikey: senha
+        })
       })
 
-      // Salvar na nova tabela instancia_whtats
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao criar instância')
+      }
+
+      // Salvar na tabela instancia_whtats (se não foi salvo pela API)
       const { data: newInstance, error: saveError } = await supabase
         .from('instancia_whtats')
         .insert({
           user_id: parseInt(user?.id || '0'),
           workspace_id: workspaceId,
           instancia: instanceName,
-          apikey: senha, // Usar a senha/token fornecida pelo usuário
-          baseurl: 'https://wsapi.dnmarketing.com.br'
+          apikey: data.data?.uazapi_response?.token || senha,
+          baseurl: 'https://dnxplataforma.uazapi.com'
         })
         .select()
         .single()
 
       if (saveError) {
-        throw new Error(`Erro ao salvar instância: ${saveError.message}`)
+        // Se já existe, buscar a instância criada
+        const { data: existingInstance } = await supabase
+          .from('instancia_whtats')
+          .select('*')
+          .eq('instancia', instanceName)
+          .single()
+
+        if (existingInstance) {
+          const newInstanceObj = {
+            id: existingInstance.id,
+            instanceName,
+            nome,
+            telefone,
+            status: 'created' as const,
+            baseUrl: existingInstance.baseurl,
+            apiKey: existingInstance.apikey
+          }
+          setInstances(prev => [newInstanceObj, ...prev])
+        }
+      } else if (newInstance) {
+        // Adicionar à lista local
+        const newInstanceObj = {
+          id: newInstance.id,
+          instanceName,
+          nome,
+          telefone,
+          status: 'created' as const,
+          baseUrl: newInstance.baseurl,
+          apiKey: newInstance.apikey
+        }
+        setInstances(prev => [newInstanceObj, ...prev])
       }
 
-      // Adicionar à lista local
-      const newInstanceObj = {
-        id: newInstance.id,
-        instanceName,
-        nome,
-        telefone,
-        status: 'created' as const,
-        baseUrl: 'https://wsapi.dnmarketing.com.br',
-        apiKey: senha // Usar a senha/token fornecida pelo usuário
-      }
-
-      setInstances(prev => [newInstanceObj, ...prev])
       setShowCreateForm(false)
-      
+
       // Limpar formulário
       setNome('')
       setTelefone('')
       setSenha('')
-      
-      alert('Instancia criada com sucesso! Agora voce pode gerar o QR Code para conectar.')
+
+      alert('Instância criada com sucesso! Agora você pode gerar o QR Code para conectar.')
 
     } catch (error) {
-      alert(`Erro ao criar instancia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      alert(`Erro ao criar instância: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     } finally {
       setCreating(false)
     }
@@ -193,72 +224,45 @@ export default function WhatsAppPage() {
     setConnecting(true)
 
     try {
-      // Estratégia baseada no seu n8n: QR Code vem na resposta do /connect
-      const connectResponse = await evolutionAPI.connectInstance(instance.instanceName)
+      // Conectar via API route (que usa UAZAPI)
+      const response = await fetch('/api/whatsapp/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId: instance.id })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao conectar instância')
+      }
 
       let qrCodeData: string | null = null
 
-      if (connectResponse.success) {
-        // O QR Code está diretamente na resposta do connect (como no seu n8n)
-        if (connectResponse.data?.base64) {
-          qrCodeData = connectResponse.data.base64
+      // Verificar se já está conectado
+      if (data.data?.status === 'connected') {
+        setInstances(prev => prev.map(inst =>
+          inst.id === instance.id
+            ? { ...inst, status: 'connected' }
+            : inst
+        ))
+
+        setSelectedInstance(prev => prev ? {
+          ...prev,
+          status: 'connected'
+        } : null)
+
+        alert('WhatsApp já está conectado!')
+        return
+      }
+
+      // Buscar QR Code na resposta
+      if (data.data?.qrCode) {
+        qrCodeData = data.data.qrCode
+        // Garantir que tenha o prefixo correto
+        if (qrCodeData && !qrCodeData.startsWith('data:image')) {
+          qrCodeData = `data:image/png;base64,${qrCodeData}`
         }
-
-        // Se não encontrou na primeira tentativa, polling adicional
-        if (!qrCodeData) {
-          for (let attempt = 0; attempt < 5; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-
-            try {
-              const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-
-              if (statusResponse.success && statusResponse.data) {
-                const data = statusResponse.data
-
-                // Verificar se já conectou
-                const connectionState = data.instance?.state || data.state
-                if (connectionState === 'open') {
-                  setInstances(prev => prev.map(inst =>
-                    inst.id === instance.id
-                      ? { ...inst, status: 'connected' }
-                      : inst
-                  ))
-
-                  setSelectedInstance(prev => prev ? {
-                    ...prev,
-                    status: 'connected'
-                  } : null)
-
-                  alert('WhatsApp conectado com sucesso!')
-                  return
-                }
-
-                // Buscar QR Code nos campos possíveis
-                const possibleQrFields = [
-                  data.base64,
-                  data.qr,
-                  data.qrcode,
-                  data.instance?.base64,
-                  data.instance?.qr
-                ]
-
-                for (const field of possibleQrFields) {
-                  if (field && typeof field === 'string' && (field.includes('data:image') || field.startsWith('iVBORw0KGgo'))) {
-                    qrCodeData = field.startsWith('data:image') ? field : `data:image/png;base64,${field}`
-                    break
-                  }
-                }
-
-                if (qrCodeData) break
-              }
-            } catch (pollError) {
-              // Continue polling
-            }
-          }
-        }
-
-      } else {
-        throw new Error(connectResponse.error || 'Erro ao conectar instancia')
       }
 
       // Atualizar instância local
@@ -277,7 +281,7 @@ export default function WhatsAppPage() {
       if (qrCodeData) {
         setShowQrCode(true)
       } else {
-        alert('QR Code nao foi gerado. Tente novamente em alguns segundos.')
+        alert('QR Code não foi gerado. Tente novamente em alguns segundos.')
       }
 
       // Iniciar polling do status de conexão
@@ -290,7 +294,6 @@ export default function WhatsAppPage() {
     }
   }
 
-
   const startConnectionPolling = (instance: WhatsAppInstance) => {
     const pollInterval = setInterval(async () => {
       if (!instance || instance.status === 'connected') {
@@ -299,44 +302,13 @@ export default function WhatsAppPage() {
       }
 
       try {
-        const statusResponse = await evolutionAPI.getConnectionState(instance.instanceName)
-        
-        if (statusResponse.success && statusResponse.data) {
-          const connectionState = statusResponse.data.state || statusResponse.data.instance?.state
-          
-          // Verificar se há QR Code disponível durante o polling
-          if (connectionState === 'connecting' || connectionState === 'close') {
-            const possibleQrFields = [
-              statusResponse.data.base64,
-              statusResponse.data.qr,
-              statusResponse.data.qrcode,
-              statusResponse.data.data?.base64,
-              statusResponse.data.data?.qr
-            ]
-            
-            for (const field of possibleQrFields) {
-              if (field && typeof field === 'string' && field.includes('data:image')) {
-                // Atualizar instância com novo QR Code
-                setInstances(prev => prev.map(inst =>
-                  inst.id === instance.id
-                    ? { ...inst, qrCode: field, status: 'connecting' }
-                    : inst
-                ))
+        // Verificar status via API
+        const response = await fetch(`/api/whatsapp/status?instanceId=${instance.id}`)
+        const data = await response.json()
 
-                if (selectedInstance?.id === instance.id) {
-                  setSelectedInstance(prev => prev ? { ...prev, qrCode: field, status: 'connecting' } : null)
-                }
-
-                if (!showQrCode) {
-                  setShowQrCode(true)
-                }
-                break
-              }
-            }
-          }
-
-          // Verificar se conectou
-          if (connectionState === 'open') {
+        if (data.success && data.data) {
+          // Verificar se conectou (UAZAPI retorna status: connected)
+          if (data.data.status_conexao === 'conectado' || data.data.api_status?.data?.status === 'connected') {
             // Atualizar instância local
             setInstances(prev => prev.map(inst =>
               inst.id === instance.id
@@ -356,7 +328,7 @@ export default function WhatsAppPage() {
       } catch (error) {
         // Continue polling despite errors
       }
-    }, 3000) // Verificar a cada 3 segundos para capturar QR Code mais rapidamente
+    }, 3000) // Verificar a cada 3 segundos
 
     // Limpar polling após 5 minutos para evitar loops infinitos
     setTimeout(() => {
@@ -364,18 +336,21 @@ export default function WhatsAppPage() {
     }, 300000)
   }
 
-
-
   const deleteInstance = async (instance: WhatsAppInstance) => {
     if (!instance) return
 
-    if (!confirm('Tem certeza que deseja deletar completamente esta instancia? Esta acao nao pode ser desfeita.')) return
+    if (!confirm('Tem certeza que deseja deletar completamente esta instância? Esta ação não pode ser desfeita.')) return
 
     try {
-      const deleteResponse = await evolutionAPI.deleteInstance(instance.instanceName)
+      // Deletar via API route (que usa UAZAPI)
+      const response = await fetch(`/api/whatsapp/instances?instanceId=${instance.id}`, {
+        method: 'DELETE'
+      })
 
-      if (!deleteResponse.success) {
-        throw new Error(deleteResponse.error || 'Erro ao deletar instancia')
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao deletar instância')
       }
 
       // Remover da tabela instancia_whtats
@@ -385,7 +360,7 @@ export default function WhatsAppPage() {
         .eq('id', instance.id)
 
       if (deleteError) {
-        throw new Error(`Erro ao remover do banco: ${deleteError.message}`)
+        console.error('Erro ao remover do banco:', deleteError)
       }
 
       // Remover da lista local
@@ -396,10 +371,10 @@ export default function WhatsAppPage() {
         setShowQrCode(false)
       }
 
-      alert('Instancia deletada com sucesso!')
+      alert('Instância deletada com sucesso!')
 
     } catch (error) {
-      alert(`Erro ao deletar instancia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      alert(`Erro ao deletar instância: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -426,7 +401,7 @@ export default function WhatsAppPage() {
             WhatsApp
           </h1>
           <p className="mt-2 text-sm text-gray-700">
-            Configure suas conexões WhatsApp com Evolution API
+            Configure suas conexões WhatsApp com UAZAPI
           </p>
           {userInfo && (
             <p className="mt-1 text-xs text-gray-500">
@@ -434,7 +409,7 @@ export default function WhatsAppPage() {
             </p>
           )}
         </div>
-        
+
         {canCreateMore() && (
           <div className="mt-4 sm:mt-0">
             <button
@@ -454,7 +429,7 @@ export default function WhatsAppPage() {
           <MessageCircle className="h-16 w-16 text-green-400 mx-auto mb-6" />
           <h3 className="text-xl font-medium text-gray-900 mb-4">Configure seu primeiro WhatsApp</h3>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            {userInfo?.numero_instancias ? 
+            {userInfo?.numero_instancias ?
               `Você pode criar até ${userInfo.numero_instancias} instâncias WhatsApp.` :
               'Crie sua primeira instância WhatsApp para começar.'
             }
@@ -484,8 +459,8 @@ export default function WhatsAppPage() {
                       <h3 className="text-lg font-medium text-gray-900">{instance.instanceName}</h3>
                       <div className="mt-1 flex items-center">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          instance.status === 'connected' 
-                            ? 'bg-green-100 text-green-800' 
+                          instance.status === 'connected'
+                            ? 'bg-green-100 text-green-800'
                             : instance.status === 'connecting'
                             ? 'bg-yellow-100 text-yellow-800'
                             : instance.status === 'created'
@@ -524,7 +499,7 @@ export default function WhatsAppPage() {
                         </button>
                       </>
                     )}
-                    
+
                     {instance.status === 'connecting' && (
                       <div className="text-sm text-blue-600">
                         Conectando... Escaneie o QR Code no seu celular.
@@ -596,9 +571,9 @@ export default function WhatsAppPage() {
             <h3 className="text-lg font-medium text-center mb-4">Conectar WhatsApp</h3>
             <div className="text-center">
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <img 
-                  src={selectedInstance.qrCode} 
-                  alt="QR Code WhatsApp" 
+                <img
+                  src={selectedInstance.qrCode}
+                  alt="QR Code WhatsApp"
                   className="mx-auto w-48 h-48 border border-gray-200"
                 />
               </div>
@@ -622,7 +597,7 @@ export default function WhatsAppPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowCreateForm(false)}></div>
           <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10">
             <h3 className="text-lg font-medium mb-6">Criar Instância WhatsApp</h3>
-            
+
             <form className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -655,7 +630,7 @@ export default function WhatsAppPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Senha *
+                  Senha/Token *
                 </label>
                 <div className="relative">
                   <input
@@ -682,8 +657,8 @@ export default function WhatsAppPage() {
 
               <div className="bg-blue-50 p-3 rounded-md">
                 <p className="text-xs text-blue-800">
-                  <strong>Nome da instância:</strong> {nome && telefone ? 
-                    nome.toLowerCase().replace(/\s+/g, '') + telefone.replace(/\D/g, '') : 
+                  <strong>Nome da instância:</strong> {nome && telefone ?
+                    nome.toLowerCase().replace(/\s+/g, '') + telefone.replace(/\D/g, '') :
                     'Preencha nome e telefone'
                   }
                 </p>

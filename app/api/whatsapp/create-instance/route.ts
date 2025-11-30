@@ -1,11 +1,14 @@
 // =====================================================
 // API ROUTE - CRIAR INSTÂNCIA WHATSAPP
-// Criar instância WhatsApp com configurações padrão
+// Criar instância WhatsApp com configurações padrão via UAZAPI
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '../../../../lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
+import { createUazapiAdmin, createUazapiInstance, DEFAULT_UAZAPI_CONFIG } from '../../../../lib/uazapi'
+
+// URL do webhook para receber mensagens
+const WEBHOOK_URL = 'https://webhooks.dnmarketing.com.br/webhook/233c6d7a-0a0a-498e-8e47-1b47a3876b63uazapi'
 
 // =====================================================
 // POST - Criar instância WhatsApp simples
@@ -13,7 +16,7 @@ import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, nomeInstancia } = body
+    const { userId, workspaceId, nomeInstancia } = body
 
     if (!userId || !nomeInstancia) {
       return NextResponse.json(
@@ -37,11 +40,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se usuário já tem instância configurada
-    const { data: existingConfig, error: configError } = await getSupabaseAdmin()
+    let configQuery = getSupabaseAdmin()
       .from('configuracoes_credenciais')
       .select('id, instancia, apikey, baseurl')
-      .eq('user_id', userId)
-      .single()
+
+    if (workspaceId) {
+      configQuery = configQuery.eq('workspace_id', workspaceId)
+    } else {
+      configQuery = configQuery.eq('user_id', userId)
+    }
+
+    const { data: existingConfig, error: configError } = await configQuery.single()
 
     if (existingConfig && existingConfig.instancia && existingConfig.apikey && existingConfig.baseurl) {
       return NextResponse.json(
@@ -53,38 +62,45 @@ export async function POST(request: NextRequest) {
     // Usar o nome específico fornecido pelo usuário (sem timestamp)
     const instanceName = nomeInstancia.toLowerCase().replace(/\s+/g, '_')
 
-    // Criar instância na Evolution API com configurações padrão
-    const evolutionClient = createEvolutionClient()
-    
-    const instanceConfig = {
-      instanceName: instanceName,
-      qrcode: true,
-      integration: 'WHATSAPP-BAILEYS',
-      
-      // Webhook padrão
-      webhook: {
-        url: 'https://webhooks.dnmarketing.com.br/webhook/c05a8122-fb58-4a3a-a2c1-73f492b95f11',
-        events: ['CONNECTION_UPDATE', 'QRCODE_UPDATED', 'MESSAGES_UPSERT'],
-        webhook_by_events: true
-      },
-      
-      // Configurações padrão solicitadas
-      groups_ignore: true,    // Ignorar grupos
-      read_messages: true,    // Read Messages ativa
-      reject_call: false,
-      always_online: false,
-      read_status: false,
-      
-      // Proxy padrão
-      proxy: {
-        host: 'p.webshare.io',
-        port: 80,
-        username: 'dpaulflz-rotate',
-        password: 'mq45cez0q5vx'
-      }
+    // Criar instância na UAZAPI
+    const uazapiAdmin = createUazapiAdmin(
+      DEFAULT_UAZAPI_CONFIG.baseUrl,
+      DEFAULT_UAZAPI_CONFIG.adminToken
+    )
+
+    const uazapiResponse = await uazapiAdmin.createInstance({
+      name: instanceName,
+      systemName: nomeInstancia,
+      adminField01: userId,
+      adminField02: workspaceId || ''
+    })
+
+    if (!uazapiResponse.success) {
+      return NextResponse.json(
+        { error: 'Erro ao criar instância na UAZAPI', details: uazapiResponse.error },
+        { status: 400 }
+      )
     }
 
-    const evolutionResponse = await evolutionClient.createInstance(instanceConfig)
+    // Token da instância retornado pela UAZAPI
+    const instanceToken = uazapiResponse.data?.token || ''
+
+    // Configurar webhook da instância para receber mensagens
+    if (instanceToken) {
+      try {
+        const uazapiInstance = createUazapiInstance(instanceToken, DEFAULT_UAZAPI_CONFIG.baseUrl)
+
+        await uazapiInstance.setWebhook({
+          url: WEBHOOK_URL,
+          enabled: true,
+          events: ['messages'],
+          excludeMessages: ['isGroupYes', 'wasSentByApi'] // Excluir grupos e mensagens enviadas pela API (evita loop)
+        })
+      } catch (webhookError) {
+        console.error('Erro ao configurar webhook:', webhookError)
+        // Continua mesmo se falhar a configuração do webhook
+      }
+    }
 
     // Se já existe configuração, apenas atualizar com dados da instância
     if (existingConfig) {
@@ -92,8 +108,8 @@ export async function POST(request: NextRequest) {
         .from('configuracoes_credenciais')
         .update({
           instancia: instanceName,
-          apikey: evolutionResponse.data?.apikey || 'api-key-gerada',
-          baseurl: DEFAULT_EVOLUTION_CONFIG.baseUrl
+          apikey: instanceToken,
+          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl
         })
         .eq('id', existingConfig.id)
         .select()
@@ -108,7 +124,7 @@ export async function POST(request: NextRequest) {
         message: 'Instância WhatsApp criada e configuração atualizada',
         data: {
           instanceName: instanceName,
-          instanceData: evolutionResponse,
+          instanceData: uazapiResponse.data,
           configData: updatedConfig
         }
       })
@@ -118,9 +134,10 @@ export async function POST(request: NextRequest) {
         .from('configuracoes_credenciais')
         .insert({
           user_id: userId,
-          baseurl: DEFAULT_EVOLUTION_CONFIG.baseUrl,
+          workspace_id: workspaceId || null,
+          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
           instancia: instanceName,
-          apikey: evolutionResponse.data?.apikey || 'api-key-gerada',
+          apikey: instanceToken,
           cliente: user.name,
           model: 'gpt-4o',
           type_tool_supabase: 'OpenAi',
@@ -141,24 +158,14 @@ export async function POST(request: NextRequest) {
         message: 'Instância WhatsApp criada com sucesso',
         data: {
           instanceName: instanceName,
-          instanceData: evolutionResponse,
+          instanceData: uazapiResponse.data,
           configData: newConfig
         }
       })
     }
 
   } catch (error) {
-
-    // Se erro específico da Evolution API
-    if ((error as any)?.response?.data) {
-      return NextResponse.json(
-        { 
-          error: 'Erro na Evolution API', 
-          details: (error as any).response.data.message || (error as Error).message 
-        },
-        { status: 400 }
-      )
-    }
+    console.error('Erro ao criar instância WhatsApp:', error)
 
     return NextResponse.json(
       { error: 'Erro ao criar instância WhatsApp', details: (error as Error).message },
@@ -174,6 +181,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
+    const workspaceId = searchParams.get('workspaceId')
 
     if (!userId) {
       return NextResponse.json(
@@ -182,12 +190,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar configuração do usuário
-    const { data: config, error } = await getSupabaseAdmin()
+    // Buscar configuração do usuário/workspace
+    let configQuery = getSupabaseAdmin()
       .from('configuracoes_credenciais')
       .select('*')
-      .eq('user_id', userId)
-      .single()
+
+    if (workspaceId) {
+      configQuery = configQuery.eq('workspace_id', workspaceId)
+    } else {
+      configQuery = configQuery.eq('user_id', userId)
+    }
+
+    const { data: config, error } = await configQuery.single()
 
     if (error || !config) {
       return NextResponse.json({
@@ -200,16 +214,12 @@ export async function GET(request: NextRequest) {
     // Verificar se instância, apikey e baseurl estão preenchidos
     if (config.instancia && config.apikey && config.baseurl) {
       try {
-        const evolutionClient = createEvolutionClient({
-          baseUrl: config.baseurl,
-          instanceName: config.instancia,
-          apiKey: config.apikey
-        })
+        const uazapiClient = createUazapiInstance(config.apikey, config.baseurl)
 
-        const instanceStatus = await evolutionClient.getConnectionState(config.instancia)
-        
-        // Se conectado, retornar status
-        if (instanceStatus.success && instanceStatus.data?.state === 'open') {
+        const instanceStatus = await uazapiClient.getStatus()
+
+        // UAZAPI retorna status: connected, disconnected, connecting
+        if (instanceStatus.success && instanceStatus.data?.status === 'connected') {
           return NextResponse.json({
             success: true,
             hasInstance: true,
@@ -218,13 +228,15 @@ export async function GET(request: NextRequest) {
               instanceName: config.instancia,
               baseurl: config.baseurl,
               status: 'connected',
+              profileName: instanceStatus.data?.profileName,
+              profilePicUrl: instanceStatus.data?.profilePicUrl,
               created_at: config.created_at
             }
           })
         } else {
           // Se desconectado, gerar QR Code
-          const connectResult = await evolutionClient.connectInstance(config.instancia)
-          
+          const connectResult = await uazapiClient.connect()
+
           return NextResponse.json({
             success: true,
             hasInstance: true,
@@ -232,14 +244,16 @@ export async function GET(request: NextRequest) {
             data: {
               instanceName: config.instancia,
               baseurl: config.baseurl,
-              status: 'disconnected',
-              qrCode: connectResult.data?.qrCode || connectResult.data?.qr,
+              status: instanceStatus.data?.status || 'disconnected',
+              qrCode: connectResult.data?.qrcode,
+              pairCode: connectResult.data?.paircode,
               created_at: config.created_at
             }
           })
         }
-        
-      } catch (evolutionError) {
+
+      } catch (uazapiError) {
+        console.error('Erro ao verificar instância UAZAPI:', uazapiError)
         return NextResponse.json({
           success: true,
           hasInstance: true,
@@ -248,7 +262,7 @@ export async function GET(request: NextRequest) {
             instanceName: config.instancia,
             baseurl: config.baseurl,
             status: 'erro',
-            error: (evolutionError as Error).message
+            error: (uazapiError as Error).message
           }
         })
       }
@@ -261,6 +275,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
+    console.error('Erro ao verificar instância:', error)
 
     return NextResponse.json(
       { error: 'Erro ao verificar instância', details: (error as Error).message },

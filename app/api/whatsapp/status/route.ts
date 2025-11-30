@@ -1,11 +1,11 @@
 // =====================================================
 // API ROUTES - STATUS INSTÂNCIAS WHATSAPP
-// Verificar status de conexão das instâncias
+// Verificar status de conexão das instâncias (UAZAPI)
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, getSupabaseAdmin } from '../../../../lib/supabase'
-import { createEvolutionClient, DEFAULT_EVOLUTION_CONFIG } from '../../../../lib/evolution-api'
+import { createUazapiClientFromDb, DEFAULT_UAZAPI_CONFIG } from '../../../../lib/uazapi'
 
 // =====================================================
 // GET - Verificar status de uma instância
@@ -54,28 +54,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verificar status na Evolution API
+    // Verificar status na UAZAPI
     const config = instancia.configuracoes_credenciais
-    const evolutionClient = createEvolutionClient({
-      baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-      masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-      instanceName: instancia.instancia,
-      apiKey: config?.apikey
+    const uazapiClient = createUazapiClientFromDb({
+      baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+      apikey: config?.apikey || '',
+      instancia: instancia.instancia
     })
 
     try {
-      const [connectionStatus, instanceInfo, profileInfo] = await Promise.all([
-        evolutionClient.getConnectionState(instancia.instancia),
-        evolutionClient.getConnectionState(instancia.instancia),
-        evolutionClient.getProfileInfo(instancia.instancia).catch(() => null)
-      ])
+      const connectionStatus = await uazapiClient.getStatus()
 
       // Atualizar status no banco se diferente
-      const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
+      // UAZAPI retorna: disconnected, connecting, connected
+      const newStatus = (connectionStatus.success && connectionStatus.data?.status === 'connected') ? 'conectado' : 'desconectado'
       if (instancia.status_conexao !== newStatus) {
         await getSupabaseAdmin()
           .from('instancias_whatsapp')
-          .update({ 
+          .update({
             status_conexao: newStatus,
             ultimo_ping: new Date().toISOString()
           })
@@ -90,27 +86,24 @@ export async function GET(request: NextRequest) {
           nome_instancia: instancia.nome_instancia,
           instancia: instancia.instancia,
           user: instancia.users,
-          
+
           // Status de conexão
           status_conexao: newStatus,
           ultimo_ping: instancia.ultimo_ping,
-          
-          // Dados da Evolution API
-          evolution_status: connectionStatus,
-          instance_info: instanceInfo,
-          profile_info: profileInfo,
-          
+
+          // Dados da UAZAPI
+          api_status: connectionStatus,
+
           // Configurações
-          baseurl: config?.baseurl,
-          webhook_configured: !!instanceInfo?.data?.webhook?.url
+          baseurl: config?.baseurl
         }
       })
 
-    } catch (evolutionError) {
-      // Se erro na Evolution API, marcar como erro
+    } catch (apiError) {
+      // Se erro na UAZAPI, marcar como erro
       await getSupabaseAdmin()
         .from('instancias_whatsapp')
-        .update({ 
+        .update({
           status_conexao: 'erro',
           ultimo_ping: new Date().toISOString()
         })
@@ -118,13 +111,13 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: false,
-        error: 'Erro ao conectar com Evolution API',
+        error: 'Erro ao conectar com UAZAPI',
         data: {
           id: instancia.id,
           nome_instancia: instancia.nome_instancia,
           instancia: instancia.instancia,
           status_conexao: 'erro',
-          error_details: (evolutionError as Error).message
+          error_details: (apiError as Error).message
         }
       })
     }
@@ -193,24 +186,21 @@ export async function POST(request: NextRequest) {
       instancias.map(async (instancia) => {
         try {
           const config = instancia.configuracoes_credenciais
-          const evolutionClient = createEvolutionClient({
-            baseUrl: config?.baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
-            masterKey: DEFAULT_EVOLUTION_CONFIG.masterKey,
-            instanceName: instancia.instancia,
-            apiKey: config?.apikey
+          const uazapiClient = createUazapiClientFromDb({
+            baseurl: config?.baseurl || DEFAULT_UAZAPI_CONFIG.baseUrl,
+            apikey: config?.apikey || '',
+            instancia: instancia.instancia
           })
 
-          const [connectionStatus, instanceInfo] = await Promise.all([
-            evolutionClient.getConnectionState(instancia.instancia),
-            evolutionClient.getConnectionState(instancia.instancia).catch(() => null)
-          ])
+          const connectionStatus = await uazapiClient.getStatus()
 
           // Atualizar status no banco
-          const newStatus = (connectionStatus.success && connectionStatus.data?.state === 'open') ? 'conectado' : 'desconectado'
+          // UAZAPI retorna: disconnected, connecting, connected
+          const newStatus = (connectionStatus.success && connectionStatus.data?.status === 'connected') ? 'conectado' : 'desconectado'
           if (instancia.status_conexao !== newStatus) {
             await getSupabaseAdmin()
               .from('instancias_whatsapp')
-              .update({ 
+              .update({
                 status_conexao: newStatus,
                 ultimo_ping: new Date().toISOString()
               })
@@ -224,8 +214,7 @@ export async function POST(request: NextRequest) {
             user: instancia.users,
             status_conexao: newStatus,
             ultimo_ping: new Date().toISOString(),
-            evolution_status: connectionStatus,
-            instance_info: instanceInfo,
+            api_status: connectionStatus,
             error: null
           }
 
@@ -233,7 +222,7 @@ export async function POST(request: NextRequest) {
           // Marcar como erro
           await getSupabaseAdmin()
             .from('instancias_whatsapp')
-            .update({ 
+            .update({
               status_conexao: 'erro',
               ultimo_ping: new Date().toISOString()
             })
