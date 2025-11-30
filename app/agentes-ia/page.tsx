@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase, AgenteIA, Tool, UserTool, InstanciaWhats } from '../../lib/supabase'
 import PlanProtection from '../../components/shared/PlanProtection'
 import VectorStoreManager from '../../components/features/vectorstore/VectorStoreManager'
@@ -20,6 +21,7 @@ import {
 
 export default function AgentesIAPage() {
   const { user: currentUser } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
   const [agentes, setAgentes] = useState<AgenteIA[]>([])
   const [loading, setLoading] = useState(true)
   const [editingAgent, setEditingAgent] = useState<AgenteIA | null>(null)
@@ -30,22 +32,22 @@ export default function AgentesIAPage() {
   const [showAgentInstance, setShowAgentInstance] = useState<{[key: number]: boolean}>({})
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && workspaceId) {
       loadAgentes()
       loadTools()
       loadUserTools()
       loadInstancias()
     }
-  }, [currentUser])
+  }, [currentUser, workspaceId])
 
   const loadAgentes = async () => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       const { data, error } = await supabase
         .from('agentes_ia')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (data) {
@@ -78,13 +80,13 @@ export default function AgentesIAPage() {
   }
 
   const loadUserTools = async () => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       const { data, error } = await supabase
         .from('user_tools')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('workspace_id', workspaceId)
 
       if (error) throw error
       if (data) {
@@ -96,13 +98,13 @@ export default function AgentesIAPage() {
   }
 
   const loadInstancias = async () => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       const { data, error } = await supabase
         .from('instancia_whtats')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -115,13 +117,12 @@ export default function AgentesIAPage() {
   }
 
   const toggleAgentTool = async (agentId: number, toolId: number, currentState: boolean) => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       // Buscar registro específico para este agente e ferramenta
-      const existingAgentTool = userTools.find(ut => 
-        ut.tool_id === toolId && 
-        ut.user_id === parseInt(currentUser.id) &&
+      const existingAgentTool = userTools.find(ut =>
+        ut.tool_id === toolId &&
         ut.agente_id === agentId
       )
 
@@ -139,6 +140,7 @@ export default function AgentesIAPage() {
           .from('user_tools')
           .insert([{
             user_id: parseInt(currentUser.id),
+            workspace_id: workspaceId,
             tool_id: toolId,
             agente_id: agentId,
             is_active: true
@@ -158,7 +160,6 @@ export default function AgentesIAPage() {
   const isAgentToolActive = (agentId: number, toolId: number): boolean => {
     const userTool = userTools.find(ut =>
       ut.tool_id === toolId &&
-      ut.user_id === parseInt(currentUser?.id || '0') &&
       ut.agente_id === agentId
     )
     // A ferramenta está ativa para este agente se existe um registro ativo
@@ -166,7 +167,7 @@ export default function AgentesIAPage() {
   }
 
   const updateAgentInstance = async (agentId: number, instanciaId: number | null) => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       // Primeiro, desvincula o agente de qualquer instância anterior
@@ -174,7 +175,7 @@ export default function AgentesIAPage() {
         .from('instancia_whtats')
         .update({ agante_id: null })
         .eq('agante_id', agentId)
-        .eq('user_id', currentUser.id)
+        .eq('workspace_id', workspaceId)
 
       // Se uma nova instância foi selecionada, vincula a ela
       if (instanciaId) {
@@ -182,7 +183,7 @@ export default function AgentesIAPage() {
           .from('instancia_whtats')
           .update({ agante_id: agentId })
           .eq('id', instanciaId)
-          .eq('user_id', currentUser.id)
+          .eq('workspace_id', workspaceId)
 
         if (error) throw error
       }
@@ -201,12 +202,13 @@ export default function AgentesIAPage() {
   }
 
   const saveAgent = async (agentData: Partial<AgenteIA>) => {
-    if (!currentUser) return
+    if (!currentUser || !workspaceId) return
 
     try {
       const dataToSave = {
         ...agentData,
-        user_id: currentUser.id
+        user_id: currentUser.id,
+        workspace_id: workspaceId
       }
 
       if (editingAgent && editingAgent.id > 0) {
@@ -241,7 +243,7 @@ export default function AgentesIAPage() {
           .from('user_tools')
           .delete()
           .eq('agente_id', id)
-          .eq('user_id', parseInt(currentUser?.id || '0'))
+          .eq('workspace_id', workspaceId)
 
         if (toolsError) {
           console.warn('Erro ao deletar ferramentas do agente:', toolsError)
@@ -320,6 +322,7 @@ export default function AgentesIAPage() {
               prompt: '',
               estagio: 'ativo',
               user_id: Number(currentUser?.id) || 0,
+              workspace_id: workspaceId || undefined,
               created_at: new Date().toISOString()
             })}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
@@ -527,6 +530,7 @@ export default function AgentesIAPage() {
                   prompt: '',
                   estagio: 'ativo',
                   user_id: Number(currentUser?.id) || 0,
+                  workspace_id: workspaceId || undefined,
                   created_at: new Date().toISOString()
                 })}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors"

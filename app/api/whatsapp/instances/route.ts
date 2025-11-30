@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
+    const workspaceId = searchParams.get('workspaceId')
 
     if (!userId) {
       return NextResponse.json(
@@ -23,8 +24,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar instâncias do usuário no banco
-    const { data: instancias, error } = await supabase
+    // Buscar instâncias do workspace/usuário no banco
+    let query = supabase
       .from('instancias_whatsapp')
       .select(`
         *,
@@ -34,8 +35,16 @@ export async function GET(request: NextRequest) {
           baseurl
         )
       `)
-      .eq('user_id', userId)
       .eq('ativo', true)
+
+    // Filtrar por workspace_id se disponível, senão por user_id
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId)
+    } else {
+      query = query.eq('user_id', userId)
+    }
+
+    const { data: instancias, error } = await query
 
     if (error) {
       throw error
@@ -89,9 +98,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
-      userId, 
-      nomeInstancia, 
+    const {
+      userId,
+      workspaceId,
+      nomeInstancia,
       instanciaNome,
       apikey,
       baseurl
@@ -118,12 +128,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se já tem instância (limite de 1 por usuário)
-    const { data: existingInstances, error: countError } = await supabase
+    // Verificar se já tem instância (limite de 1 por workspace)
+    let existingQuery = supabase
       .from('instancias_whatsapp')
       .select('id')
-      .eq('user_id', userId)
       .eq('ativo', true)
+
+    // Filtrar por workspace_id se disponível, senão por user_id
+    if (workspaceId) {
+      existingQuery = existingQuery.eq('workspace_id', workspaceId)
+    } else {
+      existingQuery = existingQuery.eq('user_id', userId)
+    }
+
+    const { data: existingInstances, error: countError } = await existingQuery
 
     if (countError) {
       throw countError
@@ -131,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     if (existingInstances && existingInstances.length > 0) {
       return NextResponse.json(
-        { error: 'Usuário já possui uma instância ativa. Limite: 1 instância por usuário.' },
+        { error: 'Workspace já possui uma instância ativa. Limite: 1 instância por workspace.' },
         { status: 400 }
       )
     }
@@ -173,6 +191,7 @@ export async function POST(request: NextRequest) {
       .from('configuracoes_credenciais')
       .insert({
         user_id: userId,
+        workspace_id: workspaceId || null,
         baseurl: baseurl || DEFAULT_EVOLUTION_CONFIG.baseUrl,
         instancia: instanciaNome,
         apikey: apikey || evolutionInstance.data?.apikey,
@@ -196,6 +215,7 @@ export async function POST(request: NextRequest) {
       .from('instancias_whatsapp')
       .insert({
         user_id: userId,
+        workspace_id: workspaceId || null,
         config_id: configData.id,
         nome_instancia: nomeInstancia,
         instancia: instanciaNome,

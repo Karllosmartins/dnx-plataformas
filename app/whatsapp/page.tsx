@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
 import { User } from '../../lib/auth'
 import { evolutionAPI } from '../../lib/evolution-api'
@@ -23,6 +24,7 @@ interface WhatsAppInstance {
 
 export default function WhatsAppPage() {
   const { user } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
   const [userInfo, setUserInfo] = useState<(User & { numero_instancias?: number }) | null>(null)
   const [loading, setLoading] = useState(true)
@@ -39,10 +41,10 @@ export default function WhatsAppPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
 
   useEffect(() => {
-    if (user) {
+    if (user && workspaceId) {
       loadUserInstances()
     }
-  }, [user])
+  }, [user, workspaceId])
 
   const checkInstancesStatus = async (instancesToCheck: WhatsAppInstance[]) => {
     for (const instance of instancesToCheck) {
@@ -94,7 +96,7 @@ export default function WhatsAppPage() {
       const { data: instancesData, error: instancesError } = await supabase
         .from('instancia_whtats')
         .select('*')
-        .eq('user_id', parseInt(user?.id || '0'))
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (!instancesError && instancesData) {
@@ -145,6 +147,7 @@ export default function WhatsAppPage() {
         .from('instancia_whtats')
         .insert({
           user_id: parseInt(user?.id || '0'),
+          workspace_id: workspaceId,
           instancia: instanceName,
           apikey: senha, // Usar a senha/token fornecida pelo usuário
           baseurl: 'https://wsapi.dnmarketing.com.br'

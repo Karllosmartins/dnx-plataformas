@@ -251,6 +251,7 @@ export interface AgenteIA {
   prompt: string
   estagio: string
   user_id: number
+  workspace_id?: string
 }
 
 // Interface para templates do WhatsApp Business API

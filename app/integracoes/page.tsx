@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
 import {
   Plug,
@@ -43,6 +44,7 @@ interface Credentials {
 
 export default function IntegracoesPage() {
   const { user } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [credentials, setCredentials] = useState<Credentials>({
@@ -61,7 +63,7 @@ export default function IntegracoesPage() {
   const GOOGLE_CLIENT_SECRET = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET || ''
 
   useEffect(() => {
-    if (user) {
+    if (user && workspaceId) {
       fetchCredentials()
     }
 
@@ -103,7 +105,7 @@ export default function IntegracoesPage() {
       // Limpar parâmetros da URL
       window.history.replaceState({}, '', '/integracoes')
     }
-  }, [user])
+  }, [user, workspaceId])
 
   // Função para migrar formato antigo de modelos (string) para novo formato (array)
   const migrateZapSignModelos = (zapsignData: any): ZapSignModelo[] => {
@@ -127,11 +129,13 @@ export default function IntegracoesPage() {
   }
 
   const fetchCredentials = async () => {
+    if (!workspaceId) return
+
     try {
       const { data, error } = await supabase
         .from('credencias_diversas')
         .select('*')
-        .eq('user_id', parseInt(user?.id || '0'))
+        .eq('workspace_id', workspaceId)
         .single()
 
       if (error && error.code !== 'PGRST116') throw error
@@ -179,6 +183,8 @@ export default function IntegracoesPage() {
   }
 
   const saveZapSignCredentials = async () => {
+    if (!workspaceId) return
+
     setSaving(true)
     setSuccessMessage('')
 
@@ -186,7 +192,7 @@ export default function IntegracoesPage() {
       const { data: existing } = await supabase
         .from('credencias_diversas')
         .select('id')
-        .eq('user_id', parseInt(user?.id || '0'))
+        .eq('workspace_id', workspaceId)
         .single()
 
       const zapSignData = {
@@ -201,7 +207,7 @@ export default function IntegracoesPage() {
           .update({
             zapsign: zapSignData
           })
-          .eq('user_id', parseInt(user?.id || '0'))
+          .eq('workspace_id', workspaceId)
 
         if (error) throw error
       } else {
@@ -210,6 +216,7 @@ export default function IntegracoesPage() {
           .from('credencias_diversas')
           .insert([{
             user_id: parseInt(user?.id || '0'),
+            workspace_id: workspaceId,
             zapsign: zapSignData,
             google_calendar: { email: '', refresh_token: '' },
             asaas: { access_token: '' }
@@ -235,6 +242,8 @@ export default function IntegracoesPage() {
   }
 
   const saveAsaasCredentials = async () => {
+    if (!workspaceId) return
+
     setSaving(true)
     setSuccessMessage('')
 
@@ -242,7 +251,7 @@ export default function IntegracoesPage() {
       const { data: existing } = await supabase
         .from('credencias_diversas')
         .select('id')
-        .eq('user_id', parseInt(user?.id || '0'))
+        .eq('workspace_id', workspaceId)
         .single()
 
       const asaasData = {
@@ -256,7 +265,7 @@ export default function IntegracoesPage() {
           .update({
             asaas: asaasData
           })
-          .eq('user_id', parseInt(user?.id || '0'))
+          .eq('workspace_id', workspaceId)
 
         if (error) throw error
       } else {
@@ -265,6 +274,7 @@ export default function IntegracoesPage() {
           .from('credencias_diversas')
           .insert([{
             user_id: parseInt(user?.id || '0'),
+            workspace_id: workspaceId,
             asaas: asaasData,
             zapsign: { token: '', modelos: [] },
             google_calendar: { email: '', refresh_token: '' }
@@ -344,6 +354,7 @@ export default function IntegracoesPage() {
     authUrl.searchParams.append('prompt', 'consent')
     authUrl.searchParams.append('state', JSON.stringify({
       user_id: user?.id,
+      workspace_id: workspaceId,
       client_id: GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET
     }))
@@ -355,6 +366,7 @@ export default function IntegracoesPage() {
 
   const disconnectGoogleCalendar = async () => {
     if (!confirm('Deseja realmente desconectar o Google Calendar?')) return
+    if (!workspaceId) return
 
     setSaving(true)
     try {
@@ -363,7 +375,7 @@ export default function IntegracoesPage() {
         .update({
           google_calendar: { email: '', refresh_token: '' }
         })
-        .eq('user_id', parseInt(user?.id || '0'))
+        .eq('workspace_id', workspaceId)
 
       if (error) throw error
 
