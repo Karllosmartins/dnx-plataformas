@@ -176,15 +176,15 @@ export default function WorkspacesSection() {
       // Buscar membros, credenciais para cada workspace
       const workspacesComDados = await Promise.all(
         (workspacesData || []).map(async (ws) => {
-          // Membros
-          const { data: membros } = await supabase
+          // Membros - usando a relação correta via FK user_id -> users.id
+          const { data: membros, error: membrosError } = await supabase
             .from('workspace_members')
             .select(`
               id,
               user_id,
               role,
               joined_at,
-              users (
+              users:user_id (
                 id,
                 name,
                 email,
@@ -193,6 +193,10 @@ export default function WorkspacesSection() {
               )
             `)
             .eq('workspace_id', ws.id)
+
+          if (membrosError) {
+            console.error('Erro ao buscar membros do workspace', ws.id, membrosError)
+          }
 
           // Credenciais
           const { data: configCred } = await supabase
