@@ -30,26 +30,20 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   useEffect(() => {
     // Verificar se há usuário logado
     const currentUser = authService.getCurrentUser()
-    console.log('Usuario atual:', currentUser) // Debug
     setUser(currentUser)
     setLoading(false)
   }, [])
 
   const login = async (email: string, password: string) => {
     setLoading(true)
-    console.log('AuthWrapper: Iniciando processo de login')
-    
+
     const { user: loggedUser, error } = await authService.signIn(email, password)
-    
-    console.log('AuthWrapper: Resultado do login:', { loggedUser, error })
-    
+
     if (loggedUser) {
-      console.log('AuthWrapper: Login bem-sucedido, definindo usuário')
       setUser(loggedUser)
       setLoading(false)
       return { success: true }
     } else {
-      console.log('AuthWrapper: Login falhou:', error)
       setLoading(false)
       return { success: false, error: error || 'Erro ao fazer login' }
     }

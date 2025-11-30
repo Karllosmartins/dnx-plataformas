@@ -39,10 +39,16 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
 
   useEffect(() => {
     loadWorkspaces()
-  }, [])
+  }, [user?.id])
 
   async function loadWorkspaces() {
+    if (!user?.id) {
+      setLoading(false)
+      return
+    }
+
     try {
+      // Carregar lista de workspaces
       const response = await workspacesApi.list()
 
       if (response.success && response.data) {
@@ -52,13 +58,24 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
 
         setWorkspaces(workspacesData as Workspace[])
 
-        // Definir workspace atual (primeiro por padrão ou baseado no usuário)
-        if (workspacesData.length > 0) {
+        // Buscar workspace atual do usuário via API local
+        const currentResponse = await fetch(`/api/workspaces/current?userId=${user.id}`)
+        const currentResult = await currentResponse.json()
+
+        if (currentResult.success && currentResult.data) {
+          // Encontrar o workspace atual na lista
+          const current = workspacesData.find((ws: any) => ws.id === currentResult.data.id)
+          if (current) {
+            setCurrentWorkspace(current as Workspace)
+          } else if (workspacesData.length > 0) {
+            setCurrentWorkspace(workspacesData[0] as Workspace)
+          }
+        } else if (workspacesData.length > 0) {
           setCurrentWorkspace(workspacesData[0] as Workspace)
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar workspaces:', error)
+      // Silently handle error
     } finally {
       setLoading(false)
     }
@@ -69,15 +86,21 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
 
     setSwitching(true)
     try {
-      const response = await workspacesApi.switchWorkspace(workspace.id)
+      // Usar API local para trocar workspace
+      const response = await fetch('/api/workspaces/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, workspaceId: workspace.id })
+      })
+      const result = await response.json()
 
-      if (response.success) {
+      if (result.success) {
         setCurrentWorkspace(workspace)
         // Recarregar a página para atualizar todos os dados
         window.location.reload()
       }
     } catch (error) {
-      console.error('Erro ao trocar workspace:', error)
+      // Silently handle error
     } finally {
       setSwitching(false)
     }

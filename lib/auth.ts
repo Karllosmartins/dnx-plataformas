@@ -18,8 +18,6 @@ export interface AuthState {
 export const authService = {
   async signIn(email: string, password: string) {
     try {
-      console.log('Tentativa de login:', email)
-
       // Usar nova API Express
       const result = await authApi.login(email, password)
 
@@ -29,11 +27,8 @@ export const authService = {
 
       const user: User = result.data.user as User
 
-      console.log('Login bem-sucedido!')
-
       return { user, error: null }
     } catch (error) {
-      console.error('Erro no processo de login:', error)
       return { user: null, error: error instanceof Error ? error.message : 'Erro ao fazer login' }
     }
   },
@@ -44,14 +39,12 @@ export const authService = {
 
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') {
-      console.log('Window undefined - SSR')
       return null
     }
 
     try {
       return tokenManager.getUser<User>()
     } catch (error) {
-      console.error('Erro ao recuperar usuário:', error)
       return null
     }
   },

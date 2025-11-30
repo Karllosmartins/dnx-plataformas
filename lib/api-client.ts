@@ -121,7 +121,6 @@ class ApiClient {
 
       return data
     } catch (error) {
-      console.error('API request error:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro de conexão com a API',

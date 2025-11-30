@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { hasWorkspaceFeatureAccess, WorkspaceComPlano } from '../../lib/permissions'
 import { User } from '../../lib/supabase'
-import { workspacesApi } from '../../lib/api-client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -153,48 +152,15 @@ function SidebarContent({
       }
 
       try {
-        // Buscar workspaces do usuário
-        const response = await workspacesApi.list()
+        // Buscar workspace atual do usuário via API local
+        const response = await fetch(`/api/workspaces/current?userId=${user.id}`)
+        const result = await response.json()
 
-        if (response.success && response.data) {
-          const workspaces = Array.isArray(response.data) ? response.data : [response.data]
-
-          if (workspaces.length > 0) {
-            const currentWorkspace = workspaces[0] as any
-
-            // Buscar detalhes do workspace com permissões do plano
-            const detailsResponse = await workspacesApi.get(currentWorkspace.id)
-
-            if (detailsResponse.success && detailsResponse.data) {
-              const wsDetails = detailsResponse.data as any
-              const planoData = wsDetails.planos || {}
-
-              const workspacePermissions = {
-                id: wsDetails.id,
-                name: wsDetails.name,
-                plano_id: wsDetails.plano_id,
-                plano_nome: planoData.nome,
-                acesso_dashboard: planoData.acesso_dashboard || false,
-                acesso_crm: planoData.acesso_crm || false,
-                acesso_whatsapp: planoData.acesso_whatsapp || false,
-                acesso_disparo_simples: planoData.acesso_disparo_simples || false,
-                acesso_disparo_ia: planoData.acesso_disparo_ia || false,
-                acesso_agentes_ia: planoData.acesso_agentes_ia || false,
-                acesso_extracao_leads: planoData.acesso_extracao_leads || false,
-                acesso_enriquecimento: planoData.acesso_enriquecimento || false,
-                acesso_usuarios: planoData.acesso_usuarios || false,
-                acesso_consulta: planoData.acesso_consulta || false,
-                acesso_integracoes: planoData.acesso_integracoes || false,
-                acesso_arquivos: planoData.acesso_arquivos || false,
-                plano_customizado: wsDetails.plano_customizado
-              }
-
-              setWorkspaceWithPlan(workspacePermissions)
-            }
-          }
+        if (result.success && result.data) {
+          setWorkspaceWithPlan(result.data)
         }
       } catch (error) {
-        console.error('Erro ao carregar permissões do workspace:', error)
+        // Fallback silencioso - admin terá acesso total de qualquer forma
       } finally {
         setLoading(false)
       }
