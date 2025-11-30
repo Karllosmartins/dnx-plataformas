@@ -435,6 +435,12 @@ export const camposApi = {
 // APIs Admin - Gestão de Usuários e Workspaces
 // ============================================
 
+export const adminToolsApi = {
+  list() {
+    return apiClient.get('/admin/tools')
+  }
+}
+
 export const adminUsersApi = {
   list() {
     return apiClient.get('/admin/users')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { adminWorkspacesApi } from '../../../lib/api-client'
+import { adminWorkspacesApi, adminUsersApi, adminToolsApi } from '../../../lib/api-client'
 import {
   Building,
   Edit,
@@ -175,13 +175,12 @@ export default function WorkspacesSection() {
 
   const fetchAllUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, role, active')
-        .order('name')
-
-      if (error) throw error
-      setAllUsers(data || [])
+      const response = await adminUsersApi.list()
+      if (response.success && response.data) {
+        setAllUsers(response.data as Usuario[])
+      } else {
+        console.error('Erro ao buscar usuários:', response.error)
+      }
     } catch (error) {
       console.error('Erro ao buscar usuários:', error)
     }
@@ -189,13 +188,12 @@ export default function WorkspacesSection() {
 
   const fetchAllTools = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tools')
-        .select('id, type, nome, descricao')
-        .order('nome')
-
-      if (error) throw error
-      setAllTools(data || [])
+      const response = await adminToolsApi.list()
+      if (response.success && response.data) {
+        setAllTools(response.data as Tool[])
+      } else {
+        console.error('Erro ao buscar tools:', response.error)
+      }
     } catch (error) {
       console.error('Erro ao buscar tools:', error)
     }
