@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/components/shared/AuthWrapper'
-import { workspacesApi } from '@/lib/api-client'
+import { useWorkspace } from '@/hooks/useWorkspace'
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Lock,
+  User,
 } from 'lucide-react'
 
 interface Member {
@@ -67,48 +69,32 @@ const roleConfig = {
 
 export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
   const { user } = useAuth()
+  const { currentWorkspace } = useWorkspace()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteName, setInviteName] = useState('')
+  const [invitePassword, setInvitePassword] = useState('')
   const [inviteRole, setInviteRole] = useState<string>('member')
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [inviteSuccess, setInviteSuccess] = useState(false)
-  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open) {
-      loadCurrentWorkspace()
+    if (open && currentWorkspace?.id) {
+      loadMembers(currentWorkspace.id)
     }
-  }, [open])
-
-  async function loadCurrentWorkspace() {
-    try {
-      // Buscar o workspace atual do usuário
-      const response = await workspacesApi.list()
-      if (response.success && response.data) {
-        const workspaces = Array.isArray(response.data) ? response.data : [response.data]
-        if (workspaces.length > 0) {
-          const workspaceId = (workspaces[0] as { id: string }).id
-          setCurrentWorkspaceId(workspaceId)
-          loadMembers(workspaceId)
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar workspace atual:', error)
-      setLoading(false)
-    }
-  }
+  }, [open, currentWorkspace?.id])
 
   async function loadMembers(workspaceId: string) {
     setLoading(true)
     try {
-      const response = await workspacesApi.get(workspaceId)
+      const response = await fetch(`/api/workspaces/${workspaceId}/members`)
+      const data = await response.json()
 
-      if (response.success && response.data) {
-        const workspaceData = response.data as { members?: Member[] }
-        setMembers(workspaceData.members || [])
+      if (data.success && data.data) {
+        setMembers(data.data)
       }
     } catch (error) {
       console.error('Erro ao carregar membros:', error)
@@ -123,7 +109,7 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
       return
     }
 
-    if (!currentWorkspaceId) {
+    if (!currentWorkspace?.id) {
       setInviteError('Workspace não identificado')
       return
     }
@@ -133,22 +119,32 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
     setInviteSuccess(false)
 
     try {
-      const response = await workspacesApi.inviteMember(currentWorkspaceId, {
-        email: inviteEmail,
-        role: inviteRole,
+      const response = await fetch(`/api/workspaces/${currentWorkspace.id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+          name: inviteName || undefined,
+          password: invitePassword || undefined,
+        }),
       })
 
-      if (response.success) {
+      const data = await response.json()
+
+      if (data.success) {
         setInviteSuccess(true)
         setInviteEmail('')
+        setInviteName('')
+        setInvitePassword('')
         setInviteRole('member')
-        loadMembers(currentWorkspaceId)
+        loadMembers(currentWorkspace.id)
         setTimeout(() => {
           setInviteOpen(false)
           setInviteSuccess(false)
         }, 1500)
       } else {
-        setInviteError(response.error || 'Erro ao convidar membro')
+        setInviteError(data.error || 'Erro ao convidar membro')
       }
     } catch (error) {
       setInviteError('Erro ao convidar membro')
@@ -159,13 +155,17 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
 
   async function handleRemoveMember(memberId: string) {
     if (!confirm('Tem certeza que deseja remover este membro?')) return
-    if (!currentWorkspaceId) return
+    if (!currentWorkspace?.id) return
 
     try {
-      const response = await workspacesApi.removeMember(currentWorkspaceId, memberId)
+      const response = await fetch(`/api/workspaces/${currentWorkspace.id}/members/${memberId}`, {
+        method: 'DELETE',
+      })
 
-      if (response.success) {
-        loadMembers(currentWorkspaceId)
+      const data = await response.json()
+
+      if (data.success) {
+        loadMembers(currentWorkspace.id)
       }
     } catch (error) {
       console.error('Erro ao remover membro:', error)
@@ -173,13 +173,19 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
   }
 
   async function handleUpdateRole(memberId: string, newRole: string) {
-    if (!currentWorkspaceId) return
+    if (!currentWorkspace?.id) return
 
     try {
-      const response = await workspacesApi.updateMemberRole(currentWorkspaceId, memberId, newRole)
+      const response = await fetch(`/api/workspaces/${currentWorkspace.id}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
 
-      if (response.success) {
-        loadMembers(currentWorkspaceId)
+      const data = await response.json()
+
+      if (data.success) {
+        loadMembers(currentWorkspace.id)
       }
     } catch (error) {
       console.error('Erro ao atualizar role:', error)
@@ -220,11 +226,29 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
 
               <div className="space-y-6 py-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="invite-name">Nome</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="invite-name"
+                      type="text"
+                      placeholder="Nome do usuário"
+                      className="pl-10"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatório para criar novo usuário
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="invite-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="email"
+                      id="invite-email"
                       type="email"
                       placeholder="usuario@exemplo.com"
                       className="pl-10"
@@ -235,7 +259,25 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="role">Função</Label>
+                  <Label htmlFor="invite-password">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="invite-password"
+                      type="password"
+                      placeholder="Senha do usuário"
+                      className="pl-10"
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatório para criar novo usuário
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="invite-role">Função</Label>
                   <Select value={inviteRole} onValueChange={setInviteRole}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a função" />
