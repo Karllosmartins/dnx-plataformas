@@ -9,11 +9,14 @@ import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase, AgenteIA, WhatsAppTemplate } from '../../lib/supabase'
 import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
 import PlanProtection from '../../components/shared/PlanProtection'
-import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X, Smartphone, Send } from 'lucide-react'
+import { Upload, Bot, FileText, Users, Calendar, Sparkles, MessageCircle, Image, X, Smartphone, Send, Phone, Loader2, CheckCircle } from 'lucide-react'
 
 interface CsvContact {
   telefone: string
   nome: string
+  hasWhatsApp?: boolean
+  verifiedName?: string
+  checked?: boolean
 }
 
 interface Campaign {
@@ -65,6 +68,11 @@ export default function DisparoIAPage() {
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [templateVariables, setTemplateVariables] = useState<string[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
+
+  // Estados para verificação de WhatsApp
+  const [checkingWhatsApp, setCheckingWhatsApp] = useState(false)
+  const [checkProgress, setCheckProgress] = useState(0)
+  const [whatsAppStats, setWhatsAppStats] = useState({ total: 0, valid: 0, invalid: 0 })
 
   useEffect(() => {
     if (user && workspaceId) {
@@ -274,23 +282,121 @@ export default function DisparoIAPage() {
     if (!file) return
 
     setCsvFile(file)
+    // Resetar estatísticas de WhatsApp
+    setWhatsAppStats({ total: 0, valid: 0, invalid: 0 })
+    setCheckProgress(0)
 
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
       const lines = text.split('\n').filter(line => line.trim())
-      
+
       const contacts: CsvContact[] = []
       for (let i = 1; i < lines.length; i++) {
         const [nome, telefone] = lines[i].split(',').map(item => item.trim().replace(/"/g, ''))
         if (telefone && nome) {
-          contacts.push({ telefone, nome })
+          contacts.push({ telefone, nome, checked: false })
         }
       }
-      
+
       setCsvContacts(contacts)
     }
     reader.readAsText(file)
+  }
+
+  // Verificar se números possuem WhatsApp
+  const checkWhatsAppNumbers = async () => {
+    if (!selectedInstance || csvContacts.length === 0) {
+      alert('Selecione uma instância WhatsApp e carregue um arquivo CSV primeiro')
+      return
+    }
+
+    // Encontrar a instância selecionada
+    const instance = instances.find(i => i.instancia === selectedInstance)
+    if (!instance) {
+      alert('Instância não encontrada')
+      return
+    }
+
+    // API oficial não suporta verificação de números
+    if (instance.is_official_api) {
+      alert('A API oficial do WhatsApp não suporta verificação de números. Os contatos serão enviados sem verificação prévia.')
+      return
+    }
+
+    setCheckingWhatsApp(true)
+    setCheckProgress(0)
+
+    try {
+      const batchSize = 50 // Verificar 50 números por vez
+      const totalBatches = Math.ceil(csvContacts.length / batchSize)
+      let validCount = 0
+      let invalidCount = 0
+      const updatedContacts = [...csvContacts]
+
+      for (let batch = 0; batch < totalBatches; batch++) {
+        const start = batch * batchSize
+        const end = Math.min(start + batchSize, csvContacts.length)
+        const batchNumbers = csvContacts.slice(start, end).map(c => c.telefone)
+
+        // Chamar API de verificação
+        const response = await fetch('/api/whatsapp/check-numbers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instanceId: instance.id,
+            numbers: batchNumbers
+          })
+        })
+
+        const result = await response.json()
+
+        if (result.success && Array.isArray(result.data)) {
+          // Atualizar contatos com resultado da verificação
+          result.data.forEach((check: { number: string; isInWhatsapp: boolean; verifiedName?: string }) => {
+            const contactIndex = updatedContacts.findIndex(c =>
+              c.telefone.replace(/\D/g, '').includes(check.number.replace(/\D/g, '').slice(-8)) ||
+              check.number.replace(/\D/g, '').includes(c.telefone.replace(/\D/g, '').slice(-8))
+            )
+            if (contactIndex !== -1) {
+              updatedContacts[contactIndex] = {
+                ...updatedContacts[contactIndex],
+                hasWhatsApp: check.isInWhatsapp,
+                verifiedName: check.verifiedName,
+                checked: true
+              }
+              if (check.isInWhatsapp) {
+                validCount++
+              } else {
+                invalidCount++
+              }
+            }
+          })
+        }
+
+        // Atualizar progresso
+        const progress = Math.round(((batch + 1) / totalBatches) * 100)
+        setCheckProgress(progress)
+        setCsvContacts([...updatedContacts])
+
+        // Pequeno delay entre lotes para não sobrecarregar a API
+        if (batch < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      }
+
+      setWhatsAppStats({
+        total: csvContacts.length,
+        valid: validCount,
+        invalid: invalidCount
+      })
+
+    } catch (error) {
+      console.error('Erro ao verificar números:', error)
+      alert('Erro ao verificar números de WhatsApp')
+    } finally {
+      setCheckingWhatsApp(false)
+    }
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,7 +477,7 @@ export default function DisparoIAPage() {
             continue
           }
 
-          const leadData = {
+          const leadData: Record<string, unknown> = {
             workspace_id: workspaceId,
             nome_cliente: contato.nome,
             telefone: contato.telefone,
@@ -381,6 +487,11 @@ export default function DisparoIAPage() {
             status_limpa_nome: 'novo_lead',
             observacoes_limpa_nome: `Campanha IA: ${nomeCampanha} | Contexto: ${contextoIA}`,
             updated_at: new Date().toISOString()
+          }
+
+          // Adicionar informação de verificação de WhatsApp se disponível
+          if (contato.checked !== undefined) {
+            leadData.existe_whatsapp = contato.hasWhatsApp ?? null
           }
 
           if (existingLead) {
@@ -984,6 +1095,69 @@ export default function DisparoIAPage() {
                 )}
               </div>
 
+              {/* Seção de Verificação de WhatsApp */}
+              {csvContacts.length > 0 && activeTab === 'evolution' && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <Phone className="h-5 w-5 text-purple-600 mr-2" />
+                      <h4 className="text-sm font-medium text-purple-800">Verificação de WhatsApp</h4>
+                    </div>
+                    <button
+                      onClick={checkWhatsAppNumbers}
+                      disabled={checkingWhatsApp || sending || !selectedInstance}
+                      className="flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {checkingWhatsApp ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                          Verificando... {checkProgress}%
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-1.5" />
+                          Verificar Números
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {checkingWhatsApp && (
+                    <div className="mb-3">
+                      <div className="w-full bg-purple-200 rounded-full h-2">
+                        <div
+                          className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${checkProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {whatsAppStats.total > 0 && (
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="bg-white rounded-md p-2">
+                        <p className="text-lg font-semibold text-gray-800">{whatsAppStats.total}</p>
+                        <p className="text-xs text-gray-500">Total</p>
+                      </div>
+                      <div className="bg-white rounded-md p-2">
+                        <p className="text-lg font-semibold text-green-600">{whatsAppStats.valid}</p>
+                        <p className="text-xs text-gray-500">Com WhatsApp</p>
+                      </div>
+                      <div className="bg-white rounded-md p-2">
+                        <p className="text-lg font-semibold text-red-600">{whatsAppStats.invalid}</p>
+                        <p className="text-xs text-gray-500">Sem WhatsApp</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {whatsAppStats.total === 0 && !checkingWhatsApp && (
+                    <p className="text-xs text-purple-600">
+                      Clique em "Verificar Números" para validar quais contatos possuem WhatsApp antes de enviar a campanha.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {csvContacts.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -991,8 +1165,13 @@ export default function DisparoIAPage() {
                   </h4>
                   <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md p-2">
                     {csvContacts.slice(0, 5).map((contact, index) => (
-                      <div key={index} className="text-sm text-gray-600 py-1">
-                        {contact.nome} - {contact.telefone}
+                      <div key={index} className="text-sm text-gray-600 py-1 flex items-center justify-between">
+                        <span>{contact.nome} - {contact.telefone}</span>
+                        {contact.checked && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${contact.hasWhatsApp ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {contact.hasWhatsApp ? '✓ WhatsApp' : '✗ Sem WhatsApp'}
+                          </span>
+                        )}
                       </div>
                     ))}
                     {csvContacts.length > 5 && (
