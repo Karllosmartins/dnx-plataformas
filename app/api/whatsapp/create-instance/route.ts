@@ -150,31 +150,29 @@ export async function POST(request: NextRequest) {
       }
 
       // Salvar também na tabela instancia_whtats
-      console.log('Atualizando instancia_whtats (upsert):', {
+      console.log('Salvando em instancia_whtats:', {
         user_id: userId,
         workspace_id: workspaceId || null,
         instancia: instanceName
       })
 
-      const { data: upsertData, error: upsertError } = await getSupabaseAdmin()
+      const { data: instanciaData, error: instanciaError } = await getSupabaseAdmin()
         .from('instancia_whtats')
-        .upsert({
-          user_id: userId,
+        .insert({
+          user_id: parseInt(userId),
           workspace_id: workspaceId || null,
           instancia: instanceName,
           apikey: instanceToken,
           baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
           is_official_api: false
-        }, {
-          onConflict: 'workspace_id,instancia'
         })
         .select()
         .single()
 
-      if (upsertError) {
-        console.error('Erro no upsert instancia_whtats:', upsertError)
+      if (instanciaError) {
+        console.error('Erro ao salvar instancia_whtats:', instanciaError)
       } else {
-        console.log('Upsert bem sucedido:', upsertData)
+        console.log('Instância salva com sucesso:', instanciaData)
       }
 
       return NextResponse.json({
@@ -223,7 +221,7 @@ export async function POST(request: NextRequest) {
       const { data: newInstancia, error: instanciaError } = await getSupabaseAdmin()
         .from('instancia_whtats')
         .insert({
-          user_id: userId,
+          user_id: parseInt(userId),
           workspace_id: workspaceId || null,
           instancia: instanceName,
           apikey: instanceToken,
