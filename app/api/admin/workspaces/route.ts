@@ -62,17 +62,49 @@ export async function GET(request: NextRequest) {
           .eq('workspace_id', workspace.id)
           .single()
 
-        // Contar membros
-        const { count: membrosCount } = await supabase
+        // Buscar membros com dados do usuário
+        const { data: membros } = await supabase
           .from('workspace_members')
-          .select('*', { count: 'exact', head: true })
+          .select(`
+            id,
+            user_id,
+            role,
+            joined_at,
+            users:user_id (
+              id,
+              name,
+              email,
+              role,
+              active
+            )
+          `)
+          .eq('workspace_id', workspace.id)
+
+        // Buscar user_tools do workspace
+        const { data: userTools } = await supabase
+          .from('user_tools')
+          .select(`
+            id,
+            workspace_id,
+            tool_id,
+            agente_id,
+            is_active,
+            tools (
+              id,
+              type,
+              nome,
+              descricao
+            )
+          `)
           .eq('workspace_id', workspace.id)
 
         return {
           ...workspace,
           config_credenciais: configCredenciais || null,
           credenciais_diversas: credenciaisDiversas || null,
-          total_membros: membrosCount || 0
+          membros: membros || [],
+          user_tools: userTools || [],
+          total_membros: membros?.length || 0
         }
       })
     )

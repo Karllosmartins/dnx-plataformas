@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { adminWorkspacesApi } from '../../../lib/api-client'
 import {
   Building,
   Edit,
@@ -142,104 +143,14 @@ export default function WorkspacesSection() {
 
   const fetchWorkspaces = async () => {
     try {
-      // Buscar todos os workspaces com suas informações
-      const { data: workspacesData, error } = await supabase
-        .from('workspaces')
-        .select(`
-          *,
-          planos (
-            id,
-            nome,
-            descricao,
-            acesso_dashboard,
-            acesso_crm,
-            acesso_whatsapp,
-            acesso_disparo_simples,
-            acesso_disparo_ia,
-            acesso_agentes_ia,
-            acesso_extracao_leads,
-            acesso_enriquecimento,
-            acesso_usuarios,
-            acesso_consulta,
-            acesso_integracoes,
-            acesso_arquivos,
-            produtos,
-            limite_leads,
-            limite_consultas,
-            limite_instancias
-          )
-        `)
-        .order('name')
+      // Usar API admin para buscar todos os workspaces
+      const response = await adminWorkspacesApi.list()
 
-      if (error) throw error
-
-      // Buscar membros, credenciais para cada workspace
-      const workspacesComDados = await Promise.all(
-        (workspacesData || []).map(async (ws) => {
-          // Membros - usando a relação correta via FK user_id -> users.id
-          const { data: membros, error: membrosError } = await supabase
-            .from('workspace_members')
-            .select(`
-              id,
-              user_id,
-              role,
-              joined_at,
-              users:user_id (
-                id,
-                name,
-                email,
-                role,
-                active
-              )
-            `)
-            .eq('workspace_id', ws.id)
-
-          if (membrosError) {
-            console.error('Erro ao buscar membros do workspace', ws.id, membrosError)
-          }
-
-          // Credenciais
-          const { data: configCred } = await supabase
-            .from('configuracoes_credenciais')
-            .select('*')
-            .eq('workspace_id', ws.id)
-            .single()
-
-          const { data: credDiversas } = await supabase
-            .from('credencias_diversas')
-            .select('*')
-            .eq('workspace_id', ws.id)
-            .single()
-
-          // User tools do workspace
-          const { data: userTools } = await supabase
-            .from('user_tools')
-            .select(`
-              id,
-              workspace_id,
-              tool_id,
-              agente_id,
-              is_active,
-              tools (
-                id,
-                type,
-                nome,
-                descricao
-              )
-            `)
-            .eq('workspace_id', ws.id)
-
-          return {
-            ...ws,
-            membros: membros || [],
-            config_credenciais: configCred || null,
-            credenciais_diversas: credDiversas || null,
-            user_tools: userTools || []
-          }
-        })
-      )
-
-      setWorkspaces(workspacesComDados)
+      if (response.success && response.data) {
+        setWorkspaces(response.data as Workspace[])
+      } else {
+        console.error('Erro ao buscar workspaces:', response.error)
+      }
     } catch (error) {
       console.error('Erro ao buscar workspaces:', error)
     } finally {
