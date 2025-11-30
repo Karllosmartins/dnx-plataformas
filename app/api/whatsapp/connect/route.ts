@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao conectar instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao conectar instância', details: (error as Error).message },
       { status: 500 }
@@ -163,7 +163,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao desconectar instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao desconectar instância', details: (error as Error).message },
       { status: 500 }

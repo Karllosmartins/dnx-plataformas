@@ -189,7 +189,6 @@ export async function POST(request: NextRequest) {
         })
 
       if (configError) {
-        console.error('Erro ao criar configurações:', configError)
       }
     }
 
@@ -206,7 +205,6 @@ export async function POST(request: NextRequest) {
         })
 
       if (credError) {
-        console.error('Erro ao criar credenciais diversas:', credError)
       }
     }
 

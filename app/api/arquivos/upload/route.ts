@@ -57,8 +57,6 @@ async function getB2UploadUrl(bucketId: string, auth: { token: string; apiUrl: s
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Upload] Usando API nativa do Backblaze B2')
-
     const formData = await request.formData()
     const userId = formData.get('userId') as string
     const nomeProduto = formData.get('nomeProduto') as string
@@ -80,7 +78,6 @@ export async function POST(request: NextRequest) {
 
     // Obter autorização B2
     const auth = await getB2Authorization()
-    console.log('[Upload] Autorização B2 obtida com sucesso')
 
     // Obter todos os arquivos do FormData
     const files: any[] = []
@@ -90,8 +87,6 @@ export async function POST(request: NextRequest) {
         files.push(value)
       }
     })
-
-    console.log('[Upload] Total de arquivos encontrados:', files.length)
 
     if (files.length === 0) {
       return NextResponse.json(
@@ -105,17 +100,12 @@ export async function POST(request: NextRequest) {
 
     // Obter URL de upload
     const uploadAuth = await getB2UploadUrl(process.env.B2_BUCKET_ID!, auth)
-    console.log('[Upload] URL de upload obtida')
 
     // Upload de cada arquivo
     for (const file of files) {
-      console.log('[Upload] Processando arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size)
-
       // Converter arquivo para Buffer
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-
-      console.log('[Upload] Buffer criado - Tamanho:', buffer.length, 'bytes')
 
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
@@ -125,8 +115,6 @@ export async function POST(request: NextRequest) {
 
       // Calcular SHA1 do arquivo (obrigatório para B2)
       const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
-
-      console.log('[Upload] Enviando para B2 - Nome:', fileName, 'SHA1:', sha1)
 
       try {
         // Upload usando API nativa do B2
@@ -141,14 +129,7 @@ export async function POST(request: NextRequest) {
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
         })
-
-        console.log('[Upload] Upload para B2 concluído com sucesso:', uploadResponse.data.fileName)
       } catch (uploadError: any) {
-        console.error('[Upload] Erro ao enviar para B2:', {
-          message: uploadError.message,
-          response: uploadError.response?.data,
-          status: uploadError.response?.status,
-        })
         throw uploadError
       }
 
@@ -176,7 +157,6 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        console.error('Erro ao salvar arquivo no banco:', error)
         continue // Continua com os próximos arquivos
       }
 
@@ -202,7 +182,6 @@ export async function POST(request: NextRequest) {
       count: uploadedFiles.length,
     })
   } catch (error) {
-    console.error('Erro ao fazer upload:', error)
     return NextResponse.json(
       { error: 'Erro ao fazer upload do arquivo' },
       { status: 500 }

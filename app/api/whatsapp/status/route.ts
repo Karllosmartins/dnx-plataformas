@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Erro ao verificar status:', error)
+
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: (error as Error).message },
       { status: 500 }
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao verificar status múltiplo:', error)
+
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: (error as Error).message },
       { status: 500 }

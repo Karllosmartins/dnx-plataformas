@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao listar instâncias:', error)
+
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: (error as Error).message },
       { status: 500 }
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Se erro 404, significa que não existe, pode prosseguir
       if ((error as any)?.response?.status !== 404) {
-        console.log('Erro diferente de 404:', error)
+
       } else {
-        console.log('Instância não existe, pode criar')
+
       }
     }
 
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao criar instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao criar instância', details: (error as Error).message },
       { status: 500 }
@@ -271,7 +271,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao atualizar instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao atualizar instância', details: (error as Error).message },
       { status: 500 }
@@ -326,7 +326,7 @@ export async function DELETE(request: NextRequest) {
 
       await evolutionClient.deleteInstance(instancia.instancia)
     } catch (error) {
-      console.warn('Erro ao deletar instância da Evolution API:', error)
+
       // Continua mesmo se falhar na Evolution API
     }
 
@@ -346,7 +346,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao remover instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao remover instância', details: (error as Error).message },
       { status: 500 }

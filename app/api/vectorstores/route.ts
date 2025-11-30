@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       vectorStore: data || null
     })
   } catch (error) {
-    console.error('Erro ao verificar vector store:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (configError) {
-      console.error('Erro ao buscar config:', configError)
+
       return NextResponse.json({ 
         error: `Erro ao buscar configuração: ${configError.message}` 
       }, { status: 400 })
     }
 
     if (!config?.openai_api_token) {
-      console.error('Token não encontrado na config:', config)
+
       return NextResponse.json({ 
         error: 'Token OpenAI não encontrado. Configure suas credenciais primeiro.' 
       }, { status: 400 })
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     if (!openaiResponse.ok) {
       const errorData = await openaiResponse.text()
-      console.error('Erro na API OpenAI:', errorData)
+
       return NextResponse.json({ 
         error: 'Erro ao criar vector store na OpenAI' 
       }, { status: 400 })
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
           }
         })
       } catch (cleanupError) {
-        console.error('Erro ao limpar vector store na OpenAI:', cleanupError)
+
       }
       throw saveError
     }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao criar vector store:', error)
+
     return NextResponse.json({ 
       error: 'Erro interno do servidor',
       details: error instanceof Error ? error.message : String(error)
@@ -170,7 +170,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao atualizar vector store:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
@@ -195,7 +195,7 @@ export async function DELETE(request: NextRequest) {
       .maybeSingle()
 
     if (configError) {
-      console.error('Erro ao buscar config:', configError)
+
       return NextResponse.json({ 
         error: `Erro ao buscar configuração: ${configError.message}` 
       }, { status: 400 })
@@ -213,10 +213,10 @@ export async function DELETE(request: NextRequest) {
         })
 
         if (!openaiResponse.ok) {
-          console.warn('Erro ao deletar vector store da OpenAI, mas continuando com exclusão do banco')
+
         }
       } catch (openaiError) {
-        console.warn('Erro ao comunicar com OpenAI, mas continuando com exclusão do banco:', openaiError)
+
       }
     }
 
@@ -238,7 +238,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao deletar vector store:', error)
+
     return NextResponse.json({ 
       error: 'Erro interno do servidor',
       details: error instanceof Error ? error.message : String(error)

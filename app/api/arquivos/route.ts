@@ -7,8 +7,6 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const role = searchParams.get('role')
 
-    console.log('[GET /api/arquivos] userId:', userId, 'role:', role)
-
     if (!userId) {
       return NextResponse.json(
         { error: 'userId é obrigatório' },
@@ -25,10 +23,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', parseInt(userId))
       .order('id', { ascending: false })
 
-    console.log('[GET /api/arquivos] Retornando', data?.length || 0, 'arquivos do usuário', userId)
-
     if (error) {
-      console.error('Erro ao buscar arquivos:', error)
       return NextResponse.json(
         { error: 'Erro ao buscar arquivos' },
         { status: 500 }
@@ -37,7 +32,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data })
   } catch (error) {
-    console.error('Erro ao buscar arquivos:', error)
     return NextResponse.json(
       { error: 'Erro ao buscar arquivos' },
       { status: 500 }
@@ -85,7 +79,6 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase.from('arquivos').delete().eq('id', id)
 
     if (error) {
-      console.error('Erro ao deletar arquivo:', error)
       return NextResponse.json(
         { error: 'Erro ao deletar arquivo' },
         { status: 500 }
@@ -94,7 +87,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Erro ao deletar arquivo:', error)
     return NextResponse.json(
       { error: 'Erro ao deletar arquivo' },
       { status: 500 }

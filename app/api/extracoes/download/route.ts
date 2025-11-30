@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao fazer download da extração:', error)
+
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Erro no download' 
     }, { status: 500 })

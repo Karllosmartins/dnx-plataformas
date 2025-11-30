@@ -12,13 +12,6 @@ import { getSupabaseAdmin } from '../../../../lib/supabase'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    // Log do webhook recebido (para debugging)
-    console.log('Webhook Evolution API recebido:', {
-      event: body.event,
-      instance: body.instance,
-      timestamp: new Date().toISOString()
-    })
 
     const { event, instance, data } = body
 
@@ -56,7 +49,7 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log(`Evento não processado: ${event}`)
+
     }
 
     // Registrar webhook no banco (opcional - para auditoria)
@@ -76,8 +69,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao processar webhook:', error)
-    
+
     // Log do erro no banco
     try {
       await getSupabaseAdmin()
@@ -89,7 +81,7 @@ export async function POST(request: NextRequest) {
           occurred_at: new Date().toISOString()
         })
     } catch (logError) {
-      console.error('Erro ao registrar erro do webhook:', logError)
+
     }
 
     return NextResponse.json(
@@ -117,9 +109,8 @@ async function handleQRCodeUpdated(instanceName: string, data: any) {
       })
       .eq('instancia', instanceName)
 
-    console.log(`QR Code atualizado para instância: ${instanceName}`)
   } catch (error) {
-    console.error('Erro ao processar QR Code:', error)
+
   }
 }
 
@@ -153,9 +144,8 @@ async function handleConnectionUpdate(instanceName: string, data: any) {
       })
       .eq('instancia', instanceName)
 
-    console.log(`Status de conexão atualizado: ${instanceName} -> ${statusConexao}`)
   } catch (error) {
-    console.error('Erro ao atualizar conexão:', error)
+
   }
 }
 
@@ -185,7 +175,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
         .single()
 
       if (instanciaError || !instancia) {
-        console.warn(`Instância não encontrada: ${instanceName}`)
+
         continue
       }
 
@@ -216,7 +206,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
           .single()
 
         if (novoLeadError) {
-          console.error('Erro ao criar lead:', novoLeadError)
+
           continue
         }
 
@@ -224,8 +214,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
       }
 
       // Registrar mensagem recebida (opcional - criar tabela mensagens)
-      console.log(`Mensagem recebida de ${senderNumber}: ${messageContent?.conversation || 'Mídia'}`)
-      
+
       // Aqui você pode adicionar lógica para:
       // - Resposta automática
       // - Processamento com IA
@@ -233,7 +222,7 @@ async function handleMessageReceived(instanceName: string, data: any) {
     }
 
   } catch (error) {
-    console.error('Erro ao processar mensagem recebida:', error)
+
   }
 }
 
@@ -243,9 +232,9 @@ async function handleMessageReceived(instanceName: string, data: any) {
 async function handleMessageUpdate(instanceName: string, data: any) {
   try {
     // Processar atualizações de status das mensagens
-    console.log(`Mensagem atualizada na instância ${instanceName}:`, data)
+
   } catch (error) {
-    console.error('Erro ao processar atualização de mensagem:', error)
+
   }
 }
 
@@ -255,9 +244,9 @@ async function handleMessageUpdate(instanceName: string, data: any) {
 async function handleContactUpdate(instanceName: string, data: any) {
   try {
     // Processar atualizações de contatos
-    console.log(`Contato atualizado na instância ${instanceName}:`, data)
+
   } catch (error) {
-    console.error('Erro ao processar atualização de contato:', error)
+
   }
 }
 
@@ -267,9 +256,9 @@ async function handleContactUpdate(instanceName: string, data: any) {
 async function handlePresenceUpdate(instanceName: string, data: any) {
   try {
     // Processar atualizações de presença
-    console.log(`Presença atualizada na instância ${instanceName}:`, data)
+
   } catch (error) {
-    console.error('Erro ao processar atualização de presença:', error)
+
   }
 }
 

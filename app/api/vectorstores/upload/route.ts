@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (!uploadResponse.ok) {
       const errorData = await uploadResponse.text()
-      console.error('Erro no upload OpenAI:', errorData)
+
       return NextResponse.json({ 
         error: 'Erro ao fazer upload do arquivo para OpenAI' 
       }, { status: 400 })
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (!vectorStoreResponse.ok) {
       const errorData = await vectorStoreResponse.text()
-      console.error('Erro ao adicionar arquivo ao vector store:', errorData)
+
       return NextResponse.json({ 
         error: 'Erro ao adicionar arquivo ao vector store' 
       }, { status: 400 })
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro no upload:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

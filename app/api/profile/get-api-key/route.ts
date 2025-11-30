@@ -24,7 +24,7 @@ export async function GET() {
     return NextResponse.json({ apiKey })
 
   } catch (error) {
-    console.error('Erro ao buscar API Key do Profile:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

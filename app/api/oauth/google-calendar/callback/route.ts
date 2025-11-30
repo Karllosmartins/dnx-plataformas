@@ -35,11 +35,6 @@ export async function GET(request: NextRequest) {
 
     // Trocar código de autorização por access_token e refresh_token
     const redirectUri = `${baseUrl}/api/oauth/google-calendar/callback`
-
-    console.log('🔍 Callback - Host detectado:', host)
-    console.log('🔍 Callback - Protocol:', protocol)
-    console.log('🔍 Callback - Redirect URI:', redirectUri)
-
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -56,11 +51,6 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json()
-      console.error('❌ Erro ao trocar código por token:', errorData)
-      console.error('📋 Detalhes da requisição:')
-      console.error('- Client ID:', client_id)
-      console.error('- Redirect URI:', redirectUri)
-      console.error('- Code:', code?.substring(0, 20) + '...')
 
       // Redirecionar com mais informações
       return NextResponse.redirect(
@@ -88,7 +78,6 @@ export async function GET(request: NextRequest) {
     )
 
     if (!userInfoResponse.ok) {
-      console.error('Erro ao obter informações do usuário')
       return NextResponse.redirect(
         `${baseUrl}/integracoes?error=user_info_failed`
       )
@@ -141,10 +130,8 @@ export async function GET(request: NextRequest) {
 
     // Redirecionar de volta para a página de integrações com sucesso
     const successUrl = `${baseUrl}/integracoes?success=google_calendar_connected`
-    console.log('✅ Redirecionando para:', successUrl)
     return NextResponse.redirect(successUrl)
   } catch (error) {
-    console.error('Erro no callback OAuth:', error)
     const host = request.headers.get('host') || new URL(request.url).host
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const errorUrl = `${protocol}://${host}/integracoes?error=server_error`

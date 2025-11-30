@@ -37,7 +37,7 @@ function parseDataBrasileira(dataStr: string | undefined): Date | null {
       return new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia))
     }
   } catch (error) {
-    console.error('Erro ao parsear data:', dataStr, error)
+
   }
 
   return null
@@ -68,8 +68,6 @@ function parseCSV(csvContent: string): Record<string, string>[] {
 
   // Primeira linha = cabeçalho
   const cabecalho = linhas[0].split('\t').map(col => col.trim())
-
-  console.log('📋 Cabeçalho detectado:', cabecalho.slice(0, 5)) // Primeiras 5 colunas
 
   const dados: Record<string, string>[] = []
 
@@ -155,11 +153,6 @@ export async function POST(request: NextRequest) {
       const isSocios = temCpf && temCpfFormatado
       const isCPF = colunasUpper.includes('CPF') && !isSocios
 
-      console.log(`📄 Processando arquivo: ${entry.entryName}`)
-      console.log(`   Colunas disponíveis:`, colunas.join(', '))
-      console.log(`   Tipo detectado: ${isCNPJ ? 'CNPJ' : isSocios ? 'Sócios' : isCPF ? 'CPF' : 'Desconhecido'}`)
-      console.log(`   Total de registros: ${dados.length}`)
-
       if (isCNPJ) {
         // Processar empresas (CNPJ)
         for (const empresa of dados) {
@@ -206,7 +199,7 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (leadError) {
-              console.error('Erro ao criar lead CNPJ:', leadError)
+
               totalErros++
               continue
             }
@@ -258,13 +251,13 @@ export async function POST(request: NextRequest) {
               })
 
             if (pjError) {
-              console.error('Erro ao salvar dados PJ:', pjError)
+
               // Lead criado mas dados completos não - ainda conta como sucesso
             }
 
             totalSalvos++
           } catch (error) {
-            console.error('Erro ao processar empresa:', error)
+
             totalErros++
           }
         }
@@ -363,11 +356,11 @@ export async function POST(request: NextRequest) {
               })
 
             if (socioError) {
-              console.error('Erro ao salvar sócio:', socioError)
+
             }
 
           } catch (error) {
-            console.error('Erro ao processar sócio:', error)
+
             totalErros++
           }
         }
@@ -417,7 +410,7 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (leadError) {
-              console.error('Erro ao criar lead CPF:', leadError)
+
               totalErros++
               continue
             }
@@ -466,13 +459,13 @@ export async function POST(request: NextRequest) {
               })
 
             if (pfError) {
-              console.error('Erro ao salvar dados PF:', pfError)
+
               // Lead criado mas dados completos não - ainda conta como sucesso
             }
 
             totalSalvos++
           } catch (error) {
-            console.error('Erro ao processar pessoa:', error)
+
             totalErros++
           }
         }
@@ -487,7 +480,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao salvar extração no CRM:', error)
+
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Erro ao salvar no CRM'
     }, { status: 500 })

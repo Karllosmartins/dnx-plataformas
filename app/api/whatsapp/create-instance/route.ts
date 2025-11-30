@@ -148,8 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Erro ao criar instância WhatsApp:', error)
-    
+
     // Se erro específico da Evolution API
     if ((error as any)?.response?.data) {
       return NextResponse.json(
@@ -262,7 +261,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao verificar instância:', error)
+
     return NextResponse.json(
       { error: 'Erro ao verificar instância', details: (error as Error).message },
       { status: 500 }

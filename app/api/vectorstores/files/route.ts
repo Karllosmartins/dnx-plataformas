@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     if (!filesResponse.ok) {
       const errorData = await filesResponse.text()
-      console.error('Erro ao listar arquivos:', errorData)
+
       return NextResponse.json({ 
         error: 'Erro ao listar arquivos do vector store' 
       }, { status: 400 })
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao listar arquivos:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
@@ -123,7 +123,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!deleteResponse.ok) {
       const errorData = await deleteResponse.text()
-      console.error('Erro ao remover arquivo:', errorData)
+
       return NextResponse.json({ 
         error: 'Erro ao remover arquivo do vector store' 
       }, { status: 400 })
@@ -135,7 +135,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao remover arquivo:', error)
+
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

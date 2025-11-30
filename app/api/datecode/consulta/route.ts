@@ -20,9 +20,6 @@ export async function POST(request: NextRequest) {
       placaVeiculo,
       userId
     } = body
-
-    console.log('API Datecode Consulta: Dados recebidos:', body)
-
     // Validar campos obrigatórios
     if (!userId) {
       return NextResponse.json(
@@ -61,7 +58,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !userData || !userData.current_workspace_id) {
-      console.error('Erro ao buscar workspace do usuário:', userError)
       return NextResponse.json(
         { error: 'Usuário não possui workspace ativo' },
         { status: 404 }
@@ -85,7 +81,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (workspaceError || !workspace || !workspace.planos) {
-      console.error('Erro ao buscar plano do workspace:', workspaceError)
       return NextResponse.json(
         { error: 'Workspace não encontrado ou sem plano ativo' },
         { status: 404 }
@@ -127,16 +122,10 @@ export async function POST(request: NextRequest) {
     let documentoLimpo = null
     if (document) {
       documentoLimpo = document.replace(/[^\d]/g, '')
-      console.log('API Datecode Consulta: Documento limpo:', documentoLimpo)
     }
 
     // Obter credenciais Datecode do usuário
     const credentials = await getDatecodeCredentials(userId)
-
-    console.log('API Datecode Consulta: Credenciais disponíveis:', {
-      found: !!credentials,
-      valid: validateDatecodeCredentials(credentials)
-    })
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
@@ -168,9 +157,6 @@ export async function POST(request: NextRequest) {
     if (email) requestBody.email = email
     if (dataNascimentoAbertura) requestBody.dataNascimentoAbertura = dataNascimentoAbertura
     if (placaVeiculo) requestBody.placaVeiculo = placaVeiculo.toUpperCase()
-
-    console.log('API Datecode Consulta: Enviando requisição:', requestBody)
-
     const response = await fetch('https://api.datecode.com.br/v2/dados/consulta', {
       method: 'POST',
       headers: {
@@ -179,14 +165,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(requestBody)
     })
-
-    console.log('API Datecode Consulta: Status da resposta:', response.status)
-
     const data = await response.json()
-    console.log('API Datecode Consulta: Dados recebidos:', JSON.stringify(data, null, 2))
 
     if (!response.ok) {
-      console.log('API Datecode Consulta: Erro na consulta:', { status: response.status, data })
       return NextResponse.json(
         { error: 'Erro na consulta Datecode', details: data },
         { status: response.status }
@@ -202,7 +183,6 @@ export async function POST(request: NextRequest) {
       .eq('id', workspaceId)
 
     if (updateError) {
-      console.error('Erro ao atualizar contador de consultas:', updateError)
       return NextResponse.json(
         { error: 'Erro ao processar consulta' },
         { status: 500 }
@@ -237,23 +217,13 @@ export async function POST(request: NextRequest) {
           observacoes_limpa_nome: `${tipoConsulta} realizada`,
           created_at: new Date().toISOString()
         })
-
-      console.log('Consulta registrada para controle de limite')
     } catch (error) {
-      console.error('Erro ao registrar consulta:', error)
       // Não interromper o fluxo por erro de logging
     }
 
     // Calcular dados atualizados
     const consultasRealizadasAtual = consultasRealizadas + 1
     const consultasRestantesAtual = limiteConsultas - consultasRealizadasAtual
-
-    console.log('[API Consulta] Dados atualizados:', {
-      consultasRealizadas: consultasRealizadasAtual,
-      limiteConsultas,
-      consultasRestantes: consultasRestantesAtual
-    })
-
     return NextResponse.json({
       success: true,
       data: data,
@@ -265,7 +235,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro na API Datecode Consulta:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

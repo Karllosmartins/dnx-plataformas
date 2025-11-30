@@ -19,13 +19,10 @@ function parseDataFinalizacao(dataStr: string | null | undefined): string | null
 
       // Criar data no formato ISO: YYYY-MM-DD HH:MM:SS
       const isoDateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}${timePart ? ' ' + timePart : ''}`
-      console.log('🔄 Convertendo data BR para ISO:', dataStr, '->', isoDateStr)
-
       const date = new Date(isoDateStr)
 
       // Verificar se a data é válida
       if (isNaN(date.getTime())) {
-        console.log('❌ Data convertida é inválida:', isoDateStr)
         return null
       }
 
@@ -35,25 +32,19 @@ function parseDataFinalizacao(dataStr: string | null | undefined): string | null
       const date = new Date(dataStr)
 
       if (isNaN(date.getTime())) {
-        console.log('❌ Data inválida recebida da API Profile:', dataStr)
         return null
       }
 
       return date.toISOString()
     }
   } catch (error) {
-    console.log('❌ Erro ao processar data da API Profile:', dataStr, error)
     return null
   }
 }
 
 // Função para autenticar na API Profile - ATUALIZADA PARA JSON
 async function authenticateAPI(apiKey: string) {
-  console.log('🔐 Tentando autenticar com API Key:', apiKey ? 'presente' : 'ausente')
-  
   const payload = { apiKey: apiKey }
-  console.log('📤 Payload da requisição:', payload)
-  
   const response = await fetch(`${API_PROFILE_BASE_URL}/api/Auth`, {
     method: 'POST',
     headers: {
@@ -62,17 +53,12 @@ async function authenticateAPI(apiKey: string) {
     },
     body: JSON.stringify(payload)
   })
-
-  console.log('📥 Status da resposta:', response.status)
-
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('❌ Erro na autenticação:', errorText)
     throw new Error(`Falha na autenticação da API Profile: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
-  console.log('✅ Autenticação bem-sucedida, token recebido')
   return data.token
 }
 
@@ -128,7 +114,6 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error('Erro ao buscar extrações da API:', error)
       }
     }
 
@@ -137,7 +122,6 @@ export async function GET(request: NextRequest) {
       extracoesAPI: extracoesAPI || []
     })
   } catch (error) {
-    console.error('Erro ao buscar extrações:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
@@ -162,7 +146,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !userData || !userData.current_workspace_id) {
-      console.error('Erro ao buscar workspace do usuário:', userError)
       return NextResponse.json(
         { error: 'Usuário não possui workspace ativo' },
         { status: 404 }
@@ -179,7 +162,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (workspaceError || !workspace) {
-      console.error('Erro ao buscar workspace:', workspaceError)
       return NextResponse.json(
         { error: 'Workspace não encontrado' },
         { status: 404 }
@@ -259,7 +241,6 @@ export async function POST(request: NextRequest) {
       .eq('id', workspaceId)
 
     if (updateError) {
-      console.error('Erro ao atualizar contador de consultas:', updateError)
       return NextResponse.json(
         { error: 'Erro ao processar extração de leads' },
         { status: 500 }
@@ -303,7 +284,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao criar extração:', error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Erro interno do servidor' 
     }, { status: 500 })
@@ -373,12 +353,6 @@ export async function PUT(request: NextRequest) {
     }
 
     // Log para debug da data
-    console.log('📊 Detalhes da extração recebidos:', {
-      status: detalhesExtracao.status,
-      dataFinalizacao: detalhesExtracao.dataFinalizacao,
-      tipoDataFinalizacao: typeof detalhesExtracao.dataFinalizacao
-    })
-
     // Atualizar status no banco local se tiver extracaoId
     if (extracaoId) {
       let statusLocal = 'processando'
@@ -404,7 +378,6 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao buscar status da extração:', error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Erro interno do servidor' 
     }, { status: 500 })
@@ -462,7 +435,6 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao fazer download da extração:', error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Erro no download' 
     }, { status: 500 })

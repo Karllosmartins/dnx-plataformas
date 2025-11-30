@@ -151,7 +151,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
 
   } catch (error) {
-    console.error('Erro na API Datecode CPF:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
