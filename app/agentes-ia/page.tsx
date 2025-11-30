@@ -415,7 +415,7 @@ export default function AgentesIAPage() {
                                 <option value="">Nenhuma instância selecionada</option>
                                 {instancias.map((instancia) => (
                                   <option key={instancia.id} value={instancia.id}>
-                                    {instancia.instancia} {instancia.is_official_api ? '(API Oficial)' : '(Evolution API)'}
+                                    {instancia.instancia} {instancia.is_official_api ? '(API Oficial)' : '(UAZAPI)'}
                                   </option>
                                 ))}
                               </select>
@@ -424,7 +424,7 @@ export default function AgentesIAPage() {
                                 <div className="mt-2 p-2 bg-green-100 rounded text-xs">
                                   <strong>Instância vinculada:</strong> {getAgentInstance(agente.id)?.instancia}
                                   <br />
-                                  <strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'Evolution API'}
+                                  <strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'UAZAPI'}
                                 </div>
                               )}
                             </div>

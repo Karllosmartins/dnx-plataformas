@@ -366,7 +366,7 @@ export default function DisparoSimplesPage() {
       setTemplateVariables([])
       setAvailableTemplates([])
     } else {
-      // Limpar campos da Evolution API se necessário
+      // Limpar campos da UAZAPI se necessário
     }
   }
 
@@ -498,7 +498,7 @@ export default function DisparoSimplesPage() {
             formData.append('tipo_disparo', 'texto')
           }
         } else {
-          // Evolution API
+          // UAZAPI
           formData.append('tipo_api', 'evolution')
           formData.append('mensagem', mensagem)
           formData.append('campo_disparo', 'simples')
@@ -584,7 +584,7 @@ export default function DisparoSimplesPage() {
                     }`}
                   >
                     <MessageCircle className="h-4 w-4 inline mr-2" />
-                    Evolution API
+                    UAZAPI
                   </button>
                 )}
                 {instances.some(i => i.is_official_api) && (
@@ -635,18 +635,18 @@ export default function DisparoSimplesPage() {
                     .filter(instance => activeTab === 'official' ? instance.is_official_api : !instance.is_official_api)
                     .map((instance) => (
                     <option key={instance.id} value={instance.instancia}>
-                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(Evolution API)'}
+                      {instance.instancia} {instance.is_official_api ? '(API Oficial)' : '(UAZAPI)'}
                     </option>
                   ))}
                 </select>
                 {instances.filter(instance => activeTab === 'official' ? instance.is_official_api : !instance.is_official_api).length === 0 && (
                   <p className="text-sm text-red-500 mt-1">
-                    Nenhuma instância {activeTab === 'official' ? 'API Oficial' : 'Evolution API'} encontrada. Configure uma instância primeiro.
+                    Nenhuma instância {activeTab === 'official' ? 'API Oficial' : 'UAZAPI'} encontrada. Configure uma instância primeiro.
                   </p>
                 )}
               </div>
 
-              {/* Campo Mensagem - apenas para Evolution API */}
+              {/* Campo Mensagem - apenas para UAZAPI */}
               {activeTab === 'evolution' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -832,7 +832,7 @@ export default function DisparoSimplesPage() {
                 </div>
               )}
 
-              {/* Seção de Upload de Imagem - apenas para Evolution API */}
+              {/* Seção de Upload de Imagem - apenas para UAZAPI */}
               {activeTab === 'evolution' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
