@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase.js'
 import { ApiError, ApiResponse, handleApiError, logger } from '../utils/index.js'
 import { generateToken, generateRefreshToken, verifyToken, authMiddleware, AuthenticatedRequest } from '../middleware/auth.js'

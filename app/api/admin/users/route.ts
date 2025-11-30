@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { supabase } from '../../../../lib/supabase'
 import { ApiResponse, ApiError, handleApiError } from '../../../../lib/api-utils'
 

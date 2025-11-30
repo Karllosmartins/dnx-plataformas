@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
 import { ApiResponse, ApiError, handleApiError } from '../../../../../lib/api-utils'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
 
