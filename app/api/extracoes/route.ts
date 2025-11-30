@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userId é obrigatório' }, { status: 400 })
     }
 
-    // Determinar workspace_id
-    let wsId = workspaceId ? parseInt(workspaceId) : null
+    // Determinar workspace_id (UUID string)
+    let wsId: string | null = workspaceId || null
     if (!wsId) {
       const { data: userData } = await getSupabaseAdmin()
         .from('users')

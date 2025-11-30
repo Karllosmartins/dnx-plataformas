@@ -553,7 +553,7 @@ export default function ExtracaoLeadsPage() {
     if (!user || !workspaceId) return
 
     try {
-      const dadosContagem: Partial<ContagemProfile> & { workspace_id?: number } = {
+      const dadosContagem: Partial<ContagemProfile> & { workspace_id?: string } = {
         user_id: parseInt(user.id.toString()),
         workspace_id: workspaceId,
         id_contagem_api: resultado.idContagem,

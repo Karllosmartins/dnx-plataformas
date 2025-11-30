@@ -3,8 +3,8 @@ import { getSupabaseAdmin } from '../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Helper para obter workspace_id do usuário
-async function getUserWorkspaceId(userId: string): Promise<number | null> {
+// Helper para obter workspace_id do usuário (retorna UUID como string)
+async function getUserWorkspaceId(userId: string): Promise<string | null> {
   const supabase = getSupabaseAdmin()
   const { data } = await supabase
     .from('users')
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin()
 
     // Determinar workspace_id - usar o passado ou buscar o atual do usuário
-    let wsId = workspaceId ? parseInt(workspaceId) : await getUserWorkspaceId(userId)
+    let wsId = workspaceId || await getUserWorkspaceId(userId)
 
     if (!wsId) {
       return NextResponse.json(
@@ -104,7 +104,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseAdmin()
 
     // Determinar workspace_id
-    let wsId = workspaceId ? parseInt(workspaceId) : await getUserWorkspaceId(userId)
+    let wsId = workspaceId || await getUserWorkspaceId(userId)
 
     // Verificar se o arquivo pertence ao workspace do usuário
     const { data: arquivo } = await supabase

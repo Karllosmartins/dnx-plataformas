@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 export interface WorkspacePermissions {
-  id: number
+  id: string  // UUID
   name: string
   slug: string
   plano_id: number | null
@@ -38,11 +38,11 @@ export interface CurrentWorkspace extends WorkspacePermissions {
 
 interface WorkspaceContextType {
   currentWorkspace: CurrentWorkspace | null
-  workspaceId: number | null
+  workspaceId: string | null  // UUID
   loading: boolean
   error: string | null
   refreshWorkspace: () => Promise<void>
-  switchWorkspace: (workspaceId: number) => Promise<boolean>
+  switchWorkspace: (workspaceId: string) => Promise<boolean>
   hasFeatureAccess: (feature: string) => boolean
 }
 
@@ -93,7 +93,7 @@ export function WorkspaceProvider({ children, userId }: WorkspaceProviderProps) 
     }
   }, [userId])
 
-  const switchWorkspace = useCallback(async (workspaceId: number): Promise<boolean> => {
+  const switchWorkspace = useCallback(async (workspaceId: string): Promise<boolean> => {
     if (!userId) return false
 
     try {

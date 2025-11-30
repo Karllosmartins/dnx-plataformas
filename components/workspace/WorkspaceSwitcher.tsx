@@ -67,11 +67,11 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
   }
 
   async function handleSwitch(workspace: Workspace) {
-    if (currentWorkspace && workspace.id === String(currentWorkspace.id)) return
+    if (currentWorkspace && workspace.id === currentWorkspace.id) return
 
     setSwitching(true)
     try {
-      await switchWorkspace(Number(workspace.id))
+      await switchWorkspace(workspace.id)
     } catch (error) {
       // Silently handle error
     } finally {
@@ -105,7 +105,7 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
 
   // Usar o workspace do contexto para exibir o atual
   const displayWorkspace = currentWorkspace
-    ? { id: String(currentWorkspace.id), name: currentWorkspace.name, slug: currentWorkspace.slug, plano_nome: currentWorkspace.plano_nome }
+    ? { id: currentWorkspace.id, name: currentWorkspace.name, slug: currentWorkspace.slug, plano_nome: currentWorkspace.plano_nome }
     : workspaces[0]
 
   if (isCollapsed) {

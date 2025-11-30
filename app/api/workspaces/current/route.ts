@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getWorkspaceWithPermissions(workspaceId: number) {
+async function getWorkspaceWithPermissions(workspaceId: string) {
   // Buscar workspace com plano
   const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
     .from('workspaces')
