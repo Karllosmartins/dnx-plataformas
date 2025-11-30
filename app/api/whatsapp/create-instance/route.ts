@@ -18,49 +18,62 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { userId, workspaceId, nomeInstancia } = body
 
-    if (!userId || !nomeInstancia) {
+    if (!userId || !workspaceId || !nomeInstancia) {
       return NextResponse.json(
-        { error: 'userId e nomeInstancia são obrigatórios' },
+        { error: 'userId, workspaceId e nomeInstancia são obrigatórios' },
         { status: 400 }
       )
     }
 
-    // Verificar se usuário existe
-    const { data: user, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('*')
-      .eq('id', userId)
+    // Verificar limite de instâncias do workspace
+    const { data: workspace, error: workspaceError } = await getSupabaseAdmin()
+      .from('workspaces')
+      .select('limite_instancias')
+      .eq('id', workspaceId)
       .single()
 
-    if (userError || !user) {
+    if (workspaceError || !workspace) {
       return NextResponse.json(
-        { error: 'Usuário não encontrado' },
+        { error: 'Workspace não encontrado' },
         { status: 404 }
       )
     }
 
-    // Verificar se usuário já tem instância configurada
-    let configQuery = getSupabaseAdmin()
-      .from('configuracoes_credenciais')
-      .select('id, instancia, apikey, baseurl')
+    // Contar instâncias existentes do workspace
+    const { count: instanceCount, error: countError } = await getSupabaseAdmin()
+      .from('instancia_whtats')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
 
-    if (workspaceId) {
-      configQuery = configQuery.eq('workspace_id', workspaceId)
-    } else {
-      configQuery = configQuery.eq('user_id', userId)
+    if (countError) {
+      throw countError
     }
 
-    const { data: existingConfig, error: configError } = await configQuery.single()
-
-    if (existingConfig && existingConfig.instancia && existingConfig.apikey && existingConfig.baseurl) {
+    const limiteInstancias = workspace.limite_instancias || 1
+    if ((instanceCount || 0) >= limiteInstancias) {
       return NextResponse.json(
-        { error: 'Usuário já possui uma instância WhatsApp configurada' },
+        { error: `Limite de ${limiteInstancias} instância(s) atingido para este workspace` },
         { status: 400 }
       )
     }
 
-    // Usar o nome específico fornecido pelo usuário (sem timestamp)
+    // Usar o nome específico fornecido pelo usuário
     const instanceName = nomeInstancia.toLowerCase().replace(/\s+/g, '_')
+
+    // Verificar se já existe instância com mesmo nome no workspace
+    const { data: existingInstance } = await getSupabaseAdmin()
+      .from('instancia_whtats')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('instancia', instanceName)
+      .single()
+
+    if (existingInstance) {
+      return NextResponse.json(
+        { error: 'Já existe uma instância com este nome no workspace' },
+        { status: 400 }
+      )
+    }
 
     // Criar instância na UAZAPI
     const uazapiAdmin = createUazapiAdmin(
@@ -68,45 +81,22 @@ export async function POST(request: NextRequest) {
       DEFAULT_UAZAPI_CONFIG.adminToken
     )
 
-    console.log('Criando instância UAZAPI com:', {
-      name: instanceName,
-      systemName: nomeInstancia,
-      adminField01: userId,
-      adminField02: workspaceId || '',
-      baseUrl: DEFAULT_UAZAPI_CONFIG.baseUrl,
-      hasAdminToken: !!DEFAULT_UAZAPI_CONFIG.adminToken
-    })
+    console.log('Criando instância UAZAPI:', { name: instanceName, workspaceId })
 
     const uazapiResponse = await uazapiAdmin.createInstance({
       name: instanceName,
       systemName: nomeInstancia,
       adminField01: String(userId),
-      adminField02: workspaceId || ''
+      adminField02: workspaceId
     })
 
     console.log('Resposta UAZAPI:', uazapiResponse)
 
     if (!uazapiResponse.success) {
-      console.error('Falha ao criar instância UAZAPI:', {
-        error: uazapiResponse.error,
-        data: uazapiResponse.data,
-        payload: {
-          name: instanceName,
-          systemName: nomeInstancia,
-          adminField01: userId,
-          adminField02: workspaceId || ''
-        }
-      })
       return NextResponse.json(
         {
           error: `Erro ao criar instância: ${uazapiResponse.error || 'Erro desconhecido'}`,
-          details: uazapiResponse.error,
-          uazapiData: uazapiResponse.data,
-          debug: {
-            name: instanceName,
-            baseUrl: DEFAULT_UAZAPI_CONFIG.baseUrl,
-            hasAdminToken: !!DEFAULT_UAZAPI_CONFIG.adminToken
-          }
+          details: uazapiResponse.error
         },
         { status: 400 }
       )
@@ -115,139 +105,54 @@ export async function POST(request: NextRequest) {
     // Token da instância retornado pela UAZAPI
     const instanceToken = uazapiResponse.data?.token || ''
 
-    // Configurar webhook da instância para receber mensagens
+    // Configurar webhook da instância
     if (instanceToken) {
       try {
         const uazapiInstance = createUazapiInstance(instanceToken, DEFAULT_UAZAPI_CONFIG.baseUrl)
-
         await uazapiInstance.setWebhook({
           url: WEBHOOK_URL,
           enabled: true,
           events: ['messages'],
-          excludeMessages: ['isGroupYes', 'wasSentByApi'] // Excluir grupos e mensagens enviadas pela API (evita loop)
+          excludeMessages: ['isGroupYes', 'wasSentByApi']
         })
       } catch (webhookError) {
         console.error('Erro ao configurar webhook:', webhookError)
-        // Continua mesmo se falhar a configuração do webhook
       }
     }
 
-    // Se já existe configuração, apenas atualizar com dados da instância
-    if (existingConfig) {
-      const { data: updatedConfig, error: updateError } = await getSupabaseAdmin()
-        .from('configuracoes_credenciais')
-        .update({
-          instancia: instanceName,
-          apikey: instanceToken,
-          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl
-        })
-        .eq('id', existingConfig.id)
-        .select()
-        .single()
-
-      if (updateError) {
-        throw updateError
-      }
-
-      // Salvar também na tabela instancia_whtats
-      console.log('Salvando em instancia_whtats:', {
-        user_id: userId,
-        workspace_id: workspaceId || null,
-        instancia: instanceName
-      })
-
-      const { data: instanciaData, error: instanciaError } = await getSupabaseAdmin()
-        .from('instancia_whtats')
-        .insert({
-          user_id: parseInt(userId),
-          workspace_id: workspaceId || null,
-          instancia: instanceName,
-          apikey: instanceToken,
-          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
-          is_official_api: false
-        })
-        .select()
-        .single()
-
-      if (instanciaError) {
-        console.error('Erro ao salvar instancia_whtats:', instanciaError)
-      } else {
-        console.log('Instância salva com sucesso:', instanciaData)
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Instância WhatsApp criada e configuração atualizada',
-        data: {
-          instanceName: instanceName,
-          instanceData: uazapiResponse.data,
-          configData: updatedConfig
-        }
-      })
-    } else {
-      // Criar nova configuração completa
-      const { data: newConfig, error: insertError } = await getSupabaseAdmin()
-        .from('configuracoes_credenciais')
-        .insert({
-          user_id: userId,
-          workspace_id: workspaceId || null,
-          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
-          instancia: instanceName,
-          apikey: instanceToken,
-          cliente: user.name,
-          model: 'gpt-4o',
-          type_tool_supabase: 'OpenAi',
-          delay_entre_mensagens_em_segundos: 30,
-          delay_apos_intervencao_humana_minutos: 0,
-          inicio_expediente: 8,
-          fim_expediente: 18
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        throw insertError
-      }
-
-      // Salvar também na tabela instancia_whtats
-      console.log('Salvando em instancia_whtats:', {
-        user_id: userId,
-        workspace_id: workspaceId || null,
+    // Salvar na tabela instancia_whtats
+    const { data: newInstancia, error: instanciaError } = await getSupabaseAdmin()
+      .from('instancia_whtats')
+      .insert({
+        user_id: parseInt(userId),
+        workspace_id: workspaceId,
         instancia: instanceName,
-        apikey: instanceToken ? '***' : 'VAZIO',
-        baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl
+        apikey: instanceToken,
+        baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
+        is_official_api: false
       })
+      .select()
+      .single()
 
-      const { data: newInstancia, error: instanciaError } = await getSupabaseAdmin()
-        .from('instancia_whtats')
-        .insert({
-          user_id: parseInt(userId),
-          workspace_id: workspaceId || null,
-          instancia: instanceName,
-          apikey: instanceToken,
-          baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl,
-          is_official_api: false
-        })
-        .select()
-        .single()
-
-      if (instanciaError) {
-        console.error('Erro ao salvar em instancia_whtats:', instanciaError)
-      } else {
-        console.log('Instância salva com sucesso:', newInstancia)
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Instância WhatsApp criada com sucesso',
-        data: {
-          instanceName: instanceName,
-          instanceData: uazapiResponse.data,
-          configData: newConfig,
-          instanciaId: newInstancia?.id
-        }
-      })
+    if (instanciaError) {
+      console.error('Erro ao salvar instância:', instanciaError)
+      return NextResponse.json(
+        { error: 'Instância criada na UAZAPI mas falhou ao salvar localmente', details: instanciaError.message },
+        { status: 500 }
+      )
     }
+
+    console.log('Instância salva com sucesso:', newInstancia)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Instância WhatsApp criada com sucesso',
+      data: {
+        instanceId: newInstancia.id,
+        instanceName: instanceName,
+        instanceData: uazapiResponse.data
+      }
+    })
 
   } catch (error) {
     console.error('Erro ao criar instância WhatsApp:', error)
