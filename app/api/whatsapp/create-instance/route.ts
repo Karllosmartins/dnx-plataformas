@@ -367,13 +367,20 @@ export async function PUT(request: NextRequest) {
     const connectResult = await uazapiClient.connect()
     console.log('Resultado da conexão:', connectResult)
 
+    // QR Code pode estar em data.qrcode ou data.instance.qrcode
+    const connectData = connectResult.data?.instance || connectResult.data
+    const qrCode = connectData?.qrcode || connectResult.data?.qrcode
+    const pairCode = connectData?.paircode || connectResult.data?.paircode
+
+    console.log('QR Code extraído:', qrCode ? 'SIM' : 'NÃO')
+
     return NextResponse.json({
       success: true,
       isConnected: false,
       data: {
         status: 'connecting',
-        qrCode: connectResult.data?.qrcode,
-        pairCode: connectResult.data?.paircode
+        qrCode: qrCode,
+        pairCode: pairCode
       }
     })
 
