@@ -232,16 +232,18 @@ export async function GET(request: NextRequest) {
             const uazapiClient = createUazapiInstance(inst.apikey, inst.baseurl)
             const statusResult = await uazapiClient.getStatus()
 
-            const status = statusResult.success ? statusResult.data?.status : 'erro'
-            console.log(`Status da instância ${inst.instancia}:`, status, statusResult.data)
+            // Status pode estar em data.status ou data.instance.status
+            const instanceData = statusResult.data?.instance || statusResult.data
+            const status = statusResult.success ? (instanceData?.status || 'disconnected') : 'erro'
+            console.log(`Status da instância ${inst.instancia}:`, status)
 
             return {
               id: inst.id,
               instanceName: inst.instancia || '',
-              status: status || 'disconnected',
+              status: status,
               isOfficialApi: false,
-              profileName: statusResult.data?.profileName,
-              profilePicUrl: statusResult.data?.profilePicUrl,
+              profileName: instanceData?.profileName,
+              profilePicUrl: instanceData?.profilePicUrl,
               created_at: inst.created_at
             }
           } catch (err) {
@@ -332,17 +334,19 @@ export async function PUT(request: NextRequest) {
 
     // Verificar status primeiro
     const statusResult = await uazapiClient.getStatus()
-    console.log('Status atual da instância:', statusResult.data?.status)
+    const instanceData = statusResult.data?.instance || statusResult.data
+    const currentStatus = instanceData?.status
+    console.log('Status atual da instância:', currentStatus)
 
     // Se já está conectado, retornar sucesso
-    if (statusResult.success && statusResult.data?.status === 'connected') {
+    if (statusResult.success && currentStatus === 'connected') {
       return NextResponse.json({
         success: true,
         isConnected: true,
         data: {
           status: 'connected',
-          profileName: statusResult.data?.profileName,
-          profilePicUrl: statusResult.data?.profilePicUrl
+          profileName: instanceData?.profileName,
+          profilePicUrl: instanceData?.profilePicUrl
         }
       })
     }
