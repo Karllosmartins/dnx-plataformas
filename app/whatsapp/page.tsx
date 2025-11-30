@@ -114,7 +114,8 @@ export default function WhatsAppPage() {
       const data = await response.json()
 
       if (!data.success) {
-        throw new Error(data.error || 'Erro ao criar instância')
+        console.error('Erro detalhado:', data)
+        throw new Error(data.error || data.details || 'Erro ao criar instância')
       }
 
       setShowCreateForm(false)

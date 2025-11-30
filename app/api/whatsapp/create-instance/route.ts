@@ -68,16 +68,46 @@ export async function POST(request: NextRequest) {
       DEFAULT_UAZAPI_CONFIG.adminToken
     )
 
-    const uazapiResponse = await uazapiAdmin.createInstance({
+    console.log('Criando instância UAZAPI com:', {
       name: instanceName,
       systemName: nomeInstancia,
       adminField01: userId,
+      adminField02: workspaceId || '',
+      baseUrl: DEFAULT_UAZAPI_CONFIG.baseUrl,
+      hasAdminToken: !!DEFAULT_UAZAPI_CONFIG.adminToken
+    })
+
+    const uazapiResponse = await uazapiAdmin.createInstance({
+      name: instanceName,
+      systemName: nomeInstancia,
+      adminField01: String(userId),
       adminField02: workspaceId || ''
     })
 
+    console.log('Resposta UAZAPI:', uazapiResponse)
+
     if (!uazapiResponse.success) {
+      console.error('Falha ao criar instância UAZAPI:', {
+        error: uazapiResponse.error,
+        data: uazapiResponse.data,
+        payload: {
+          name: instanceName,
+          systemName: nomeInstancia,
+          adminField01: userId,
+          adminField02: workspaceId || ''
+        }
+      })
       return NextResponse.json(
-        { error: 'Erro ao criar instância na UAZAPI', details: uazapiResponse.error },
+        {
+          error: `Erro ao criar instância: ${uazapiResponse.error || 'Erro desconhecido'}`,
+          details: uazapiResponse.error,
+          uazapiData: uazapiResponse.data,
+          debug: {
+            name: instanceName,
+            baseUrl: DEFAULT_UAZAPI_CONFIG.baseUrl,
+            hasAdminToken: !!DEFAULT_UAZAPI_CONFIG.adminToken
+          }
+        },
         { status: 400 }
       )
     }

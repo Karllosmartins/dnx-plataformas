@@ -144,16 +144,35 @@ class UazapiAdminService {
    */
   async createInstance(payload: CreateInstancePayload): Promise<UazapiResponse> {
     try {
+      console.log('UAZAPI createInstance - URL:', `${this.baseUrl}/instance/init`)
+      console.log('UAZAPI createInstance - Payload:', JSON.stringify(payload))
+      console.log('UAZAPI createInstance - AdminToken present:', !!this.adminToken)
+
       const response = await fetch(`${this.baseUrl}/instance/init`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload)
       })
 
-      const result = await response.json()
+      const responseText = await response.text()
+      console.log('UAZAPI createInstance - Response status:', response.status)
+      console.log('UAZAPI createInstance - Response body:', responseText)
+
+      let result
+      try {
+        result = JSON.parse(responseText)
+      } catch {
+        result = { error: responseText }
+      }
 
       if (!response.ok) {
-        throw new Error(result.error || result.message || `Erro HTTP ${response.status}`)
+        const errorMsg = result.error || result.message || result.msg || responseText || `Erro HTTP ${response.status}`
+        console.error('UAZAPI createInstance - Error:', errorMsg)
+        return {
+          success: false,
+          error: errorMsg,
+          data: result
+        }
       }
 
       return {
@@ -161,7 +180,7 @@ class UazapiAdminService {
         data: result
       }
     } catch (error) {
-      console.error('Erro ao criar instância:', error)
+      console.error('UAZAPI createInstance - Exception:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro desconhecido'
