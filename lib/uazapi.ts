@@ -102,6 +102,21 @@ export interface SendContactPayload {
 }
 
 // =====================================================
+// INTERFACES - VERIFICAÇÃO DE NÚMERO
+// =====================================================
+
+export interface CheckNumberPayload {
+  numbers: string[]
+}
+
+export interface CheckNumberResult {
+  query: string
+  jid: string
+  isInWhatsapp: boolean
+  verifiedName?: string
+}
+
+// =====================================================
 // INTERFACES - WEBHOOK
 // =====================================================
 
@@ -831,6 +846,58 @@ class UazapiInstanceService {
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       }
     }
+  }
+
+  // =====================================================
+  // VERIFICAÇÃO DE NÚMEROS
+  // =====================================================
+
+  /**
+   * Verificar se números possuem WhatsApp
+   * POST /chat/check
+   */
+  async checkNumbers(numbers: string[]): Promise<UazapiResponse> {
+    try {
+      // Formatar números antes de enviar
+      const formattedNumbers = numbers.map(num => this.formatPhoneNumber(num))
+
+      const response = await fetch(`${this.baseUrl}/chat/check`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ numbers: formattedNumbers })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || `Erro HTTP ${response.status}`)
+      }
+
+      return {
+        success: true,
+        data: result
+      }
+    } catch (error) {
+      console.error('Erro ao verificar números:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      }
+    }
+  }
+
+  /**
+   * Verificar um único número
+   */
+  async checkNumber(number: string): Promise<{ isInWhatsapp: boolean; verifiedName?: string }> {
+    const result = await this.checkNumbers([number])
+    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+      return {
+        isInWhatsapp: result.data[0].isInWhatsapp || false,
+        verifiedName: result.data[0].verifiedName
+      }
+    }
+    return { isInWhatsapp: false }
   }
 
   // =====================================================

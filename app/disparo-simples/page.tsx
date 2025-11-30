@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase, WhatsAppTemplate } from '../../lib/supabase'
 import { WhatsAppOfficialAPI, WhatsAppOfficialTemplate } from '../../lib/whatsapp-official-api'
 import { Upload, Send, FileText, Users, Calendar, CheckCircle, AlertTriangle, Bot, MessageCircle, Image, X, Smartphone } from 'lucide-react'
@@ -31,6 +32,7 @@ interface WhatsAppInstance {
 
 export default function DisparoSimplesPage() {
   const { user } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,11 +58,11 @@ export default function DisparoSimplesPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(false)
 
   useEffect(() => {
-    if (user) {
+    if (user && workspaceId) {
       fetchCampaigns()
       fetchInstances()
     }
-  }, [user])
+  }, [user, workspaceId])
 
   // Definir aba padrão baseada nas instâncias disponíveis
   useEffect(() => {
@@ -90,13 +92,13 @@ export default function DisparoSimplesPage() {
   }, [instances, selectedInstance])
 
   const fetchCampaigns = async () => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     try {
       const { data, error } = await supabase
         .from('leads')
         .select('nome_campanha, created_at, origem')
-        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
         .not('nome_campanha', 'is', null)
         .order('created_at', { ascending: false })
 
@@ -130,13 +132,13 @@ export default function DisparoSimplesPage() {
   }
 
   const fetchInstances = async () => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     try {
       const { data, error } = await supabase
         .from('instancia_whtats')
         .select('id, instancia, is_official_api, waba_id, apikey')
-        .eq('user_id', parseInt(user.id || '0'))
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -305,11 +307,11 @@ export default function DisparoSimplesPage() {
       // Inserir/Atualizar leads (verificar se existe para o mesmo usuário)
       for (const contato of csvContacts) {
         try {
-          // Verificar se lead já existe para este usuário e telefone
+          // Verificar se lead já existe para este workspace e telefone
           const { data: existingLead, error: searchError } = await supabase
             .from('leads')
             .select('id')
-            .eq('user_id', user?.id)
+            .eq('workspace_id', workspaceId)
             .eq('telefone', contato.telefone)
             .maybeSingle()
 
@@ -319,7 +321,7 @@ export default function DisparoSimplesPage() {
           }
 
           const leadData = {
-            user_id: user?.id,
+            workspace_id: workspaceId,
             nome_cliente: contato.nome,
             telefone: contato.telefone,
             numero_formatado: contato.telefone.replace(/\D/g, ''),
@@ -361,7 +363,7 @@ export default function DisparoSimplesPage() {
         const formData = new FormData()
         formData.append('planilha', csvFile!)
         formData.append('campanha', nomeCampanha)
-        formData.append('usuario_id', user?.id?.toString() || '')
+        formData.append('workspace_id', workspaceId || '')
         formData.append('instancia', selectedInstance)
         formData.append('total_contatos', csvContacts.length.toString())
 
