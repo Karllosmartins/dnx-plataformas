@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const userId = formData.get('userId') as string
+    const workspaceId = formData.get('workspaceId') as string | null
     const nomeProduto = formData.get('nomeProduto') as string
     const descricao = formData.get('descricao') as string | null
 
@@ -74,6 +75,18 @@ export async function POST(request: NextRequest) {
         { error: 'Nome do produto é obrigatório' },
         { status: 400 }
       )
+    }
+
+    // Se não tiver workspaceId, buscar do usuário
+    let wsId = workspaceId
+    if (!wsId) {
+      const supabaseAdmin = getSupabaseAdmin()
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('current_workspace_id')
+        .eq('id', parseInt(userId))
+        .single()
+      wsId = userData?.current_workspace_id || null
     }
 
     // Obter autorização B2
@@ -152,6 +165,7 @@ export async function POST(request: NextRequest) {
           descricao: descricao || null,
           produto: nomeProduto,
           user_id: parseInt(userId),
+          workspace_id: wsId || null,
         })
         .select()
         .single()

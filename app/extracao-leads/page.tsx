@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import PlanProtection from '../../components/shared/PlanProtection'
 import SearchableMultiSelect from '../../components/forms/SearchableMultiSelect'
 import ResultadosContagem from '../../components/features/extracao/ResultadosContagem'
@@ -185,7 +186,8 @@ interface ContagemRetornoVM {
 
 export default function ExtracaoLeadsPage() {
   const { user } = useAuth()
-  
+  const { workspaceId } = useWorkspaceContext()
+
   // Estados da API
   const [apiConfig, setApiConfig] = useState({
     token: '',
@@ -548,11 +550,12 @@ export default function ExtracaoLeadsPage() {
 
   // Salvar contagem no banco de dados
   const salvarContagemNoBanco = async (resultado: ContagemRetornoVM, filtrosAplicados: any) => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     try {
-      const dadosContagem: Partial<ContagemProfile> = {
+      const dadosContagem: Partial<ContagemProfile> & { workspace_id?: number } = {
         user_id: parseInt(user.id.toString()),
+        workspace_id: workspaceId,
         id_contagem_api: resultado.idContagem,
         nome_contagem: nomeContagem,
         tipo_pessoa: tipoPessoa,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../shared/AuthWrapper'
+import { useWorkspaceContext } from '../../../contexts/WorkspaceContext'
 import { supabase, ContagemProfile, ExtracaoProfile } from '../../../lib/supabase'
 import {
   History,
@@ -35,24 +36,25 @@ export default function HistoricoContagens({
   loading
 }: HistoricoContagensProps) {
   const { user } = useAuth()
+  const { workspaceId, loading: workspaceLoading } = useWorkspaceContext()
   const [contagens, setContagens] = useState<ContagemComExtracoes[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [atualizandoExtracoes, setAtualizandoExtracoes] = useState<Set<number>>(new Set())
 
   // Carregar histórico de contagens
   const loadHistorico = async () => {
-    if (!user) return
-    
+    if (!user || !workspaceId) return
+
     setLoadingHistorico(true)
     try {
-      // Buscar contagens do banco com suas extrações APENAS do usuário logado
+      // Buscar contagens do banco com suas extrações do workspace atual
       const { data: contagensBanco, error } = await supabase
         .from('contagens_profile')
         .select(`
           *,
           extracoes_profile (*)
         `)
-        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -175,7 +177,7 @@ export default function HistoricoContagens({
 
   // Carregar histórico sem verificar pendentes (para evitar loop)
   const loadHistoricoSemVerificacao = async () => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     try {
       const { data: contagensBanco, error } = await supabase
@@ -184,7 +186,7 @@ export default function HistoricoContagens({
           *,
           extracoes_profile (*)
         `)
-        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
 
       if (!error) {
@@ -197,7 +199,7 @@ export default function HistoricoContagens({
 
   // Deletar contagem
   const deletarContagem = async (contagemId: number, nomeContagem: string) => {
-    if (!user) return
+    if (!user || !workspaceId) return
 
     const confirmacao = confirm(`Tem certeza que deseja deletar a contagem "${nomeContagem}"?\n\nEsta ação irá remover:\n- A contagem do histórico\n- Todas as extrações relacionadas\n\nEsta ação não pode ser desfeita.`)
 
@@ -211,7 +213,7 @@ export default function HistoricoContagens({
         .from('extracoes_profile')
         .delete()
         .eq('contagem_id', contagemId)
-        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
 
       if (errorExtracoes) {
         throw errorExtracoes
@@ -222,7 +224,7 @@ export default function HistoricoContagens({
         .from('contagens_profile')
         .delete()
         .eq('id', contagemId)
-        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
 
       if (errorContagem) {
         throw errorContagem
@@ -239,12 +241,12 @@ export default function HistoricoContagens({
     }
   }
 
-  // Carregar histórico quando componente monta ou usuário muda
+  // Carregar histórico quando componente monta, usuário muda ou workspace muda
   useEffect(() => {
-    if (user) {
+    if (user && workspaceId && !workspaceLoading) {
       loadHistorico()
     }
-  }, [user])
+  }, [user, workspaceId, workspaceLoading])
 
   if (!apiConfig.authenticated) {
     return (

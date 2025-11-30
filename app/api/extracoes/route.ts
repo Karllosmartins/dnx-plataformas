@@ -62,19 +62,31 @@ async function authenticateAPI(apiKey: string) {
   return data.token
 }
 
-// GET /api/extracoes - Listar extrações do usuário (do banco local + API Profile)
+// GET /api/extracoes - Listar extrações do workspace (do banco local + API Profile)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
+    const workspaceId = searchParams.get('workspaceId')
     const apiKey = searchParams.get('apiKey')
 
     if (!userId) {
       return NextResponse.json({ error: 'userId é obrigatório' }, { status: 400 })
     }
 
-    // Buscar extrações do banco local
-    const { data: extracoesLocal, error } = await supabase
+    // Determinar workspace_id
+    let wsId = workspaceId ? parseInt(workspaceId) : null
+    if (!wsId) {
+      const { data: userData } = await getSupabaseAdmin()
+        .from('users')
+        .select('current_workspace_id')
+        .eq('id', parseInt(userId))
+        .single()
+      wsId = userData?.current_workspace_id || null
+    }
+
+    // Buscar extrações do banco local - filtrar por workspace_id se disponível
+    let query = supabase
       .from('extracoes_profile')
       .select(`
         *,
@@ -86,8 +98,15 @@ export async function GET(request: NextRequest) {
           id_contagem_api
         )
       `)
-      .eq('user_id', parseInt(userId))
-      .order('created_at', { ascending: false })
+
+    // Usar workspace_id se disponível, senão fallback para user_id
+    if (wsId) {
+      query = query.eq('workspace_id', wsId)
+    } else {
+      query = query.eq('user_id', parseInt(userId))
+    }
+
+    const { data: extracoesLocal, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       throw error
@@ -250,10 +269,18 @@ export async function POST(request: NextRequest) {
     // 4. Salvar no banco local (opcional, para tracking)
     const nomeArquivo = `leads_${contagem.nome_contagem.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.csv`
 
+    // Buscar o workspace.id (uuid) a partir do workspace (que usa id inteiro)
+    const { data: workspaceData } = await getSupabaseAdmin()
+      .from('workspaces')
+      .select('id')
+      .eq('id', workspace.id)
+      .single()
+
     const { data: novaExtracao } = await supabase
       .from('extracoes_profile')
       .insert([{
         user_id: userId,
+        workspace_id: workspaceData?.id || null,
         contagem_id: contagemId,
         id_extracao_api: resultadoExtracao.idExtracao,
         nome_arquivo: nomeArquivo,

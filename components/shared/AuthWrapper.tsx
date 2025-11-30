@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { authService, User } from '../../lib/auth'
+import { WorkspaceProvider } from '../../contexts/WorkspaceContext'
 import Sidebar from '../layout/Sidebar'
 import LoginForm from '../layout/LoginForm'
 
@@ -68,17 +69,19 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     return <LoginForm onLogin={login} />
   }
 
-  // Se está logado, mostrar o dashboard
+  // Se está logado, mostrar o dashboard com contexto de workspace
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar user={user as any} onLogout={logout} onCollapseChange={setSidebarCollapsed} />
-        <div className={`${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'} relative z-10 transition-all duration-300`}>
-          <main className="py-4 px-4 sm:px-6 lg:px-8">
-            {children}
-          </main>
+      <WorkspaceProvider userId={user.id}>
+        <div className="min-h-screen bg-gray-50">
+          <Sidebar user={user as any} onLogout={logout} onCollapseChange={setSidebarCollapsed} />
+          <div className={`${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'} relative z-10 transition-all duration-300`}>
+            <main className="py-4 px-4 sm:px-6 lg:px-8">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </WorkspaceProvider>
     </AuthContext.Provider>
   )
 }

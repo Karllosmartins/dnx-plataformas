@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { hasWorkspaceFeatureAccess, WorkspaceComPlano } from '../../lib/permissions'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { User } from '../../lib/supabase'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,6 @@ import {
   BarChart3,
   Users,
   Target,
-  Settings,
   Home,
   Send,
   Menu,
@@ -141,33 +140,8 @@ function SidebarContent({
   setIsCollapsed: (collapsed: boolean) => void
   onCollapseChange?: (collapsed: boolean) => void
 }) {
-  const [workspaceWithPlan, setWorkspaceWithPlan] = useState<WorkspaceComPlano | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchWorkspacePermissions() {
-      if (!user?.id) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        // Buscar workspace atual do usuário via API local
-        const response = await fetch(`/api/workspaces/current?userId=${user.id}`)
-        const result = await response.json()
-
-        if (result.success && result.data) {
-          setWorkspaceWithPlan(result.data)
-        }
-      } catch (error) {
-        // Fallback silencioso - admin terá acesso total de qualquer forma
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchWorkspacePermissions()
-  }, [user?.id])
+  // Usar WorkspaceContext ao invés de fazer chamada de API separada
+  const { currentWorkspace, loading, hasFeatureAccess } = useWorkspaceContext()
 
   const filteredNavigation = navigation.filter(item => {
     const isAdmin = user?.role === 'admin'
@@ -183,12 +157,12 @@ function SidebarContent({
     }
 
     // Verificar se tem workspace com permissões
-    if (!workspaceWithPlan) {
+    if (!currentWorkspace) {
       return false
     }
 
-    // Verificar permissão do workspace
-    return hasWorkspaceFeatureAccess(workspaceWithPlan, item.feature)
+    // Verificar permissão do workspace usando o contexto
+    return hasFeatureAccess(item.feature)
   })
 
   return (

@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { UploadCloud, FileText, Image as ImageIcon, Video, Trash2, Loader2, FolderOpen } from 'lucide-react'
 import { useAuth } from '../../components/shared/AuthWrapper'
+import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 
 interface Arquivo {
   id: number
@@ -20,6 +21,7 @@ interface Arquivo {
 
 export default function ArquivosPage() {
   const { user } = useAuth()
+  const { workspaceId, loading: workspaceLoading } = useWorkspaceContext()
   const [arquivos, setArquivos] = useState<Arquivo[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -28,19 +30,23 @@ export default function ArquivosPage() {
   const [descricao, setDescricao] = useState('')
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !workspaceLoading) {
       fetchArquivos()
     }
-  }, [user])
+  }, [user, workspaceId, workspaceLoading])
 
   const fetchArquivos = async () => {
     if (!user?.id) return
 
     try {
-      console.log('[Frontend] Buscando arquivos - userId:', user.id, 'role:', user.role)
-      const response = await fetch(`/api/arquivos?userId=${user.id}&role=${user.role}`)
+      // Construir URL com workspaceId se disponível
+      let url = `/api/arquivos?userId=${user.id}`
+      if (workspaceId) {
+        url += `&workspaceId=${workspaceId}`
+      }
+
+      const response = await fetch(url)
       const data = await response.json()
-      console.log('[Frontend] Arquivos recebidos:', data.data?.length || 0)
       setArquivos(data.data || [])
     } catch (error) {
       console.error('Erro ao carregar arquivos:', error)
@@ -68,6 +74,9 @@ export default function ArquivosPage() {
     try {
       const formData = new FormData()
       formData.append('userId', user.id.toString())
+      if (workspaceId) {
+        formData.append('workspaceId', workspaceId.toString())
+      }
       formData.append('nomeProduto', nomeProduto)
       if (descricao) {
         formData.append('descricao', descricao)
@@ -110,7 +119,12 @@ export default function ArquivosPage() {
     }
 
     try {
-      const response = await fetch(`/api/arquivos?id=${id}&userId=${user.id}&role=${user.role}`, {
+      let url = `/api/arquivos?id=${id}&userId=${user.id}`
+      if (workspaceId) {
+        url += `&workspaceId=${workspaceId}`
+      }
+
+      const response = await fetch(url, {
         method: 'DELETE',
       })
 
