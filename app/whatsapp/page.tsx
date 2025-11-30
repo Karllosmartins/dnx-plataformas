@@ -1,6 +1,5 @@
 'use client'
 
-// Forçar renderização dinâmica para evitar erro de useContext no build
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
@@ -9,6 +8,20 @@ import { useWorkspaceContext } from '../../contexts/WorkspaceContext'
 import { supabase } from '../../lib/supabase'
 import { User } from '../../lib/auth'
 import { MessageCircle, Smartphone, QrCode, CheckCircle, AlertCircle, WifiOff, Eye, EyeOff, Trash2, RotateCcw, Plus } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 interface WhatsAppInstance {
   id: number
@@ -45,7 +58,6 @@ export default function WhatsAppPage() {
     }
   }, [user, workspaceId])
 
-  // Verificar status de cada instância via API
   const checkInstancesStatus = async (instancesToCheck: WhatsAppInstance[]) => {
     for (const instance of instancesToCheck) {
       try {
@@ -55,8 +67,6 @@ export default function WhatsAppPage() {
         if (data.success && data.data) {
           let status: 'created' | 'connecting' | 'connected' | 'disconnected' = 'disconnected'
 
-          // Mapear estados da UAZAPI para nossos estados
-          // UAZAPI retorna: connected, disconnected, connecting
           if (data.data.status_conexao === 'conectado' || data.data.api_status?.data?.status === 'connected') {
             status = 'connected'
           } else if (data.data.api_status?.data?.status === 'connecting') {
@@ -65,11 +75,8 @@ export default function WhatsAppPage() {
             status = 'disconnected'
           }
 
-          // Atualizar estado local
           setInstances(prev => prev.map(inst =>
-            inst.id === instance.id
-              ? { ...inst, status }
-              : inst
+            inst.id === instance.id ? { ...inst, status } : inst
           ))
         }
       } catch (error) {
@@ -80,7 +87,6 @@ export default function WhatsAppPage() {
 
   const loadUserInstances = async () => {
     try {
-      // Carregar informações do usuário (incluindo limite de instâncias)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('numero_instancias')
@@ -94,7 +100,6 @@ export default function WhatsAppPage() {
         })
       }
 
-      // Carregar instâncias existentes
       const { data: instancesData, error: instancesError } = await supabase
         .from('instancia_whtats')
         .select('*')
@@ -112,8 +117,6 @@ export default function WhatsAppPage() {
           apiKey: inst.apikey
         }))
         setInstances(mappedInstances)
-
-        // Verificar status real de cada instância
         checkInstancesStatus(mappedInstances)
       }
     } catch (error) {
@@ -132,11 +135,9 @@ export default function WhatsAppPage() {
     setCreating(true)
 
     try {
-      // Gerar nome da instância: nome + telefone limpo
       const telefoneClean = telefone.replace(/\D/g, '')
       const instanceName = nome.toLowerCase().replace(/\s+/g, '') + telefoneClean
 
-      // Criar instância via API route (que usa UAZAPI)
       const response = await fetch('/api/whatsapp/instances', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,7 +156,6 @@ export default function WhatsAppPage() {
         throw new Error(data.error || 'Erro ao criar instância')
       }
 
-      // Salvar na tabela instancia_whtats (se não foi salvo pela API)
       const { data: newInstance, error: saveError } = await supabase
         .from('instancia_whtats')
         .insert({
@@ -169,7 +169,6 @@ export default function WhatsAppPage() {
         .single()
 
       if (saveError) {
-        // Se já existe, buscar a instância criada
         const { data: existingInstance } = await supabase
           .from('instancia_whtats')
           .select('*')
@@ -177,7 +176,7 @@ export default function WhatsAppPage() {
           .single()
 
         if (existingInstance) {
-          const newInstanceObj = {
+          setInstances(prev => [{
             id: existingInstance.id,
             instanceName,
             nome,
@@ -185,12 +184,10 @@ export default function WhatsAppPage() {
             status: 'created' as const,
             baseUrl: existingInstance.baseurl,
             apiKey: existingInstance.apikey
-          }
-          setInstances(prev => [newInstanceObj, ...prev])
+          }, ...prev])
         }
       } else if (newInstance) {
-        // Adicionar à lista local
-        const newInstanceObj = {
+        setInstances(prev => [{
           id: newInstance.id,
           instanceName,
           nome,
@@ -198,13 +195,10 @@ export default function WhatsAppPage() {
           status: 'created' as const,
           baseUrl: newInstance.baseurl,
           apiKey: newInstance.apikey
-        }
-        setInstances(prev => [newInstanceObj, ...prev])
+        }, ...prev])
       }
 
       setShowCreateForm(false)
-
-      // Limpar formulário
       setNome('')
       setTelefone('')
       setSenha('')
@@ -224,7 +218,6 @@ export default function WhatsAppPage() {
     setConnecting(true)
 
     try {
-      // Conectar via API route (que usa UAZAPI)
       const response = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,35 +230,23 @@ export default function WhatsAppPage() {
         throw new Error(data.error || 'Erro ao conectar instância')
       }
 
-      let qrCodeData: string | null = null
-
-      // Verificar se já está conectado
       if (data.data?.status === 'connected') {
         setInstances(prev => prev.map(inst =>
-          inst.id === instance.id
-            ? { ...inst, status: 'connected' }
-            : inst
+          inst.id === instance.id ? { ...inst, status: 'connected' } : inst
         ))
-
-        setSelectedInstance(prev => prev ? {
-          ...prev,
-          status: 'connected'
-        } : null)
-
+        setSelectedInstance(prev => prev ? { ...prev, status: 'connected' } : null)
         alert('WhatsApp já está conectado!')
         return
       }
 
-      // Buscar QR Code na resposta
+      let qrCodeData: string | null = null
       if (data.data?.qrCode) {
         qrCodeData = data.data.qrCode
-        // Garantir que tenha o prefixo correto
         if (qrCodeData && !qrCodeData.startsWith('data:image')) {
           qrCodeData = `data:image/png;base64,${qrCodeData}`
         }
       }
 
-      // Atualizar instância local
       setInstances(prev => prev.map(inst =>
         inst.id === instance.id
           ? { ...inst, status: 'connecting', qrCode: qrCodeData || undefined }
@@ -284,7 +265,6 @@ export default function WhatsAppPage() {
         alert('QR Code não foi gerado. Tente novamente em alguns segundos.')
       }
 
-      // Iniciar polling do status de conexão
       startConnectionPolling(instance)
 
     } catch (error) {
@@ -302,18 +282,13 @@ export default function WhatsAppPage() {
       }
 
       try {
-        // Verificar status via API
         const response = await fetch(`/api/whatsapp/status?instanceId=${instance.id}`)
         const data = await response.json()
 
         if (data.success && data.data) {
-          // Verificar se conectou (UAZAPI retorna status: connected)
           if (data.data.status_conexao === 'conectado' || data.data.api_status?.data?.status === 'connected') {
-            // Atualizar instância local
             setInstances(prev => prev.map(inst =>
-              inst.id === instance.id
-                ? { ...inst, status: 'connected' }
-                : inst
+              inst.id === instance.id ? { ...inst, status: 'connected' } : inst
             ))
 
             if (selectedInstance?.id === instance.id) {
@@ -328,21 +303,16 @@ export default function WhatsAppPage() {
       } catch (error) {
         // Continue polling despite errors
       }
-    }, 3000) // Verificar a cada 3 segundos
+    }, 3000)
 
-    // Limpar polling após 5 minutos para evitar loops infinitos
-    setTimeout(() => {
-      clearInterval(pollInterval)
-    }, 300000)
+    setTimeout(() => clearInterval(pollInterval), 300000)
   }
 
   const deleteInstance = async (instance: WhatsAppInstance) => {
     if (!instance) return
-
-    if (!confirm('Tem certeza que deseja deletar completamente esta instância? Esta ação não pode ser desfeita.')) return
+    if (!confirm('Tem certeza que deseja deletar esta instância? Esta ação não pode ser desfeita.')) return
 
     try {
-      // Deletar via API route (que usa UAZAPI)
       const response = await fetch(`/api/whatsapp/instances?instanceId=${instance.id}`, {
         method: 'DELETE'
       })
@@ -353,17 +323,11 @@ export default function WhatsAppPage() {
         throw new Error(data.error || 'Erro ao deletar instância')
       }
 
-      // Remover da tabela instancia_whtats
-      const { error: deleteError } = await supabase
+      await supabase
         .from('instancia_whtats')
         .delete()
         .eq('id', instance.id)
 
-      if (deleteError) {
-        console.error('Erro ao remover do banco:', deleteError)
-      }
-
-      // Remover da lista local
       setInstances(prev => prev.filter(inst => inst.id !== instance.id))
 
       if (selectedInstance?.id === instance.id) {
@@ -378,6 +342,24 @@ export default function WhatsAppPage() {
     }
   }
 
+  const canCreateMore = () => {
+    const maxInstances = userInfo?.numero_instancias || 1
+    return instances.length < maxInstances
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="h-3 w-3 mr-1" /> Conectado</Badge>
+      case 'connecting':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><AlertCircle className="h-3 w-3 mr-1" /> Conectando...</Badge>
+      case 'created':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><Smartphone className="h-3 w-3 mr-1" /> Criado</Badge>
+      default:
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><WifiOff className="h-3 w-3 mr-1" /> Desconectado</Badge>
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -386,308 +368,208 @@ export default function WhatsAppPage() {
     )
   }
 
-  // Verificar se pode criar mais instâncias
-  const canCreateMore = () => {
-    const maxInstances = userInfo?.numero_instancias || 0
-    return instances.length < maxInstances
-  }
-
   return (
-    <div className="space-y-8">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <MessageCircle className="h-8 w-8 mr-3 text-green-600" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <MessageCircle className="h-8 w-8 text-green-600" />
             WhatsApp
           </h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Configure suas conexões WhatsApp com UAZAPI
+          <p className="mt-1 text-sm text-gray-500">
+            Gerencie suas conexões WhatsApp
           </p>
-          {userInfo && (
-            <p className="mt-1 text-xs text-gray-500">
-              Instâncias: {instances.length} / {userInfo.numero_instancias || 0}
-            </p>
-          )}
         </div>
 
         {canCreateMore() && (
-          <div className="mt-4 sm:mt-0">
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Nova Instância
-            </button>
-          </div>
+          <Button onClick={() => setShowCreateForm(true)} className="bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Instância
+          </Button>
         )}
       </div>
 
+      {/* Lista de Instâncias ou Estado Vazio */}
       {instances.length === 0 ? (
-        // Estado inicial - Nenhuma instância
-        <div className="text-center py-12">
-          <MessageCircle className="h-16 w-16 text-green-400 mx-auto mb-6" />
-          <h3 className="text-xl font-medium text-gray-900 mb-4">Configure seu primeiro WhatsApp</h3>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            {userInfo?.numero_instancias ?
-              `Você pode criar até ${userInfo.numero_instancias} instâncias WhatsApp.` :
-              'Crie sua primeira instância WhatsApp para começar.'
-            }
-          </p>
-          {canCreateMore() && (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
-            >
-              <MessageCircle className="h-5 w-5 mr-2" />
-              Criar Instância WhatsApp
-            </button>
-          )}
-        </div>
+        <Card className="text-center py-12">
+          <CardContent className="pt-6">
+            <MessageCircle className="h-16 w-16 text-green-400 mx-auto mb-6" />
+            <h3 className="text-xl font-medium text-gray-900 mb-2">Configure seu primeiro WhatsApp</h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              Crie sua primeira instância WhatsApp para começar a enviar e receber mensagens.
+            </p>
+            {canCreateMore() && (
+              <Button onClick={() => setShowCreateForm(true)} className="bg-green-600 hover:bg-green-700">
+                <MessageCircle className="h-5 w-5 mr-2" />
+                Criar Instância
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
-        // Mostrar lista de instâncias
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {instances.map((instance) => (
-            <div key={instance.id} className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="sm:flex sm:items-start sm:justify-between">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Smartphone className="h-12 w-12 text-green-600" />
+            <Card key={instance.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Smartphone className="h-6 w-6 text-green-600" />
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-gray-900">{instance.instanceName}</h3>
-                      <div className="mt-1 flex items-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          instance.status === 'connected'
-                            ? 'bg-green-100 text-green-800'
-                            : instance.status === 'connecting'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : instance.status === 'created'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {instance.status === 'connected' && <><CheckCircle className="h-3 w-3 mr-1" /> Conectado</>}
-                          {instance.status === 'connecting' && <><AlertCircle className="h-3 w-3 mr-1" /> Conectando...</>}
-                          {instance.status === 'created' && <><Smartphone className="h-3 w-3 mr-1" /> Criado</>}
-                          {instance.status === 'disconnected' && <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>}
-                        </span>
+                    <div>
+                      <CardTitle className="text-lg">{instance.instanceName}</CardTitle>
+                      <div className="mt-1">
+                        {getStatusBadge(instance.status)}
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-5 sm:mt-0 sm:ml-6 sm:flex-shrink-0 sm:flex sm:items-center space-x-3">
-                    {instance.status === 'created' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setSelectedInstance(instance)
-                            generateQrCode(instance)
-                          }}
-                          disabled={connecting}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                        >
-                          <QrCode className="h-4 w-4 mr-2" />
-                          {connecting ? 'Gerando...' : 'Gerar QR Code'}
-                        </button>
-                        <button
-                          onClick={() => deleteInstance(instance)}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar
-                        </button>
-                      </>
+                  <div className="flex items-center gap-2">
+                    {(instance.status === 'created' || instance.status === 'disconnected') && (
+                      <Button
+                        onClick={() => {
+                          setSelectedInstance(instance)
+                          generateQrCode(instance)
+                        }}
+                        disabled={connecting}
+                        variant={instance.status === 'disconnected' ? 'outline' : 'default'}
+                        className={instance.status === 'created' ? 'bg-green-600 hover:bg-green-700' : ''}
+                      >
+                        {instance.status === 'disconnected' ? (
+                          <><RotateCcw className="h-4 w-4 mr-2" />{connecting ? 'Reconectando...' : 'Reconectar'}</>
+                        ) : (
+                          <><QrCode className="h-4 w-4 mr-2" />{connecting ? 'Gerando...' : 'Conectar'}</>
+                        )}
+                      </Button>
                     )}
 
                     {instance.status === 'connecting' && (
-                      <div className="text-sm text-blue-600">
-                        Conectando... Escaneie o QR Code no seu celular.
-                      </div>
+                      <span className="text-sm text-blue-600">Escaneie o QR Code...</span>
                     )}
 
-                    {instance.status === 'connected' && (
-                      <>
-                        <div className="text-sm text-green-600 font-medium">
-                          Conectado ✓
-                        </div>
-                        <button
-                          onClick={() => deleteInstance(instance)}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar
-                        </button>
-                      </>
-                    )}
-
-                    {instance.status === 'disconnected' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setSelectedInstance(instance)
-                            generateQrCode(instance)
-                          }}
-                          disabled={connecting}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          {connecting ? 'Reconectando...' : 'Reconectar'}
-                        </button>
-                        <button
-                          onClick={() => deleteInstance(instance)}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar
-                        </button>
-                      </>
-                    )}
+                    <Button
+                      onClick={() => deleteInstance(instance)}
+                      variant="destructive"
+                      size="icon"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                {instance.status === 'connected' && (
-                  <div className="mt-6 border-t border-gray-200 pt-6">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Informações da Instância</h4>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <dt className="text-sm text-gray-500">Nome da Instância</dt>
-                        <dd className="mt-1 text-sm text-gray-900">{instance.instanceName}</dd>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              </CardHeader>
+            </Card>
           ))}
         </div>
       )}
 
       {/* Modal QR Code */}
-      {showQrCode && selectedInstance?.qrCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowQrCode(false)}></div>
-          <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10">
-            <h3 className="text-lg font-medium text-center mb-4">Conectar WhatsApp</h3>
-            <div className="text-center">
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <img
-                  src={selectedInstance.qrCode}
-                  alt="QR Code WhatsApp"
-                  className="mx-auto w-48 h-48 border border-gray-200"
-                />
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Abra o WhatsApp no seu celular e escaneie este código QR
-              </p>
-              <button
-                onClick={() => setShowQrCode(false)}
-                className="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-              >
-                Fechar
-              </button>
-            </div>
+      <Dialog open={showQrCode && !!selectedInstance?.qrCode} onOpenChange={setShowQrCode}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Conectar WhatsApp</DialogTitle>
+            <DialogDescription>
+              Escaneie o QR Code abaixo com seu WhatsApp
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center p-4">
+            {selectedInstance?.qrCode && (
+              <img
+                src={selectedInstance.qrCode}
+                alt="QR Code WhatsApp"
+                className="w-64 h-64 border rounded-lg"
+              />
+            )}
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQrCode(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Criar Instância */}
-      {showCreateForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowCreateForm(false)}></div>
-          <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10">
-            <h3 className="text-lg font-medium mb-6">Criar Instância WhatsApp</h3>
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Instância WhatsApp</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para criar uma nova conexão
+            </DialogDescription>
+          </DialogHeader>
 
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome *
-                </label>
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Ex: Karllos"
-                  required
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome</Label>
+              <Input
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex: Minha Empresa"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                id="telefone"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                placeholder="Ex: 62999999999"
+              />
+              <p className="text-xs text-gray-500">Digite apenas números</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="senha">Token/Senha</Label>
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={showPassword ? 'text' : 'password'}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="Digite uma senha segura"
+                  className="pr-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                </button>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone *
-                </label>
-                <input
-                  type="text"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Ex: 62981048778"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Digite apenas números</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Senha/Token *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Digite uma senha segura"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 p-3 rounded-md">
+            {nome && telefone && (
+              <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-xs text-blue-800">
-                  <strong>Nome da instância:</strong> {nome && telefone ?
-                    nome.toLowerCase().replace(/\s+/g, '') + telefone.replace(/\D/g, '') :
-                    'Preencha nome e telefone'
-                  }
+                  <strong>Nome da instância:</strong> {nome.toLowerCase().replace(/\s+/g, '') + telefone.replace(/\D/g, '')}
                 </p>
               </div>
-            </form>
-
-            <div className="mt-6 flex space-x-3">
-              <button
-                onClick={createInstance}
-                disabled={creating || !nome.trim() || !telefone.trim() || !senha.trim()}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400"
-              >
-                {creating ? 'Criando...' : 'Criar Instância'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateForm(false)
-                  setNome('')
-                  setTelefone('')
-                  setSenha('')
-                }}
-                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-              >
-                Cancelar
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => {
+              setShowCreateForm(false)
+              setNome('')
+              setTelefone('')
+              setSenha('')
+            }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={createInstance}
+              disabled={creating || !nome.trim() || !telefone.trim() || !senha.trim()}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {creating ? 'Criando...' : 'Criar Instância'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
