@@ -73,14 +73,17 @@ export async function POST(request: NextRequest) {
       workspace_id,
       workspace_role = 'member',
       cpf,
-      telefone
+      telefone,
+      active = true,
+      skip_workspace = false // Permitir criar usuário sem workspace (para donos de novos workspaces)
     } = body
 
     if (!name || !email || !password) {
       throw ApiError.badRequest('Nome, email e senha são obrigatórios', 'MISSING_FIELDS')
     }
 
-    if (!workspace_id) {
+    // Workspace só é obrigatório se não for skip_workspace
+    if (!workspace_id && !skip_workspace) {
       throw ApiError.badRequest('Workspace é obrigatório', 'MISSING_WORKSPACE')
     }
 
@@ -106,29 +109,31 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         role,
-        active: true,
+        active,
         cpf: cpf || null,
         telefone: telefone || null,
-        current_workspace_id: workspace_id
+        current_workspace_id: workspace_id || null
       })
       .select()
       .single()
 
     if (userError) throw userError
 
-    // Adicionar usuário ao workspace
-    const { error: memberError } = await supabase
-      .from('workspace_members')
-      .insert({
-        workspace_id,
-        user_id: newUser.id,
-        role: workspace_role
-      })
+    // Adicionar usuário ao workspace (se workspace_id foi fornecido)
+    if (workspace_id) {
+      const { error: memberError } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id,
+          user_id: newUser.id,
+          role: workspace_role
+        })
 
-    if (memberError) {
-      // Se falhar ao adicionar membro, excluir usuário criado
-      await supabase.from('users').delete().eq('id', newUser.id)
-      throw memberError
+      if (memberError) {
+        // Se falhar ao adicionar membro, excluir usuário criado
+        await supabase.from('users').delete().eq('id', newUser.id)
+        throw memberError
+      }
     }
 
     // Retornar usuário sem a senha
@@ -136,8 +141,8 @@ export async function POST(request: NextRequest) {
 
     return ApiResponse.created({
       ...userWithoutPassword,
-      workspace_id,
-      workspace_role
+      workspace_id: workspace_id || null,
+      workspace_role: workspace_id ? workspace_role : null
     })
   } catch (error) {
     return handleApiError(error)

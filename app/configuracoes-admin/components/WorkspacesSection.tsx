@@ -25,7 +25,11 @@ import {
   Crown,
   ToggleLeft,
   ToggleRight,
-  Wrench
+  Wrench,
+  User,
+  Mail,
+  Phone,
+  Lock
 } from 'lucide-react'
 
 interface Plano {
@@ -205,6 +209,49 @@ export default function WorkspacesSection() {
 
   const handleCreateWorkspace = async (workspaceData: any) => {
     try {
+      let ownerId: number | null = null
+
+      // Se for criar novo usuário dono
+      if (workspaceData.criar_novo_dono && workspaceData.dono_nome && workspaceData.dono_email && workspaceData.dono_senha) {
+        // Verificar se email já existe
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', workspaceData.dono_email)
+          .single()
+
+        if (existingUser) {
+          alert('Já existe um usuário com este email. Selecione um usuário existente ou use outro email.')
+          return
+        }
+
+        // Criar usuário via API (sem workspace, será adicionado depois)
+        const createUserResponse = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: workspaceData.dono_nome,
+            email: workspaceData.dono_email,
+            password: workspaceData.dono_senha,
+            telefone: workspaceData.dono_telefone || null,
+            role: 'user',
+            active: true,
+            skip_workspace: true // Pular criação de membership, será feito após criar o workspace
+          })
+        })
+
+        const createUserResult = await createUserResponse.json()
+
+        if (!createUserResult.success || !createUserResult.data) {
+          throw new Error(createUserResult.error || 'Erro ao criar usuário dono')
+        }
+
+        ownerId = createUserResult.data.id
+      } else if (workspaceData.dono_existente_id) {
+        // Usar usuário existente selecionado
+        ownerId = parseInt(workspaceData.dono_existente_id)
+      }
+
       // Criar workspace
       const { data: newWs, error: wsError } = await supabase
         .from('workspaces')
@@ -213,6 +260,7 @@ export default function WorkspacesSection() {
           slug: workspaceData.slug,
           plano_id: workspaceData.plano_id || null,
           ativo: workspaceData.ativo ?? true,
+          owner_id: ownerId,
           limite_leads: workspaceData.limite_leads || 1000,
           limite_consultas: workspaceData.limite_consultas || 100,
           limite_instancias: workspaceData.limite_instancias || 1,
@@ -222,6 +270,33 @@ export default function WorkspacesSection() {
         .single()
 
       if (wsError) throw wsError
+
+      // Adicionar dono como membro do workspace
+      if (ownerId) {
+        const { error: memberError } = await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: newWs.id,
+            user_id: ownerId,
+            role: 'owner',
+            permissions: {
+              leads: { create: true, read: true, update: true, delete: true },
+              whatsapp: { create: true, read: true, update: true, delete: true },
+              members: { invite: true, remove: true, update_roles: true },
+              workspace: { update: true, delete: true }
+            }
+          })
+
+        if (memberError) {
+          console.error('Erro ao adicionar dono como membro:', memberError)
+        }
+
+        // Atualizar current_workspace_id do usuário dono
+        await supabase
+          .from('users')
+          .update({ current_workspace_id: newWs.id })
+          .eq('id', ownerId)
+      }
 
       // Criar credenciais se fornecidas
       if (workspaceData.openai_api_token || workspaceData.gemini_api_key || workspaceData.elevenlabs_api_key) {
@@ -251,8 +326,9 @@ export default function WorkspacesSection() {
       }
 
       await fetchWorkspaces()
+      await fetchAllUsers() // Atualizar lista de usuários
       setShowNewWorkspace(false)
-      alert('Workspace criado com sucesso!')
+      alert('Workspace criado com sucesso!' + (ownerId ? ' Usuário dono adicionado.' : ''))
     } catch (error) {
       console.error('Erro ao criar workspace:', error)
       alert(error instanceof Error ? error.message : 'Erro ao criar workspace')
@@ -597,6 +673,7 @@ export default function WorkspacesSection() {
         {showNewWorkspace && (
           <NovoWorkspaceCard
             planos={planos}
+            allUsers={allUsers}
             onSave={handleCreateWorkspace}
             onCancel={() => setShowNewWorkspace(false)}
           />
@@ -1268,13 +1345,15 @@ function WorkspaceCard({
 
 interface NovoWorkspaceCardProps {
   planos: Plano[]
+  allUsers: Usuario[]
   onSave: (data: any) => void
   onCancel: () => void
 }
 
-function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps) {
-  const [activeTab, setActiveTab] = useState('basico')
+function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspaceCardProps) {
+  const [activeTab, setActiveTab] = useState('dono')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  const [criarNovoDono, setCriarNovoDono] = useState(true)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -1289,7 +1368,13 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
     elevenlabs_api_key: '',
     elevenlabs_voice_id: '',
     datecode_username: '',
-    datecode_password: ''
+    datecode_password: '',
+    // Campos do dono
+    dono_nome: '',
+    dono_email: '',
+    dono_telefone: '',
+    dono_senha: '',
+    dono_existente_id: ''
   })
 
   const togglePasswordVisibility = (field: string) => {
@@ -1300,6 +1385,18 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
     if (!formData.name.trim() || !formData.slug.trim()) {
       alert('Nome e Slug são obrigatórios')
       return
+    }
+
+    // Validar dados do dono
+    if (criarNovoDono) {
+      if (!formData.dono_nome.trim() || !formData.dono_email.trim() || !formData.dono_senha.trim()) {
+        alert('Para criar novo dono, preencha Nome, Email e Senha')
+        return
+      }
+      if (formData.dono_senha.length < 6) {
+        alert('A senha deve ter pelo menos 6 caracteres')
+        return
+      }
     }
 
     onSave({
@@ -1315,11 +1412,19 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
       elevenlabs_api_key: formData.elevenlabs_api_key || undefined,
       elevenlabs_voice_id: formData.elevenlabs_voice_id || undefined,
       datecode_username: formData.datecode_username || undefined,
-      datecode_password: formData.datecode_password || undefined
+      datecode_password: formData.datecode_password || undefined,
+      // Dados do dono
+      criar_novo_dono: criarNovoDono,
+      dono_nome: formData.dono_nome || undefined,
+      dono_email: formData.dono_email || undefined,
+      dono_telefone: formData.dono_telefone || undefined,
+      dono_senha: formData.dono_senha || undefined,
+      dono_existente_id: formData.dono_existente_id || undefined
     })
   }
 
   const tabs = [
+    { id: 'dono', label: 'Dono', icon: Crown },
     { id: 'basico', label: 'Informações', icon: Building },
     { id: 'limites', label: 'Limites', icon: Settings },
     { id: 'credenciais', label: 'APIs de IA', icon: Bot },
@@ -1357,6 +1462,155 @@ function NovoWorkspaceCard({ planos, onSave, onCancel }: NovoWorkspaceCardProps)
 
         {/* Tab Content */}
         <div className="space-y-4">
+          {activeTab === 'dono' && (
+            <div className="space-y-4">
+              <div className="flex items-center mb-4">
+                <Crown className="h-5 w-5 mr-2 text-yellow-600" />
+                <h4 className="text-lg font-medium text-gray-900">Usuário Dono do Workspace</h4>
+              </div>
+
+              {/* Toggle criar novo ou selecionar existente */}
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    checked={criarNovoDono}
+                    onChange={() => {
+                      setCriarNovoDono(true)
+                      setFormData({ ...formData, dono_existente_id: '' })
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-900">Criar novo usuário</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    checked={!criarNovoDono}
+                    onChange={() => {
+                      setCriarNovoDono(false)
+                      setFormData({
+                        ...formData,
+                        dono_nome: '',
+                        dono_email: '',
+                        dono_telefone: '',
+                        dono_senha: ''
+                      })
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-900">Selecionar usuário existente</span>
+                </label>
+              </div>
+
+              {criarNovoDono ? (
+                <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+                  <h5 className="text-sm font-medium text-gray-700 flex items-center">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Criar Novo Usuário Dono
+                  </h5>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <User className="inline h-4 w-4 mr-1" />
+                        Nome Completo *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.dono_nome}
+                        onChange={(e) => setFormData({ ...formData, dono_nome: e.target.value })}
+                        className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Nome do responsável"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Mail className="inline h-4 w-4 mr-1" />
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.dono_email}
+                        onChange={(e) => setFormData({ ...formData, dono_email: e.target.value })}
+                        className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="email@empresa.com"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Phone className="inline h-4 w-4 mr-1" />
+                        Telefone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.dono_telefone}
+                        onChange={(e) => setFormData({ ...formData, dono_telefone: e.target.value })}
+                        className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Lock className="inline h-4 w-4 mr-1" />
+                        Senha *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPasswords.dono_senha ? 'text' : 'password'}
+                          value={formData.dono_senha}
+                          onChange={(e) => setFormData({ ...formData, dono_senha: e.target.value })}
+                          className="w-full text-sm border border-gray-300 rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Mínimo 6 caracteres"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility('dono_senha')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showPasswords.dono_senha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-2">
+                    * Este usuário será criado automaticamente e terá acesso total ao workspace como Dono.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    Selecionar Usuário Existente
+                  </h5>
+
+                  <select
+                    value={formData.dono_existente_id}
+                    onChange={(e) => setFormData({ ...formData, dono_existente_id: e.target.value })}
+                    className="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione um usuário...</option>
+                    {allUsers.filter(u => u.active).map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+
+                  {allUsers.length === 0 && (
+                    <p className="text-sm text-yellow-600 mt-2">
+                      Nenhum usuário cadastrado. Crie um novo usuário acima.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'basico' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
