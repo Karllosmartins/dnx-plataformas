@@ -150,10 +150,16 @@ export async function POST(request: NextRequest) {
       }
 
       // Salvar também na tabela instancia_whtats
-      await getSupabaseAdmin()
+      console.log('Atualizando instancia_whtats (upsert):', {
+        user_id: userId,
+        workspace_id: workspaceId || null,
+        instancia: instanceName
+      })
+
+      const { data: upsertData, error: upsertError } = await getSupabaseAdmin()
         .from('instancia_whtats')
         .upsert({
-          user_id: parseInt(userId),
+          user_id: userId,
           workspace_id: workspaceId || null,
           instancia: instanceName,
           apikey: instanceToken,
@@ -162,6 +168,14 @@ export async function POST(request: NextRequest) {
         }, {
           onConflict: 'workspace_id,instancia'
         })
+        .select()
+        .single()
+
+      if (upsertError) {
+        console.error('Erro no upsert instancia_whtats:', upsertError)
+      } else {
+        console.log('Upsert bem sucedido:', upsertData)
+      }
 
       return NextResponse.json({
         success: true,
@@ -198,10 +212,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Salvar também na tabela instancia_whtats
+      console.log('Salvando em instancia_whtats:', {
+        user_id: userId,
+        workspace_id: workspaceId || null,
+        instancia: instanceName,
+        apikey: instanceToken ? '***' : 'VAZIO',
+        baseurl: DEFAULT_UAZAPI_CONFIG.baseUrl
+      })
+
       const { data: newInstancia, error: instanciaError } = await getSupabaseAdmin()
         .from('instancia_whtats')
         .insert({
-          user_id: parseInt(userId),
+          user_id: userId,
           workspace_id: workspaceId || null,
           instancia: instanceName,
           apikey: instanceToken,
@@ -213,6 +235,8 @@ export async function POST(request: NextRequest) {
 
       if (instanciaError) {
         console.error('Erro ao salvar em instancia_whtats:', instanciaError)
+      } else {
+        console.log('Instância salva com sucesso:', newInstancia)
       }
 
       return NextResponse.json({
@@ -254,6 +278,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar todas as instâncias da tabela instancia_whtats
+    console.log('Buscando instâncias:', { userId, workspaceId })
+
     let query = getSupabaseAdmin()
       .from('instancia_whtats')
       .select('*')
@@ -262,16 +288,19 @@ export async function GET(request: NextRequest) {
     if (workspaceId) {
       query = query.eq('workspace_id', workspaceId)
     } else {
-      query = query.eq('user_id', parseInt(userId))
+      query = query.eq('user_id', userId)
     }
 
     const { data: instancias, error } = await query
+
+    console.log('Resultado da busca:', { instancias, error })
 
     if (error) {
       throw error
     }
 
     if (!instancias || instancias.length === 0) {
+      console.log('Nenhuma instância encontrada')
       return NextResponse.json({
         success: true,
         instances: []
