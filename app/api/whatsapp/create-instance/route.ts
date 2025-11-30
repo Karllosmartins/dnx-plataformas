@@ -395,12 +395,14 @@ export async function PUT(request: NextRequest) {
 }
 
 // =====================================================
-// DELETE - Desconectar instância WhatsApp
+// DELETE - Desconectar ou Excluir instância WhatsApp
+// action: 'disconnect' - apenas desconecta a sessão
+// action: 'delete' - exclui completamente da UAZAPI e do banco
 // =====================================================
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()
-    const { instanceId, action } = body
+    const { instanceId, action = 'disconnect' } = body
 
     if (!instanceId) {
       return NextResponse.json(
@@ -423,10 +425,10 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Se é API oficial, não permite desconectar
+    // Se é API oficial, não permite desconectar/excluir
     if (instancia.is_official_api) {
       return NextResponse.json(
-        { error: 'Não é possível desconectar a API oficial' },
+        { error: 'Não é possível modificar a API oficial por esta rota' },
         { status: 400 }
       )
     }
@@ -441,7 +443,35 @@ export async function DELETE(request: NextRequest) {
 
     const uazapiClient = createUazapiInstance(instancia.apikey, instancia.baseurl)
 
-    // Desconectar via UAZAPI
+    // Ação: DELETE - Excluir completamente
+    if (action === 'delete') {
+      console.log('Excluindo instância:', instancia.instancia)
+
+      // Primeiro deletar da UAZAPI
+      const deleteResult = await uazapiClient.delete()
+      console.log('Resultado da exclusão UAZAPI:', deleteResult)
+
+      // Mesmo se falhar na UAZAPI, remover do banco local
+      const { error: deleteDbError } = await getSupabaseAdmin()
+        .from('instancia_whtats')
+        .delete()
+        .eq('id', instanceId)
+
+      if (deleteDbError) {
+        console.error('Erro ao excluir do banco:', deleteDbError)
+        return NextResponse.json(
+          { error: 'Instância removida da UAZAPI mas falhou ao excluir do banco', details: deleteDbError.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Instância excluída com sucesso'
+      })
+    }
+
+    // Ação: DISCONNECT - Apenas desconectar sessão
     console.log('Desconectando instância:', instancia.instancia)
     const disconnectResult = await uazapiClient.disconnect()
     console.log('Resultado da desconexão:', disconnectResult)
@@ -452,10 +482,10 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao desconectar instância:', error)
+    console.error('Erro ao processar instância:', error)
 
     return NextResponse.json(
-      { error: 'Erro ao desconectar instância', details: (error as Error).message },
+      { error: 'Erro ao processar instância', details: (error as Error).message },
       { status: 500 }
     )
   }

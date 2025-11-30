@@ -49,6 +49,7 @@ export default function WhatsAppPage() {
   const [creating, setCreating] = useState(false)
   const [connecting, setConnecting] = useState<number | null>(null)
   const [disconnecting, setDisconnecting] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null)
   const [showQrCode, setShowQrCode] = useState(false)
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null)
 
@@ -260,6 +261,43 @@ export default function WhatsAppPage() {
     }
   }
 
+  const deleteInstance = async (instance: WhatsAppInstance) => {
+    if (instance.isOfficialApi) {
+      alert('Não é possível excluir a API oficial por esta interface.')
+      return
+    }
+
+    if (!confirm(`Tem certeza que deseja EXCLUIR a instância "${instance.instanceName}"?\n\nEsta ação é irreversível e removerá a instância da UAZAPI e do sistema.`)) {
+      return
+    }
+
+    setDeleting(instance.id)
+
+    try {
+      const response = await fetch('/api/whatsapp/create-instance', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId: instance.id, action: 'delete' })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao excluir')
+      }
+
+      // Remover da lista local
+      setInstances(prev => prev.filter(inst => inst.id !== instance.id))
+
+      alert('Instância excluída com sucesso!')
+
+    } catch (error) {
+      alert(`Erro ao excluir: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   const canCreateMore = () => {
     const maxInstances = workspaceInfo?.limite_instancias || 1
     return instances.length < maxInstances
@@ -394,10 +432,22 @@ export default function WhatsAppPage() {
                         onClick={() => disconnectInstance(instance)}
                         disabled={disconnecting === instance.id}
                         variant="outline"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                       >
                         <LogOut className="h-4 w-4 mr-2" />
                         {disconnecting === instance.id ? 'Desconectando...' : 'Desconectar'}
+                      </Button>
+                    )}
+
+                    {!instance.isOfficialApi && (
+                      <Button
+                        onClick={() => deleteInstance(instance)}
+                        disabled={deleting === instance.id}
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {deleting === instance.id ? 'Excluindo...' : 'Excluir'}
                       </Button>
                     )}
                   </div>
