@@ -15,6 +15,9 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud3hia3l2bnJqZGVycWR5Z3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjA2MzAzNCwiZXhwIjoyMDcxNjM5MDM0fQ.BxADhNw1F84N_YVV7EQC8OHJlE6StJx0lqjZxjHRRD8
       - DATECODE_USERNAME=karllosdkma1@gmail.com
       - DATECODE_PASSWORD=dnmkt@123
+      # UAZAPI WhatsApp Configuration
+      - UAZAPI_BASE_URL=https://dnxplataforma.uazapi.com
+      - UAZAPI_ADMIN_TOKEN=qjFnbrGWTpVUVFkYwLzgtNGzIPu5xmfsIpf0cbnJEs7mI3VR4L
     deploy:
       mode: replicated
       replicas: 1
