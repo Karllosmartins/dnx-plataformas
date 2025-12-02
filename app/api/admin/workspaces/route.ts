@@ -163,9 +163,9 @@ export async function POST(request: NextRequest) {
         plano_id: plano_id || null,
         ativo,
         owner_id: owner_id || null,
-        limite_leads: limite_leads || 1000,
-        limite_consultas: limite_consultas || 100,
-        limite_instancias: limite_instancias || 1,
+        limite_leads: limite_leads ?? 1000,
+        limite_consultas: limite_consultas ?? 100,
+        limite_instancias: limite_instancias ?? 1,
         leads_consumidos: 0,
         consultas_realizadas: 0,
         instancias_ativas: 0
@@ -175,8 +175,9 @@ export async function POST(request: NextRequest) {
 
     if (wsError) throw wsError
 
-    // Criar configurações de credenciais se fornecidas
-    if (openai_api_token || gemini_api_key || elevenlabs_api_key) {
+    // Criar configurações de credenciais se alguma foi fornecida
+    const hasAnyCredential = openai_api_token || gemini_api_key || elevenlabs_api_key || elevenlabs_voice_id
+    if (hasAnyCredential) {
       const { error: configError } = await supabase
         .from('configuracoes_credenciais')
         .insert({

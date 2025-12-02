@@ -261,9 +261,9 @@ export default function WorkspacesSection() {
           plano_id: workspaceData.plano_id || null,
           ativo: workspaceData.ativo ?? true,
           owner_id: ownerId,
-          limite_leads: workspaceData.limite_leads || 1000,
-          limite_consultas: workspaceData.limite_consultas || 100,
-          limite_instancias: workspaceData.limite_instancias || 1,
+          limite_leads: workspaceData.limite_leads ?? 1000,
+          limite_consultas: workspaceData.limite_consultas ?? 100,
+          limite_instancias: workspaceData.limite_instancias ?? 1,
           plano_customizado: workspaceData.plano_customizado || null
         })
         .select()
@@ -298,8 +298,13 @@ export default function WorkspacesSection() {
           .eq('id', ownerId)
       }
 
-      // Criar credenciais se fornecidas
-      if (workspaceData.openai_api_token || workspaceData.gemini_api_key || workspaceData.elevenlabs_api_key) {
+      // Criar credenciais - sempre criar registro para o workspace
+      const hasAnyCredential = workspaceData.openai_api_token ||
+                               workspaceData.gemini_api_key ||
+                               workspaceData.elevenlabs_api_key ||
+                               workspaceData.elevenlabs_voice_id
+
+      if (hasAnyCredential) {
         await supabase
           .from('configuracoes_credenciais')
           .insert({
