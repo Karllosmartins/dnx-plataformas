@@ -182,7 +182,6 @@ export async function POST(request: NextRequest) {
         .from('configuracoes_credenciais')
         .insert({
           workspace_id: newWorkspace.id,
-          cliente: name,
           openai_api_token: openai_api_token || null,
           gemini_api_key: gemini_api_key || null,
           apikey_elevenlabs: elevenlabs_api_key || null,
@@ -190,6 +189,7 @@ export async function POST(request: NextRequest) {
         })
 
       if (configError) {
+        console.error('Erro ao criar configuracoes_credenciais:', configError)
       }
     }
 

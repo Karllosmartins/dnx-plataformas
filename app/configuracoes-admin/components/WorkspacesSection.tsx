@@ -309,7 +309,6 @@ export default function WorkspacesSection() {
           .from('configuracoes_credenciais')
           .insert({
             workspace_id: newWs.id,
-            cliente: workspaceData.name,
             openai_api_token: workspaceData.openai_api_token || null,
             gemini_api_key: workspaceData.gemini_api_key || null,
             apikey_elevenlabs: workspaceData.elevenlabs_api_key || null,
