@@ -503,26 +503,40 @@ export default function ExtracaoLeadsPage() {
         ? cleanObject(filtrosPf as Record<string, unknown>)
         : cleanObject(filtrosPj as Record<string, unknown>)
 
+      // Garantir que os arrays contêm apenas números válidos
+      const ufsLimpos = selectedUfs
+        .map(v => typeof v === 'number' ? v : parseInt(String(v), 10))
+        .filter(v => !isNaN(v) && v > 0)
+
+      const cidadesLimpas = selectedCidades
+        .map(v => typeof v === 'number' ? v : parseInt(String(v), 10))
+        .filter(v => !isNaN(v) && v > 0)
+
+      console.warn('📤 [DEBUG] UFs originais:', selectedUfs)
+      console.warn('📤 [DEBUG] UFs limpas:', ufsLimpos)
+      console.warn('📤 [DEBUG] Cidades originais:', selectedCidades)
+      console.warn('📤 [DEBUG] Cidades limpas:', cidadesLimpas)
+
       const payload = tipoPessoa === 'pf' ? {
         nomeContagem: nomeContagem.trim(),
         estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
+          idsUfs: ufsLimpos,
+          idsMunicipios: cidadesLimpas
         },
         contagemPf: filtrosLimpos
       } : {
         nomeContagem: nomeContagem.trim(),
         estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
+          idsUfs: ufsLimpos,
+          idsMunicipios: cidadesLimpas
         },
         contagemPj: filtrosLimpos
       }
 
       console.warn('📤 [DEBUG] Enviando para:', endpoint)
       console.warn('📤 [DEBUG] Payload COMPLETO:', JSON.stringify(payload, null, 2))
-      console.warn('📤 [DEBUG] Qtd Estados:', selectedUfs.length)
-      console.warn('📤 [DEBUG] Qtd Cidades:', selectedCidades.length)
+      console.warn('📤 [DEBUG] Qtd Estados:', ufsLimpos.length)
+      console.warn('📤 [DEBUG] Qtd Cidades:', cidadesLimpas.length)
 
       const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
         method: 'POST',
