@@ -82,10 +82,21 @@ export async function POST(request: NextRequest) {
   logDebug('POST', `Endpoint: ${endpoint}`)
   logDebug('POST', `Token presente: ${!!token}`)
 
+  // Ler body bruto primeiro para debug
+  let bodyText: string
   let body
   try {
-    body = await request.json()
-    logDebug('POST', 'Payload recebido:', body)
+    bodyText = await request.text()
+    logDebug('POST', 'Body bruto (primeiros 500 chars):', bodyText.substring(0, 500))
+
+    // Verificar se há caracteres de controle
+    const controlChars = bodyText.match(/[\x00-\x1F]/g)
+    if (controlChars) {
+      logError('POST', `⚠️ Caracteres de controle encontrados: ${controlChars.map(c => '0x' + c.charCodeAt(0).toString(16)).join(', ')}`)
+    }
+
+    body = JSON.parse(bodyText)
+    logDebug('POST', 'Payload parseado:', body)
   } catch (parseError) {
     logError('POST', 'Erro ao parsear body da requisição:', parseError instanceof Error ? parseError.message : String(parseError))
     return NextResponse.json({
