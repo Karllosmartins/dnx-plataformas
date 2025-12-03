@@ -450,29 +450,79 @@ export default function ExtracaoLeadsPage() {
     }
   }
 
+  // Função auxiliar para limpar objeto removendo valores undefined/null
+  const cleanObject = (obj: Record<string, unknown>): Record<string, unknown> => {
+    const cleaned: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value) && value.length === 0) {
+          // Manter arrays vazios apenas para campos obrigatórios
+          if (key === 'idsUfs' || key === 'idsMunicipios') {
+            cleaned[key] = value
+          }
+          // Omitir arrays vazios opcionais
+        } else {
+          cleaned[key] = value
+        }
+      }
+    }
+    return cleaned
+  }
+
   // Realizar contagem resumida
   const realizarResumo = async () => {
-    if (!apiConfig.token || !nomeContagem) return
+    console.warn('🚀 [DEBUG] realizarResumo() iniciada')
+    console.warn('🚀 [DEBUG] Estados selecionados:', selectedUfs)
+    console.warn('🚀 [DEBUG] Cidades selecionadas:', selectedCidades)
+    console.warn('🚀 [DEBUG] Filtros PF:', filtrosPf)
+
+    if (!apiConfig.token || !nomeContagem) {
+      console.warn('⚠️ [DEBUG] Retornando: token ou nome faltando', { token: !!apiConfig.token, nome: nomeContagem })
+      return
+    }
+
+    // Validação: pelo menos um estado deve estar selecionado
+    if (selectedUfs.length === 0) {
+      console.warn('⚠️ [DEBUG] Nenhum estado selecionado')
+      setResumoContagem({
+        sucesso: false,
+        msg: 'Selecione pelo menos um estado',
+        limiteContagem: '0',
+        total: '0',
+        permitido: false
+      })
+      return
+    }
 
     setLoading(true)
     try {
       const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ResumirContagem' : '/ContagemPj/ResumirContagem'
-      
+
+      // Limpar filtros removendo undefined/null
+      const filtrosLimpos = tipoPessoa === 'pf'
+        ? cleanObject(filtrosPf as Record<string, unknown>)
+        : cleanObject(filtrosPj as Record<string, unknown>)
+
       const payload = tipoPessoa === 'pf' ? {
-        nomeContagem,
+        nomeContagem: nomeContagem.trim(),
         estadosMunicipios: {
           idsUfs: selectedUfs,
           idsMunicipios: selectedCidades
         },
-        contagemPf: filtrosPf
+        contagemPf: filtrosLimpos
       } : {
-        nomeContagem,
+        nomeContagem: nomeContagem.trim(),
         estadosMunicipios: {
           idsUfs: selectedUfs,
           idsMunicipios: selectedCidades
         },
-        contagemPj: filtrosPj
+        contagemPj: filtrosLimpos
       }
+
+      console.warn('📤 [DEBUG] Enviando para:', endpoint)
+      console.warn('📤 [DEBUG] Payload COMPLETO:', JSON.stringify(payload, null, 2))
+      console.warn('📤 [DEBUG] Qtd Estados:', selectedUfs.length)
+      console.warn('📤 [DEBUG] Qtd Cidades:', selectedCidades.length)
 
       const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
         method: 'POST',
@@ -483,7 +533,37 @@ export default function ExtracaoLeadsPage() {
         body: JSON.stringify(payload)
       })
 
-      const data: ResumoContagemVM = await response.json()
+      console.warn('📥 [DEBUG] Response status:', response.status)
+      console.warn('📥 [DEBUG] Response ok:', response.ok)
+
+      // Tentar ler a resposta como texto primeiro para debug
+      const responseText = await response.text()
+      console.warn('📥 [DEBUG] Response raw:', responseText.substring(0, 500))
+
+      let data: ResumoContagemVM
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('❌ [DEBUG] Erro ao parsear resposta JSON:', parseError)
+        console.error('❌ [DEBUG] Resposta recebida:', responseText)
+        setResumoContagem({
+          sucesso: false,
+          msg: 'Erro ao processar resposta da API: resposta inválida',
+          limiteContagem: '0',
+          total: '0',
+          permitido: false
+        })
+        return
+      }
+
+      console.warn('📥 [DEBUG] Response data:', JSON.stringify(data, null, 2))
+
+      if (!data.sucesso) {
+        console.error('❌ [DEBUG] Erro na contagem:', data.msg)
+      } else {
+        console.warn('✅ [DEBUG] Contagem OK, total:', data.total)
+      }
+
       setResumoContagem(data)
 
     } catch (error) {

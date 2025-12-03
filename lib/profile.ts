@@ -9,14 +9,16 @@
  * @returns API Key do Profile ou null se não encontrada
  */
 export function getProfileApiKey(): string | null {
+  const timestamp = new Date().toISOString()
   const envApiKey = process.env.PROFILE_API_KEY
 
   if (envApiKey && envApiKey.trim() !== '') {
-    console.log('Usando API Key do Profile da variável de ambiente')
+    console.log(`[${timestamp}] 🟢 [Profile] API Key encontrada (${envApiKey.substring(0, 8)}...)`)
     return envApiKey
   }
 
-  console.error('API Key do Profile não encontrada nas variáveis de ambiente')
+  console.error(`[${timestamp}] 🔴 [Profile] API Key NÃO encontrada nas variáveis de ambiente`)
+  console.error(`[${timestamp}] 🔴 [Profile] Verifique se PROFILE_API_KEY está definida no .env`)
   return null
 }
 
