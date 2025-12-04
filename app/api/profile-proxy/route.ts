@@ -82,32 +82,27 @@ export async function POST(request: NextRequest) {
   logDebug('POST', `Endpoint: ${endpoint}`)
   logDebug('POST', `Token presente: ${!!token}`)
 
-  // Ler body bruto primeiro para debug
-  let bodyText: string
-  let body
-  try {
-    bodyText = await request.text()
-    logDebug('POST', 'Body bruto (primeiros 500 chars):', bodyText.substring(0, 500))
-
-    // Verificar se há caracteres de controle
-    const controlChars = bodyText.match(/[\x00-\x1F]/g)
-    if (controlChars) {
-      logError('POST', `⚠️ Caracteres de controle encontrados: ${controlChars.map(c => '0x' + c.charCodeAt(0).toString(16)).join(', ')}`)
-    }
-
-    body = JSON.parse(bodyText)
-    logDebug('POST', 'Payload parseado:', body)
-  } catch (parseError) {
-    logError('POST', 'Erro ao parsear body da requisição:', parseError instanceof Error ? parseError.message : String(parseError))
-    return NextResponse.json({
-      sucesso: false,
-      msg: 'Erro ao processar dados da requisição'
-    }, { status: 400 })
-  }
-
   if (!endpoint) {
     logError('POST', 'Endpoint não fornecido')
     return NextResponse.json({ error: 'Endpoint is required' }, { status: 400 })
+  }
+
+  // Ler body bruto - NÃO PARSEAR para evitar corrupção
+  let bodyText: string
+  try {
+    bodyText = await request.text()
+    logDebug('POST', 'Body bruto COMPLETO:', bodyText)
+
+    // Log dos códigos ASCII para debug
+    const first50Chars = bodyText.substring(0, 50)
+    const asciiCodes = first50Chars.split('').map(c => c.charCodeAt(0)).join(',')
+    logDebug('POST', `ASCII codes (primeiros 50 chars): ${asciiCodes}`)
+  } catch (readError) {
+    logError('POST', 'Erro ao ler body:', readError instanceof Error ? readError.message : String(readError))
+    return NextResponse.json({
+      sucesso: false,
+      msg: 'Erro ao ler dados da requisição'
+    }, { status: 400 })
   }
 
   try {
@@ -121,16 +116,11 @@ export async function POST(request: NextRequest) {
 
     const fullUrl = `${PROFILE_API_BASE}${endpoint}`
     logDebug('POST', `Chamando API Profile: ${fullUrl}`)
-    logDebug('POST', 'Headers:', { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ***' : 'não definido' })
-
-    // IMPORTANTE: Usar bodyText diretamente ao invés de JSON.stringify(body)
-    // para evitar problemas de re-serialização que corrompem os dados
-    logDebug('POST', 'Enviando body bruto para API Profile')
 
     const response = await fetch(fullUrl, {
       method: 'POST',
       headers,
-      body: bodyText  // Usar texto bruto diretamente!
+      body: bodyText  // Enviar texto bruto diretamente!
     })
 
     logDebug('POST', `Status da resposta: ${response.status}`)
