@@ -469,6 +469,47 @@ export default function ExtracaoLeadsPage() {
     return cleaned
   }
 
+  // Realizar contagem resumida para um único estado
+  const realizarResumoParaEstado = async (
+    ufId: number,
+    cidadesDaUf: number[],
+    filtrosLimpos: Record<string, unknown>
+  ): Promise<ResumoContagemVM> => {
+    const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ResumirContagem' : '/ContagemPj/ResumirContagem'
+
+    const payload = tipoPessoa === 'pf' ? {
+      nomeContagem: nomeContagem.trim(),
+      estadosMunicipios: {
+        idsUfs: [ufId],
+        idsMunicipios: cidadesDaUf
+      },
+      contagemPf: filtrosLimpos
+    } : {
+      nomeContagem: nomeContagem.trim(),
+      estadosMunicipios: {
+        idsUfs: [ufId],
+        idsMunicipios: cidadesDaUf
+      },
+      contagemPj: filtrosLimpos
+    }
+
+    console.warn(`📤 [DEBUG] Chamando API para UF ${ufId}:`, JSON.stringify(payload))
+
+    const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiConfig.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const responseText = await response.text()
+    console.warn(`📥 [DEBUG] Resposta UF ${ufId}:`, responseText.substring(0, 300))
+
+    return JSON.parse(responseText) as ResumoContagemVM
+  }
+
   // Realizar contagem resumida
   const realizarResumo = async () => {
     console.warn('🚀 [DEBUG] realizarResumo() iniciada')
@@ -496,8 +537,6 @@ export default function ExtracaoLeadsPage() {
 
     setLoading(true)
     try {
-      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ResumirContagem' : '/ContagemPj/ResumirContagem'
-
       // Limpar filtros removendo undefined/null
       const filtrosLimpos = tipoPessoa === 'pf'
         ? cleanObject(filtrosPf as Record<string, unknown>)
@@ -512,10 +551,76 @@ export default function ExtracaoLeadsPage() {
         .map(v => typeof v === 'number' ? v : parseInt(String(v), 10))
         .filter(v => !isNaN(v) && v > 0)
 
-      console.warn('📤 [DEBUG] UFs originais:', selectedUfs)
       console.warn('📤 [DEBUG] UFs limpas:', ufsLimpos)
-      console.warn('📤 [DEBUG] Cidades originais:', selectedCidades)
       console.warn('📤 [DEBUG] Cidades limpas:', cidadesLimpas)
+
+      // WORKAROUND: API Profile não suporta múltiplos estados
+      // Se houver mais de 1 estado, fazer chamadas separadas e combinar
+      if (ufsLimpos.length > 1) {
+        console.warn('🔄 [DEBUG] Múltiplos estados detectados, fazendo chamadas separadas...')
+
+        // Criar mapa de cidades por UF
+        const cidadesPorUf: Map<number, number[]> = new Map()
+        ufsLimpos.forEach(uf => cidadesPorUf.set(uf, []))
+
+        // Distribuir cidades para suas respectivas UFs
+        for (const cidadeId of cidadesLimpas) {
+          const cidadeInfo = cidades.find(c => c.idcidade === cidadeId)
+          if (cidadeInfo && cidadesPorUf.has(cidadeInfo.idUf)) {
+            cidadesPorUf.get(cidadeInfo.idUf)!.push(cidadeId)
+          }
+        }
+
+        console.warn('📤 [DEBUG] Cidades por UF:', Object.fromEntries(cidadesPorUf))
+
+        // Fazer chamadas em paralelo para cada estado
+        const promessas = ufsLimpos.map(ufId =>
+          realizarResumoParaEstado(ufId, cidadesPorUf.get(ufId) || [], filtrosLimpos)
+        )
+
+        const resultados = await Promise.all(promessas)
+        console.warn('📥 [DEBUG] Resultados por estado:', resultados)
+
+        // Verificar se alguma chamada falhou
+        const erros = resultados.filter(r => !r.sucesso)
+        if (erros.length > 0) {
+          console.error('❌ [DEBUG] Erros em algumas UFs:', erros)
+          setResumoContagem({
+            sucesso: false,
+            msg: erros.map(e => e.msg).join('; '),
+            limiteContagem: '0',
+            total: '0',
+            permitido: false
+          })
+          return
+        }
+
+        // Combinar resultados - somar totais
+        const totalCombinado = resultados.reduce((acc, r) => {
+          const total = parseInt(r.total?.replace(/\D/g, '') || '0', 10)
+          return acc + total
+        }, 0)
+
+        // Usar o limite da primeira resposta (todos devem ter o mesmo limite)
+        const limiteContagem = resultados[0]?.limiteContagem || '0'
+        const limiteNumero = parseInt(limiteContagem.replace(/\D/g, '') || '0', 10)
+        const permitido = totalCombinado <= limiteNumero
+
+        const resumoCombinado: ResumoContagemVM = {
+          sucesso: true,
+          msg: `Contagem combinada de ${ufsLimpos.length} estados`,
+          limiteContagem: limiteContagem,
+          total: totalCombinado.toLocaleString('pt-BR'),
+          permitido: permitido
+        }
+
+        console.warn('✅ [DEBUG] Resumo combinado:', resumoCombinado)
+        setResumoContagem(resumoCombinado)
+        return
+      }
+
+      // Chamada única para 1 estado (comportamento original)
+      const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/ResumirContagem' : '/ContagemPj/ResumirContagem'
 
       const payload = tipoPessoa === 'pf' ? {
         nomeContagem: nomeContagem.trim(),
@@ -534,9 +639,7 @@ export default function ExtracaoLeadsPage() {
       }
 
       console.warn('📤 [DEBUG] Enviando para:', endpoint)
-      console.warn('📤 [DEBUG] Payload COMPLETO:', JSON.stringify(payload, null, 2))
-      console.warn('📤 [DEBUG] Qtd Estados:', ufsLimpos.length)
-      console.warn('📤 [DEBUG] Qtd Cidades:', cidadesLimpas.length)
+      console.warn('📤 [DEBUG] Payload:', JSON.stringify(payload))
 
       const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
         method: 'POST',
@@ -547,10 +650,6 @@ export default function ExtracaoLeadsPage() {
         body: JSON.stringify(payload)
       })
 
-      console.warn('📥 [DEBUG] Response status:', response.status)
-      console.warn('📥 [DEBUG] Response ok:', response.ok)
-
-      // Tentar ler a resposta como texto primeiro para debug
       const responseText = await response.text()
       console.warn('📥 [DEBUG] Response raw:', responseText.substring(0, 500))
 
@@ -559,7 +658,6 @@ export default function ExtracaoLeadsPage() {
         data = JSON.parse(responseText)
       } catch (parseError) {
         console.error('❌ [DEBUG] Erro ao parsear resposta JSON:', parseError)
-        console.error('❌ [DEBUG] Resposta recebida:', responseText)
         setResumoContagem({
           sucesso: false,
           msg: 'Erro ao processar resposta da API: resposta inválida',
