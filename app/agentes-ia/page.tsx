@@ -14,10 +14,27 @@ import {
   Edit2,
   Trash2,
   Bot,
-  Settings,
   Wrench,
-  MessageCircle
+  MessageCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink
 } from 'lucide-react'
+
+// Componentes shadcn
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { Switch } from '../../components/ui/switch'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { Textarea } from '../../components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip'
+import { Separator } from '../../components/ui/separator'
+import { ScrollArea } from '../../components/ui/scroll-area'
 
 export default function AgentesIAPage() {
   const { user: currentUser } = useAuth()
@@ -256,7 +273,7 @@ export default function AgentesIAPage() {
       try {
         const vectorStoreResponse = await fetch(`/api/vectorstores?userId=${currentUser?.id}&agentId=${id}`)
         const vectorStoreData = await vectorStoreResponse.json()
-        
+
         if (vectorStoreData.hasVectorStore && vectorStoreData.vectorStore) {
           // Deletar vector store da OpenAI e do banco
           const deleteResponse = await fetch('/api/vectorstores', {
@@ -268,7 +285,7 @@ export default function AgentesIAPage() {
               vectorStoreId: vectorStoreData.vectorStore.vectorstore_id
             })
           })
-          
+
           if (!deleteResponse.ok) {
             console.warn('Erro ao deletar vector store, mas continuando com exclusão do agente')
           }
@@ -294,361 +311,448 @@ export default function AgentesIAPage() {
     }
   }
 
+  const getStatusBadgeVariant = (estagio: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (estagio) {
+      case 'ativo': return 'default'
+      case 'desenvolvimento': return 'secondary'
+      case 'teste': return 'outline'
+      case 'inativo': return 'destructive'
+      default: return 'secondary'
+    }
+  }
+
+  const getStatusLabel = (estagio: string): string => {
+    switch (estagio) {
+      case 'ativo': return 'Ativo'
+      case 'desenvolvimento': return 'Em Desenvolvimento'
+      case 'teste': return 'Teste'
+      case 'inativo': return 'Inativo'
+      default: return estagio
+    }
+  }
+
+  const createNewAgent = () => {
+    setEditingAgent({
+      id: 0,
+      nome: '',
+      funcao: '',
+      prompt: '',
+      estagio: 'ativo',
+      user_id: Number(currentUser?.id) || 0,
+      workspace_id: workspaceId || undefined,
+      created_at: new Date().toISOString()
+    })
+  }
+
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Carregando agentes...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <p className="text-sm text-muted-foreground">Carregando agentes...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <PlanProtection feature="agentesIA">
-      <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-          <Bot className="h-8 w-8 mr-3 text-purple-600" />
-          Agentes IA
-        </h1>
-        <p className="mt-2 text-sm text-gray-700">
-          Gerencie seus agentes de inteligência artificial para automação
-        </p>
-      </div>
+      <TooltipProvider>
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-xl">
+                <Bot className="h-8 w-8 text-purple-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Agentes IA</h1>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie seus agentes de inteligência artificial para automação
+                </p>
+              </div>
+            </div>
+            <Button onClick={createNewAgent} className="bg-purple-600 hover:bg-purple-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Agente
+            </Button>
+          </div>
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">Meus Agentes</h3>
-          <button
-            onClick={() => setEditingAgent({
-              id: 0,
-              nome: '',
-              funcao: '',
-              prompt: '',
-              estagio: 'ativo',
-              user_id: Number(currentUser?.id) || 0,
-              workspace_id: workspaceId || undefined,
-              created_at: new Date().toISOString()
-            })}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agente
-          </button>
-        </div>
-
-        <div className="p-6">
+          {/* Lista de Agentes */}
           {agentes.length > 0 ? (
             <div className="grid gap-6">
               {agentes.map((agente) => (
-                <div key={agente.id} className="border border-gray-200 rounded-lg p-4 sm:p-6 hover:border-gray-300 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
+                <Card key={agente.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
                           <Bot className="h-6 w-6 text-purple-600" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{agente.nome}</h4>
-                          <p className="text-sm text-gray-600 truncate">{agente.funcao}</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <CardTitle className="text-xl">{agente.nome}</CardTitle>
+                            <Badge variant={getStatusBadgeVariant(agente.estagio)}>
+                              {getStatusLabel(agente.estagio)}
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-sm">{agente.funcao}</CardDescription>
                         </div>
                       </div>
-                      
-                      <div className="mb-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          agente.estagio === 'ativo' 
-                            ? 'bg-green-100 text-green-800'
-                            : agente.estagio === 'desenvolvimento'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : agente.estagio === 'teste'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {agente.estagio === 'ativo' && 'Ativo'}
-                          {agente.estagio === 'desenvolvimento' && 'Em Desenvolvimento'}
-                          {agente.estagio === 'teste' && 'Teste'}
-                          {agente.estagio === 'inativo' && 'Inativo'}
-                        </span>
-                      </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h5 className="text-sm font-medium text-gray-900 mb-2">Prompt do Agente:</h5>
-                        <p className="text-sm text-gray-700 leading-relaxed max-h-24 overflow-y-auto">
+                      {/* Ações */}
+                      <div className="flex items-center gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingAgent(agente)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                              <span className="ml-2 hidden sm:inline">Editar</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar agente</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteAgent(agente.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="ml-2 hidden sm:inline">Excluir</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Excluir agente</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Prompt */}
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h5 className="text-sm font-medium mb-2">Prompt do Agente:</h5>
+                      <ScrollArea className="h-24">
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                           {agente.prompt}
                         </p>
-                      </div>
+                      </ScrollArea>
+                    </div>
 
-                      <div className="mt-4 text-xs text-gray-500">
-                        ID: {agente.id} • Criado em {new Date(agente.created_at).toLocaleDateString('pt-BR')}
-                      </div>
+                    {/* Metadados */}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>ID: {agente.id}</span>
+                      <Separator orientation="vertical" className="h-4" />
+                      <span>Criado em {new Date(agente.created_at).toLocaleDateString('pt-BR')}</span>
+                    </div>
 
-                      {/* Vector Store Manager */}
-                      <VectorStoreManager agentId={agente.id} />
-                      
-                      {/* Instância WhatsApp do Agente */}
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="h-5 w-5 text-green-600" />
-                            <h5 className="text-sm font-medium text-gray-900">Instância WhatsApp</h5>
-                          </div>
-                          <button
-                            onClick={() => setShowAgentInstance({
-                              ...showAgentInstance,
-                              [agente.id]: !showAgentInstance[agente.id]
-                            })}
-                            className="text-xs text-green-600 hover:text-green-800"
-                          >
-                            {showAgentInstance[agente.id] ? 'Ocultar' : 'Mostrar'}
-                          </button>
-                        </div>
+                    <Separator />
 
-                        {showAgentInstance[agente.id] && (
-                          <div className="space-y-3">
-                            <div className="bg-white rounded-lg border p-3">
-                              <label className="block text-xs font-medium text-gray-900 mb-2">
-                                Selecionar Instância WhatsApp:
-                              </label>
-                              <select
-                                value={getAgentInstance(agente.id)?.id || ''}
-                                onChange={(e) => {
-                                  const instanciaId = e.target.value ? parseInt(e.target.value) : null
-                                  updateAgentInstance(agente.id, instanciaId)
-                                }}
-                                className="w-full text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                              >
-                                <option value="">Nenhuma instância selecionada</option>
-                                {instancias.map((instancia) => (
-                                  <option key={instancia.id} value={instancia.id}>
-                                    {instancia.instancia} {instancia.is_official_api ? '(API Oficial)' : '(UAZAPI)'}
-                                  </option>
-                                ))}
-                              </select>
+                    {/* Vector Store Manager */}
+                    <VectorStoreManager agentId={agente.id} />
+
+                    {/* Seção WhatsApp - Collapsible */}
+                    <Collapsible
+                      open={showAgentInstance[agente.id]}
+                      onOpenChange={(open) => setShowAgentInstance({
+                        ...showAgentInstance,
+                        [agente.id]: open
+                      })}
+                    >
+                      <Card className="border-green-200 bg-green-50/50">
+                        <CollapsibleTrigger asChild>
+                          <CardHeader className="py-3 cursor-pointer hover:bg-green-100/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <MessageCircle className="h-5 w-5 text-green-600" />
+                                <span className="font-medium text-sm">Instância WhatsApp</span>
+                                {getAgentInstance(agente.id) && (
+                                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                                    Conectado
+                                  </Badge>
+                                )}
+                              </div>
+                              {showAgentInstance[agente.id] ? (
+                                <ChevronUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                          </CardHeader>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                          <CardContent className="pt-0 pb-4">
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs">Selecionar Instância WhatsApp:</Label>
+                                <Select
+                                  value={getAgentInstance(agente.id)?.id?.toString() || 'none'}
+                                  onValueChange={(value) => {
+                                    const instanciaId = value === 'none' ? null : parseInt(value)
+                                    updateAgentInstance(agente.id, instanciaId)
+                                  }}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder="Nenhuma instância selecionada" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Nenhuma instância</SelectItem>
+                                    {instancias.map((instancia) => (
+                                      <SelectItem key={instancia.id} value={instancia.id.toString()}>
+                                        {instancia.instancia} {instancia.is_official_api ? '(API Oficial)' : '(UAZAPI)'}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
                               {getAgentInstance(agente.id) && (
-                                <div className="mt-2 p-2 bg-green-100 rounded text-xs">
-                                  <strong>Instância vinculada:</strong> {getAgentInstance(agente.id)?.instancia}
-                                  <br />
-                                  <strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'UAZAPI'}
+                                <div className="p-3 bg-green-100 rounded-lg text-sm">
+                                  <p><strong>Instância vinculada:</strong> {getAgentInstance(agente.id)?.instancia}</p>
+                                  <p><strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'UAZAPI'}</p>
+                                </div>
+                              )}
+
+                              {instancias.length === 0 && (
+                                <div className="text-center py-3 text-sm text-muted-foreground">
+                                  <p>Nenhuma instância WhatsApp configurada.</p>
+                                  <Button variant="link" asChild className="text-green-600 h-auto p-0 mt-1">
+                                    <a href="/whatsapp">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Criar nova instância
+                                    </a>
+                                  </Button>
                                 </div>
                               )}
                             </div>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
 
-                            {instancias.length === 0 && (
-                              <div className="text-xs text-gray-500 text-center py-2">
-                                Nenhuma instância WhatsApp configurada.
-                                <br />
-                                <a href="/whatsapp" className="text-green-600 hover:text-green-800 underline">
-                                  Criar nova instância
-                                </a>
+                    {/* Seção Ferramentas - Collapsible */}
+                    <Collapsible
+                      open={showAgentTools[agente.id]}
+                      onOpenChange={(open) => setShowAgentTools({
+                        ...showAgentTools,
+                        [agente.id]: open
+                      })}
+                    >
+                      <Card className="border-blue-200 bg-blue-50/50">
+                        <CollapsibleTrigger asChild>
+                          <CardHeader className="py-3 cursor-pointer hover:bg-blue-100/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Wrench className="h-5 w-5 text-blue-600" />
+                                <span className="font-medium text-sm">Ferramentas do Agente</span>
+                                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                                  {userTools.filter(ut => ut.agente_id === agente.id && ut.is_active).length} ativas
+                                </Badge>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                              {showAgentTools[agente.id] ? (
+                                <ChevronUp className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-blue-600" />
+                              )}
+                            </div>
+                          </CardHeader>
+                        </CollapsibleTrigger>
 
-                      {/* Ferramentas do Agente */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <Wrench className="h-5 w-5 text-blue-600" />
-                            <h5 className="text-sm font-medium text-gray-900">Ferramentas do Agente</h5>
-                          </div>
-                          <button
-                            onClick={() => setShowAgentTools({
-                              ...showAgentTools,
-                              [agente.id]: !showAgentTools[agente.id]
-                            })}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            {showAgentTools[agente.id] ? 'Ocultar' : 'Mostrar'}
-                          </button>
-                        </div>
-
-                        {showAgentTools[agente.id] && (
-                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                            {tools.map((tool) => {
-                              const isActive = isAgentToolActive(agente.id, tool.id)
-                              return (
-                                <div key={tool.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                                  <div className="min-w-0 flex-1">
-                                    <h6 className="text-xs font-medium text-gray-900 truncate">{tool.nome}</h6>
-                                    <p className="text-xs text-gray-500 truncate">{tool.type}</p>
-                                  </div>
-                                  
-                                  <label className="flex items-center cursor-pointer ml-2">
-                                    <input
-                                      type="checkbox"
-                                      checked={isActive}
-                                      onChange={() => toggleAgentTool(agente.id, tool.id, isActive)}
-                                      className="sr-only"
-                                    />
-                                    <div className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                      isActive ? 'bg-green-600' : 'bg-gray-300'
-                                    }`}>
-                                      <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
-                                        isActive ? 'translate-x-4' : 'translate-x-1'
-                                      }`} />
+                        <CollapsibleContent>
+                          <CardContent className="pt-0 pb-4">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              {tools.map((tool) => {
+                                const isActive = isAgentToolActive(agente.id, tool.id)
+                                return (
+                                  <div
+                                    key={tool.id}
+                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                      isActive
+                                        ? 'bg-white border-blue-200'
+                                        : 'bg-white/50 border-gray-200'
+                                    }`}
+                                  >
+                                    <div className="min-w-0 flex-1 mr-3">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <h6 className="text-sm font-medium truncate cursor-help">
+                                            {tool.nome}
+                                          </h6>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                          <p className="max-w-xs">{tool.nome}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <p className="text-xs text-muted-foreground truncate">{tool.type}</p>
                                     </div>
-                                  </label>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 justify-end sm:justify-start">
-                      <button
-                        onClick={() => setEditingAgent(agente)}
-                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors whitespace-nowrap"
-                      >
-                        <Edit2 className="h-4 w-4 sm:mr-1" />
-                        <span className="hidden sm:inline ml-1">Editar</span>
-                      </button>
-                      <button
-                        onClick={() => deleteAgent(agente.id)}
-                        className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap"
-                      >
-                        <Trash2 className="h-4 w-4 sm:mr-1" />
-                        <span className="hidden sm:inline ml-1">Excluir</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+
+                                    <Switch
+                                      checked={isActive}
+                                      onCheckedChange={() => toggleAgentTool(agente.id, tool.id, isActive)}
+                                    />
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Bot className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-              <h3 className="text-xl font-medium text-gray-900 mb-4">Nenhum agente configurado</h3>
-              <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                Crie seu primeiro agente IA para começar a automatizar suas tarefas. 
-                Agentes podem ser usados para vendas, suporte, qualificação de leads e muito mais.
-              </p>
-              <button
-                onClick={() => setEditingAgent({
-                  id: 0,
-                  nome: '',
-                  funcao: '',
-                  prompt: '',
-                  estagio: 'ativo',
-                  user_id: Number(currentUser?.id) || 0,
-                  workspace_id: workspaceId || undefined,
-                  created_at: new Date().toISOString()
-                })}
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Criar Primeiro Agente
-              </button>
-            </div>
+            /* Empty State */
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <div className="p-4 bg-purple-100 rounded-full mb-6">
+                  <Bot className="h-12 w-12 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Nenhum agente configurado</h3>
+                <p className="text-muted-foreground text-center max-w-md mb-8">
+                  Crie seu primeiro agente IA para começar a automatizar suas tarefas.
+                  Agentes podem ser usados para vendas, suporte, qualificação de leads e muito mais.
+                </p>
+                <Button size="lg" onClick={createNewAgent} className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Criar Primeiro Agente
+                </Button>
+              </CardContent>
+            </Card>
           )}
+
+          {/* Modal de Edição de Agente */}
+          <AgentModal
+            agent={editingAgent}
+            onSave={saveAgent}
+            onClose={() => setEditingAgent(null)}
+          />
         </div>
-      </div>
-
-
-      {/* Modal de Edição de Agente */}
-      {editingAgent && (
-        <AgentModal
-          agent={editingAgent}
-          onSave={saveAgent}
-          onClose={() => setEditingAgent(null)}
-        />
-      )}
-      </div>
+      </TooltipProvider>
     </PlanProtection>
   )
 }
 
 // Componente Modal para Agente
-function AgentModal({ 
-  agent, 
-  onSave, 
-  onClose 
-}: { 
-  agent: AgenteIA
+function AgentModal({
+  agent,
+  onSave,
+  onClose
+}: {
+  agent: AgenteIA | null
   onSave: (data: Partial<AgenteIA>) => void
   onClose: () => void
 }) {
   const [formData, setFormData] = useState({
-    nome: agent.nome || '',
-    funcao: agent.funcao || '',
-    prompt: agent.prompt || '',
-    estagio: agent.estagio || 'ativo'
+    nome: '',
+    funcao: '',
+    prompt: '',
+    estagio: 'ativo'
   })
+
+  useEffect(() => {
+    if (agent) {
+      setFormData({
+        nome: agent.nome || '',
+        funcao: agent.funcao || '',
+        prompt: agent.prompt || '',
+        estagio: agent.estagio || 'ativo'
+      })
+    }
+  }, [agent])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave(formData)
   }
 
+  if (!agent) return null
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto z-10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Bot className="h-6 w-6 text-purple-600" />
+    <Dialog open={!!agent} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Bot className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">
+                {agent.id && agent.id > 0 ? 'Editar Agente IA' : 'Criar Novo Agente IA'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure as informações e o comportamento do seu agente
+              </DialogDescription>
+            </div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900">
-            {agent.id && agent.id > 0 ? 'Editar Agente IA' : 'Criar Novo Agente IA'}
-          </h3>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nome do Agente *
-            </label>
-            <input
-              type="text"
-              value={formData.nome}
-              onChange={(e) => setFormData({...formData, nome: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Agente de Vendas"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">O ID do agente será gerado automaticamente ao criar</p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome do Agente *</Label>
+              <Input
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                placeholder="Agente de Vendas"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                O ID do agente será gerado automaticamente ao criar
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="estagio">Status do Agente</Label>
+              <Select
+                value={formData.estagio}
+                onValueChange={(value) => setFormData({...formData, estagio: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="desenvolvimento">Em Desenvolvimento</SelectItem>
+                  <SelectItem value="teste">Teste</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Função do Agente *
-            </label>
-            <input
-              type="text"
+          <div className="space-y-2">
+            <Label htmlFor="funcao">Função do Agente *</Label>
+            <Input
+              id="funcao"
               value={formData.funcao}
               onChange={(e) => setFormData({...formData, funcao: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Especialista em vendas e conversão de leads"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Descreva brevemente qual é o papel deste agente</p>
+            <p className="text-xs text-muted-foreground">
+              Descreva brevemente qual é o papel deste agente
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status do Agente
-            </label>
-            <select
-              value={formData.estagio}
-              onChange={(e) => setFormData({...formData, estagio: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="ativo">Ativo</option>
-              <option value="desenvolvimento">Em Desenvolvimento</option>
-              <option value="teste">Teste</option>
-              <option value="inativo">Inativo</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Prompt do Agente *
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="prompt">Prompt do Agente *</Label>
+            <Textarea
+              id="prompt"
               value={formData.prompt}
               onChange={(e) => setFormData({...formData, prompt: e.target.value})}
               rows={12}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
-              placeholder="Você é um agente especialista em vendas focado em recuperação de crédito. Seu objetivo é qualificar leads e converter em clientes...
+              className="font-mono text-sm"
+              placeholder={`Você é um agente especialista em vendas focado em recuperação de crédito. Seu objetivo é qualificar leads e converter em clientes...
 
 Suas responsabilidades incluem:
 - Analisar o perfil do lead
@@ -656,29 +760,26 @@ Suas responsabilidades incluem:
 - Apresentar soluções adequadas
 - Conduzir para o fechamento
 
-Seja sempre profissional, empático e focado em resultados."
+Seja sempre profissional, empático e focado em resultados.`}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Define como o agente deve se comportar e responder. Seja específico e detalhado.</p>
+            <p className="text-xs text-muted-foreground">
+              Define como o agente deve se comportar e responder. Seja específico e detalhado.
+            </p>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
+          <Separator />
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 transition-colors"
-            >
+            </Button>
+            <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
               {agent.id && agent.id > 0 ? 'Atualizar Agente' : 'Criar Agente'}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
