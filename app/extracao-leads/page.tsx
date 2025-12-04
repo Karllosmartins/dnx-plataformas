@@ -686,28 +686,183 @@ export default function ExtracaoLeadsPage() {
     }
   }
 
+  // Criar contagem para um único estado
+  const criarContagemParaEstado = async (
+    ufId: number,
+    cidadesDaUf: number[],
+    filtrosLimpos: Record<string, unknown>,
+    sufixoNome: string
+  ): Promise<ContagemRetornoVM> => {
+    const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/CriarContagem' : '/ContagemPj/CriarContagem'
+
+    const payload = tipoPessoa === 'pf' ? {
+      nomeContagem: `${nomeContagem.trim()} - ${sufixoNome}`,
+      estadosMunicipios: {
+        idsUfs: [ufId],
+        idsMunicipios: cidadesDaUf
+      },
+      contagemPf: filtrosLimpos
+    } : {
+      nomeContagem: `${nomeContagem.trim()} - ${sufixoNome}`,
+      estadosMunicipios: {
+        idsUfs: [ufId],
+        idsMunicipios: cidadesDaUf
+      },
+      contagemPj: filtrosLimpos
+    }
+
+    console.warn(`📤 [DEBUG] Criando contagem para UF ${ufId}:`, JSON.stringify(payload))
+
+    const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiConfig.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const data = await response.json()
+    console.warn(`📥 [DEBUG] Resultado contagem UF ${ufId}:`, data)
+
+    return data as ContagemRetornoVM
+  }
+
   // Realizar contagem completa
   const criarContagem = async () => {
     if (!apiConfig.token || !nomeContagem || !resumoContagem?.permitido) return
 
     setLoading(true)
     try {
+      // Limpar filtros removendo undefined/null
+      const filtrosLimpos = tipoPessoa === 'pf'
+        ? cleanObject(filtrosPf as Record<string, unknown>)
+        : cleanObject(filtrosPj as Record<string, unknown>)
+
+      // Garantir que os arrays contêm apenas números válidos
+      const ufsLimpos = selectedUfs
+        .map(v => typeof v === 'number' ? v : parseInt(String(v), 10))
+        .filter(v => !isNaN(v) && v > 0)
+
+      const cidadesLimpas = selectedCidades
+        .map(v => typeof v === 'number' ? v : parseInt(String(v), 10))
+        .filter(v => !isNaN(v) && v > 0)
+
+      // WORKAROUND: API Profile não suporta múltiplos estados
+      // Se houver mais de 1 estado, criar contagens separadas
+      if (ufsLimpos.length > 1) {
+        console.warn('🔄 [DEBUG] Múltiplos estados detectados, criando contagens separadas...')
+
+        // Criar mapa de cidades por UF
+        const cidadesPorUf: Map<number, number[]> = new Map()
+        ufsLimpos.forEach(uf => cidadesPorUf.set(uf, []))
+
+        // Distribuir cidades para suas respectivas UFs
+        for (const cidadeId of cidadesLimpas) {
+          const cidadeInfo = cidades.find(c => c.idcidade === cidadeId)
+          if (cidadeInfo && cidadesPorUf.has(cidadeInfo.idUf)) {
+            cidadesPorUf.get(cidadeInfo.idUf)!.push(cidadeId)
+          }
+        }
+
+        // Buscar nomes das UFs para sufixo
+        const ufNomes: Map<number, string> = new Map()
+        ufsLimpos.forEach(ufId => {
+          const ufInfo = ufs.find(u => u.idUf === ufId)
+          ufNomes.set(ufId, ufInfo?.uf1 || `UF${ufId}`)
+        })
+
+        // Criar contagens em paralelo para cada estado
+        const promessas = ufsLimpos.map(ufId =>
+          criarContagemParaEstado(
+            ufId,
+            cidadesPorUf.get(ufId) || [],
+            filtrosLimpos,
+            ufNomes.get(ufId) || `UF${ufId}`
+          )
+        )
+
+        const resultados = await Promise.all(promessas)
+        console.warn('📥 [DEBUG] Resultados contagens por estado:', resultados)
+
+        // Verificar se alguma chamada falhou
+        const erros = resultados.filter(r => !r.sucesso)
+        if (erros.length > 0) {
+          console.error('❌ [DEBUG] Erros em algumas UFs:', erros)
+          throw new Error(erros.map(e => e.msg).join('; '))
+        }
+
+        // Salvar cada contagem no banco
+        for (let i = 0; i < resultados.length; i++) {
+          const resultado = resultados[i]
+          const ufId = ufsLimpos[i]
+          const sufixo = ufNomes.get(ufId) || `UF${ufId}`
+
+          const payloadParaSalvar = tipoPessoa === 'pf' ? {
+            nomeContagem: `${nomeContagem.trim()} - ${sufixo}`,
+            estadosMunicipios: {
+              idsUfs: [ufId],
+              idsMunicipios: cidadesPorUf.get(ufId) || []
+            },
+            contagemPf: filtrosLimpos
+          } : {
+            nomeContagem: `${nomeContagem.trim()} - ${sufixo}`,
+            estadosMunicipios: {
+              idsUfs: [ufId],
+              idsMunicipios: cidadesPorUf.get(ufId) || []
+            },
+            contagemPj: filtrosLimpos
+          }
+
+          await salvarContagemNoBanco(resultado, payloadParaSalvar)
+        }
+
+        // Combinar quantidades de todos os resultados
+        const quantidadesCombinadas = resultados.flatMap(r => r.quantidades || [])
+        const totalCombinado = resultados.reduce((acc, r) => {
+          const total = r.quantidades?.find(q => q.descricao === 'Total')?.total || 0
+          return acc + total
+        }, 0)
+
+        // Criar resultado combinado para exibição
+        const resultadoCombinado: ContagemRetornoVM = {
+          sucesso: true,
+          msg: `${ufsLimpos.length} contagens criadas com sucesso`,
+          idContagem: resultados[0].idContagem, // Primeiro ID para referência
+          quantidades: [
+            ...quantidadesCombinadas,
+            { descricao: 'Total Combinado', total: totalCombinado }
+          ]
+        }
+
+        setContagemRealizada(true)
+        setResultadoContagem(resultadoCombinado)
+
+        // Mostrar mensagem informativa
+        alert(`✅ ${ufsLimpos.length} contagens criadas com sucesso!\n\nComo foram selecionados múltiplos estados, cada estado gerou uma contagem separada.\n\nAcesse o Histórico para ver todas as contagens e criar as extrações.`)
+
+        // Ir para aba de histórico
+        setAbaAtiva('historico')
+        return
+      }
+
+      // Chamada única para 1 estado (comportamento original)
       const endpoint = tipoPessoa === 'pf' ? '/ContagemPf/CriarContagem' : '/ContagemPj/CriarContagem'
-      
+
       const payload = tipoPessoa === 'pf' ? {
         nomeContagem,
         estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
+          idsUfs: ufsLimpos,
+          idsMunicipios: cidadesLimpas
         },
-        contagemPf: filtrosPf
+        contagemPf: filtrosLimpos
       } : {
         nomeContagem,
         estadosMunicipios: {
-          idsUfs: selectedUfs,
-          idsMunicipios: selectedCidades
+          idsUfs: ufsLimpos,
+          idsMunicipios: cidadesLimpas
         },
-        contagemPj: filtrosPj
+        contagemPj: filtrosLimpos
       }
 
       const response = await fetch('/api/profile-proxy?endpoint=' + endpoint, {
@@ -720,11 +875,11 @@ export default function ExtracaoLeadsPage() {
       })
 
       const data: ContagemRetornoVM = await response.json()
-      
+
       if (data.sucesso) {
         // Salvar contagem no banco de dados
         await salvarContagemNoBanco(data, payload)
-        
+
         setContagemRealizada(true)
         setResultadoContagem(data)
         console.log('Contagem iniciada com sucesso:', data)
