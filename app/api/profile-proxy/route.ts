@@ -123,10 +123,14 @@ export async function POST(request: NextRequest) {
     logDebug('POST', `Chamando API Profile: ${fullUrl}`)
     logDebug('POST', 'Headers:', { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ***' : 'não definido' })
 
+    // IMPORTANTE: Usar bodyText diretamente ao invés de JSON.stringify(body)
+    // para evitar problemas de re-serialização que corrompem os dados
+    logDebug('POST', 'Enviando body bruto para API Profile')
+
     const response = await fetch(fullUrl, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: bodyText  // Usar texto bruto diretamente!
     })
 
     logDebug('POST', `Status da resposta: ${response.status}`)
