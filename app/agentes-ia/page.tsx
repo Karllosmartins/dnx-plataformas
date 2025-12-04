@@ -465,15 +465,15 @@ export default function AgentesIAPage() {
                         [agente.id]: open
                       })}
                     >
-                      <Card className="border-green-200 bg-green-50/50">
+                      <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30">
                         <CollapsibleTrigger asChild>
-                          <CardHeader className="py-3 cursor-pointer hover:bg-green-100/50 transition-colors">
+                          <CardHeader className="py-3 cursor-pointer hover:bg-green-100/50 dark:hover:bg-green-900/30 transition-colors">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <MessageCircle className="h-5 w-5 text-green-600" />
                                 <span className="font-medium text-sm">Instância WhatsApp</span>
                                 {getAgentInstance(agente.id) && (
-                                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                                  <Badge variant="outline" className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
                                     Conectado
                                   </Badge>
                                 )}
@@ -514,7 +514,7 @@ export default function AgentesIAPage() {
                               </div>
 
                               {getAgentInstance(agente.id) && (
-                                <div className="p-3 bg-green-100 rounded-lg text-sm">
+                                <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg text-sm text-green-900 dark:text-green-100">
                                   <p><strong>Instância vinculada:</strong> {getAgentInstance(agente.id)?.instancia}</p>
                                   <p><strong>Tipo:</strong> {getAgentInstance(agente.id)?.is_official_api ? 'API Oficial do WhatsApp' : 'UAZAPI'}</p>
                                 </div>
@@ -545,14 +545,14 @@ export default function AgentesIAPage() {
                         [agente.id]: open
                       })}
                     >
-                      <Card className="border-blue-200 bg-blue-50/50">
+                      <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
                         <CollapsibleTrigger asChild>
-                          <CardHeader className="py-3 cursor-pointer hover:bg-blue-100/50 transition-colors">
+                          <CardHeader className="py-3 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Wrench className="h-5 w-5 text-blue-600" />
                                 <span className="font-medium text-sm">Ferramentas do Agente</span>
-                                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                                <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700">
                                   {userTools.filter(ut => ut.agente_id === agente.id && ut.is_active).length} ativas
                                 </Badge>
                               </div>
@@ -575,8 +575,8 @@ export default function AgentesIAPage() {
                                     key={tool.id}
                                     className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                                       isActive
-                                        ? 'bg-white border-blue-200'
-                                        : 'bg-white/50 border-gray-200'
+                                        ? 'bg-white dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
+                                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
                                     }`}
                                   >
                                     <div className="min-w-0 flex-1 mr-3">
