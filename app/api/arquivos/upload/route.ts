@@ -148,10 +148,26 @@ export async function POST(request: NextRequest) {
 
       const fileUrl = `https://f005.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`
 
+      // Detectar tipo de mídia baseado no mimetype
+      const documentTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain',
+        'text/csv',
+        'application/rtf'
+      ]
+
       const mediaType = file.type.startsWith('image/')
         ? 'image'
         : file.type.startsWith('video/')
         ? 'video'
+        : documentTypes.includes(file.type)
+        ? 'document'
         : 'file'
 
       // Salvar no banco
