@@ -342,7 +342,7 @@ export const funisApi = {
   },
 
   updateEstagio(funilId: string, estagioId: string, data: { nome?: string; cor?: string }) {
-    return apiClient.patch(`/funis/${funilId}/estagios/${estagioId}`, data)
+    return apiClient.put(`/funis/${funilId}/estagios/${estagioId}`, data)
   },
 
   deleteEstagio(funilId: string, estagioId: string) {
@@ -350,7 +350,7 @@ export const funisApi = {
   },
 
   reorderEstagio(funilId: string, estagioId: string, novaOrdem: number) {
-    return apiClient.patch(`/funis/${funilId}/estagios/${estagioId}/reorder`, { novaOrdem })
+    return apiClient.put(`/funis/${funilId}/estagios/${estagioId}/reorder`, { novaOrdem })
   }
 }
 
