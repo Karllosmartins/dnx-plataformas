@@ -1,15 +1,19 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
-import { ApiResponse, ApiError, handleApiError } from '../../../../../lib/api-utils'
+import { requireAdmin } from '../../../../../lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar workspace por ID
+// GET - Buscar workspace por ID (admin only)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
 
     const { data: workspace, error } = await supabase
@@ -41,7 +45,10 @@ export async function GET(
       .single()
 
     if (error || !workspace) {
-      throw ApiError.notFound('Workspace não encontrado', 'WORKSPACE_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Workspace não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Buscar configurações de credenciais
@@ -75,23 +82,34 @@ export async function GET(
       `)
       .eq('workspace_id', id)
 
-    return ApiResponse.success({
-      ...workspace,
-      config_credenciais: configCredenciais || null,
-      credenciais_diversas: credenciaisDiversas || null,
-      membros: membros || []
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...workspace,
+        config_credenciais: configCredenciais || null,
+        credenciais_diversas: credenciaisDiversas || null,
+        membros: membros || []
+      }
     })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao buscar workspace:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao buscar workspace' },
+      { status: 500 }
+    )
   }
 }
 
-// PUT - Atualizar workspace
+// PUT - Atualizar workspace (admin only)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
     const body = await request.json()
     const {
@@ -124,7 +142,10 @@ export async function PUT(
       .single()
 
     if (findError || !existingWs) {
-      throw ApiError.notFound('Workspace não encontrado', 'WORKSPACE_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Workspace não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Se mudou o slug, verificar se já existe
@@ -137,7 +158,10 @@ export async function PUT(
         .single()
 
       if (slugCheck) {
-        throw ApiError.badRequest('Slug já existe em outro workspace', 'SLUG_EXISTS')
+        return NextResponse.json(
+          { success: false, error: 'Slug já existe em outro workspace' },
+          { status: 400 }
+        )
       }
     }
 
@@ -232,18 +256,26 @@ export async function PUT(
       }
     }
 
-    return ApiResponse.success(updatedWorkspace)
+    return NextResponse.json({ success: true, data: updatedWorkspace })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao atualizar workspace:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao atualizar workspace' },
+      { status: 500 }
+    )
   }
 }
 
-// DELETE - Excluir workspace
+// DELETE - Excluir workspace (admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
 
     // Verificar se workspace existe
@@ -254,7 +286,10 @@ export async function DELETE(
       .single()
 
     if (findError || !existingWs) {
-      throw ApiError.notFound('Workspace não encontrado', 'WORKSPACE_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Workspace não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Remover membros primeiro
@@ -283,8 +318,12 @@ export async function DELETE(
 
     if (deleteError) throw deleteError
 
-    return ApiResponse.noContent()
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao excluir workspace:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao excluir workspace' },
+      { status: 500 }
+    )
   }
 }

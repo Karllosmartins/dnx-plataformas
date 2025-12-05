@@ -1,13 +1,17 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../../../../lib/supabase'
-import { ApiResponse, ApiError, handleApiError } from '../../../../lib/api-utils'
+import { requireAdmin } from '../../../../lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 // GET - Listar todos os usuários (admin only)
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     // Buscar todos os usuários com informações do workspace
     const { data: usuarios, error } = await supabase
       .from('users')
@@ -55,15 +59,23 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return ApiResponse.success(usuariosComWorkspaces)
+    return NextResponse.json({ success: true, data: usuariosComWorkspaces })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao listar usuários:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao listar usuários' },
+      { status: 500 }
+    )
   }
 }
 
-// POST - Criar novo usuário
+// POST - Criar novo usuário (admin only)
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const body = await request.json()
     const {
       name,
@@ -75,16 +87,22 @@ export async function POST(request: NextRequest) {
       cpf,
       telefone,
       active = true,
-      skip_workspace = false // Permitir criar usuário sem workspace (para donos de novos workspaces)
+      skip_workspace = false
     } = body
 
     if (!name || !email || !password) {
-      throw ApiError.badRequest('Nome, email e senha são obrigatórios', 'MISSING_FIELDS')
+      return NextResponse.json(
+        { success: false, error: 'Nome, email e senha são obrigatórios' },
+        { status: 400 }
+      )
     }
 
     // Workspace só é obrigatório se não for skip_workspace
     if (!workspace_id && !skip_workspace) {
-      throw ApiError.badRequest('Workspace é obrigatório', 'MISSING_WORKSPACE')
+      return NextResponse.json(
+        { success: false, error: 'Workspace é obrigatório' },
+        { status: 400 }
+      )
     }
 
     // Verificar se email já existe
@@ -95,7 +113,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingUser) {
-      throw ApiError.badRequest('Email já cadastrado', 'EMAIL_EXISTS')
+      return NextResponse.json(
+        { success: false, error: 'Email já cadastrado' },
+        { status: 400 }
+      )
     }
 
     // Hash da senha
@@ -139,12 +160,19 @@ export async function POST(request: NextRequest) {
     // Retornar usuário sem a senha
     const { password: _, ...userWithoutPassword } = newUser
 
-    return ApiResponse.created({
-      ...userWithoutPassword,
-      workspace_id: workspace_id || null,
-      workspace_role: workspace_id ? workspace_role : null
-    })
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...userWithoutPassword,
+        workspace_id: workspace_id || null,
+        workspace_role: workspace_id ? workspace_role : null
+      }
+    }, { status: 201 })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao criar usuário:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao criar usuário' },
+      { status: 500 }
+    )
   }
 }

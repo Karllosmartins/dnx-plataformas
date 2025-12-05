@@ -1,16 +1,20 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../../../../../lib/supabase'
-import { ApiResponse, ApiError, handleApiError } from '../../../../../lib/api-utils'
+import { requireAdmin } from '../../../../../lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar usuário por ID
+// GET - Buscar usuário por ID (admin only)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
 
     const { data: usuario, error } = await supabase
@@ -31,7 +35,10 @@ export async function GET(
       .single()
 
     if (error || !usuario) {
-      throw ApiError.notFound('Usuário não encontrado', 'USER_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Usuário não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Buscar memberships
@@ -48,21 +55,32 @@ export async function GET(
       `)
       .eq('user_id', id)
 
-    return ApiResponse.success({
-      ...usuario,
-      workspace_memberships: memberships || []
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...usuario,
+        workspace_memberships: memberships || []
+      }
     })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao buscar usuário:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao buscar usuário' },
+      { status: 500 }
+    )
   }
 }
 
-// PUT - Atualizar usuário
+// PUT - Atualizar usuário (admin only)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
     const body = await request.json()
     const {
@@ -85,7 +103,10 @@ export async function PUT(
       .single()
 
     if (findError || !existingUser) {
-      throw ApiError.notFound('Usuário não encontrado', 'USER_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Usuário não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Se mudou o email, verificar se já existe
@@ -98,7 +119,10 @@ export async function PUT(
         .single()
 
       if (emailCheck) {
-        throw ApiError.badRequest('Email já cadastrado por outro usuário', 'EMAIL_EXISTS')
+        return NextResponse.json(
+          { success: false, error: 'Email já cadastrado por outro usuário' },
+          { status: 400 }
+        )
       }
     }
 
@@ -161,18 +185,26 @@ export async function PUT(
     // Retornar usuário sem a senha
     const { password: _, ...userWithoutPassword } = updatedUser
 
-    return ApiResponse.success(userWithoutPassword)
+    return NextResponse.json({ success: true, data: userWithoutPassword })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao atualizar usuário:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao atualizar usuário' },
+      { status: 500 }
+    )
   }
 }
 
-// DELETE - Excluir usuário
+// DELETE - Excluir usuário (admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const { id } = await params
 
     // Verificar se usuário existe
@@ -183,7 +215,10 @@ export async function DELETE(
       .single()
 
     if (findError || !existingUser) {
-      throw ApiError.notFound('Usuário não encontrado', 'USER_NOT_FOUND')
+      return NextResponse.json(
+        { success: false, error: 'Usuário não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Remover memberships primeiro
@@ -200,8 +235,12 @@ export async function DELETE(
 
     if (deleteError) throw deleteError
 
-    return ApiResponse.noContent()
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao excluir usuário:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao excluir usuário' },
+      { status: 500 }
+    )
   }
 }

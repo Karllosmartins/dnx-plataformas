@@ -99,7 +99,16 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
+    console.error('Erro no upload de arquivo:', error)
+    const errorMessage = error instanceof Error
+      ? error.message
+      : (typeof error === 'object' && error !== null)
+        ? JSON.stringify(error)
+        : String(error)
 
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return NextResponse.json({
+      error: 'Erro interno do servidor',
+      details: errorMessage
+    }, { status: 500 })
   }
 }

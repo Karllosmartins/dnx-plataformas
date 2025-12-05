@@ -177,7 +177,8 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
       }
     } catch (error) {
       console.error('Erro no upload:', error)
-      alert('Erro ao enviar arquivo')
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`Erro ao enviar arquivo: ${errorMsg}`)
     } finally {
       setUploading(false)
       // Reset input

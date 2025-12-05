@@ -1,12 +1,16 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
-import { ApiResponse, ApiError, handleApiError } from '../../../../lib/api-utils'
+import { requireAdmin } from '../../../../lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 // GET - Listar todos os workspaces (admin only)
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     // Buscar todos os workspaces com plano e configurações
     const { data: workspaces, error } = await supabase
       .from('workspaces')
@@ -109,15 +113,23 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return ApiResponse.success(workspacesCompletos)
+    return NextResponse.json({ success: true, data: workspacesCompletos })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao listar workspaces:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao listar workspaces' },
+      { status: 500 }
+    )
   }
 }
 
-// POST - Criar novo workspace
+// POST - Criar novo workspace (admin only)
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se é admin
+    const adminError = await requireAdmin(request)
+    if (adminError) return adminError
+
     const body = await request.json()
     const {
       name,
@@ -140,7 +152,10 @@ export async function POST(request: NextRequest) {
     } = body
 
     if (!name || !slug) {
-      throw ApiError.badRequest('Nome e slug são obrigatórios', 'MISSING_FIELDS')
+      return NextResponse.json(
+        { success: false, error: 'Nome e slug são obrigatórios' },
+        { status: 400 }
+      )
     }
 
     // Verificar se slug já existe
@@ -151,7 +166,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingWorkspace) {
-      throw ApiError.badRequest('Slug já existe', 'SLUG_EXISTS')
+      return NextResponse.json(
+        { success: false, error: 'Slug já existe' },
+        { status: 400 }
+      )
     }
 
     // Criar workspace
@@ -195,7 +213,7 @@ export async function POST(request: NextRequest) {
 
     // Criar credenciais diversas se datecode fornecido
     if (datecode_username || datecode_password) {
-      const { error: credError } = await supabase
+      await supabase
         .from('credencias_diversas')
         .insert({
           workspace_id: newWorkspace.id,
@@ -204,9 +222,6 @@ export async function POST(request: NextRequest) {
             password: datecode_password || ''
           }
         })
-
-      if (credError) {
-      }
     }
 
     // Se owner_id fornecido, adicionar como owner do workspace
@@ -220,8 +235,12 @@ export async function POST(request: NextRequest) {
         })
     }
 
-    return ApiResponse.created(newWorkspace)
+    return NextResponse.json({ success: true, data: newWorkspace }, { status: 201 })
   } catch (error) {
-    return handleApiError(error)
+    console.error('Erro ao criar workspace:', error)
+    return NextResponse.json(
+      { success: false, error: 'Erro ao criar workspace' },
+      { status: 500 }
+    )
   }
 }
