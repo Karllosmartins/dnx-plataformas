@@ -40,6 +40,9 @@ interface Credentials {
     token: string
     modelos: ZapSignModelo[]
   }
+  mercadopago: {
+    access_token: string
+  }
 }
 
 export default function IntegracoesPage() {
@@ -50,12 +53,15 @@ export default function IntegracoesPage() {
   const [credentials, setCredentials] = useState<Credentials>({
     google_calendar: { email: '', refresh_token: '' },
     asaas: { access_token: '' },
-    zapsign: { token: '', modelos: [] }
+    zapsign: { token: '', modelos: [] },
+    mercadopago: { access_token: '' }
   })
   const [editingZapSign, setEditingZapSign] = useState(false)
   const [zapSignForm, setZapSignForm] = useState({ token: '', modelos: [] as ZapSignModelo[] })
   const [editingAsaas, setEditingAsaas] = useState(false)
   const [asaasForm, setAsaasForm] = useState({ access_token: '' })
+  const [editingMercadoPago, setEditingMercadoPago] = useState(false)
+  const [mercadoPagoForm, setMercadoPagoForm] = useState({ access_token: '' })
   const [successMessage, setSuccessMessage] = useState('')
 
   // Credenciais OAuth2 do Google (variáveis de ambiente)
@@ -148,17 +154,25 @@ export default function IntegracoesPage() {
 
         const modelosMigrados = migrateZapSignModelos(zapsignData)
 
+        // Parse dos dados de cada integração
+        const asaasData = typeof data.asaas === 'string'
+          ? JSON.parse(data.asaas)
+          : (data.asaas || { access_token: '' })
+
+        const mercadopagoData = typeof data.mercadopago === 'string'
+          ? JSON.parse(data.mercadopago)
+          : (data.mercadopago || { access_token: '' })
+
         setCredentials({
           google_calendar: typeof data.google_calendar === 'string'
             ? JSON.parse(data.google_calendar)
-            : data.google_calendar,
-          asaas: typeof data.asaas === 'string'
-            ? JSON.parse(data.asaas)
-            : data.asaas,
+            : (data.google_calendar || { email: '', refresh_token: '' }),
+          asaas: asaasData,
           zapsign: {
             token: zapsignData.token || '',
             modelos: modelosMigrados
-          }
+          },
+          mercadopago: mercadopagoData
         })
 
         // Inicializar formulário do ZapSign
@@ -168,11 +182,13 @@ export default function IntegracoesPage() {
         })
 
         // Inicializar formulário do Asaas
-        const asaasData = typeof data.asaas === 'string'
-          ? JSON.parse(data.asaas)
-          : data.asaas
         setAsaasForm({
           access_token: asaasData.access_token || ''
+        })
+
+        // Inicializar formulário do Mercado Pago
+        setMercadoPagoForm({
+          access_token: mercadopagoData.access_token || ''
         })
       }
     } catch (error) {
@@ -299,12 +315,75 @@ export default function IntegracoesPage() {
     }
   }
 
+  const saveMercadoPagoCredentials = async () => {
+    if (!workspaceId) return
+
+    setSaving(true)
+    setSuccessMessage('')
+
+    try {
+      const { data: existing } = await supabase
+        .from('credencias_diversas')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .single()
+
+      const mercadoPagoData = {
+        access_token: mercadoPagoForm.access_token
+      }
+
+      if (existing) {
+        // Atualizar registro existente
+        const { error } = await supabase
+          .from('credencias_diversas')
+          .update({
+            mercadopago: mercadoPagoData
+          })
+          .eq('workspace_id', workspaceId)
+
+        if (error) throw error
+      } else {
+        // Criar novo registro
+        const { error } = await supabase
+          .from('credencias_diversas')
+          .insert([{
+            user_id: parseInt(user?.id || '0'),
+            workspace_id: workspaceId,
+            mercadopago: mercadoPagoData,
+            zapsign: { token: '', modelos: [] },
+            google_calendar: { email: '', refresh_token: '' },
+            asaas: { access_token: '' }
+          }])
+
+        if (error) throw error
+      }
+
+      setCredentials(prev => ({
+        ...prev,
+        mercadopago: mercadoPagoData
+      }))
+      setEditingMercadoPago(false)
+      setSuccessMessage('Credenciais do Mercado Pago salvas com sucesso!')
+
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Erro ao salvar credenciais:', error)
+      alert('Erro ao salvar credenciais do Mercado Pago')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const isZapSignConfigured = () => {
     return credentials.zapsign.token && credentials.zapsign.modelos.length > 0
   }
 
   const isAsaasConfigured = () => {
     return credentials.asaas.access_token && credentials.asaas.access_token.length > 0
+  }
+
+  const isMercadoPagoConfigured = () => {
+    return credentials.mercadopago.access_token && credentials.mercadopago.access_token.length > 0
   }
 
   // Funções para gerenciar modelos do ZapSign
@@ -403,31 +482,31 @@ export default function IntegracoesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Plug className="h-8 w-8 mr-3 text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+            <Plug className="h-8 w-8 mr-3 text-blue-600 dark:text-blue-400" />
             Integrações
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Conecte suas ferramentas favoritas para automatizar seu fluxo de trabalho
           </p>
         </div>
 
         {/* Mensagem de sucesso */}
         {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-            <span className="text-green-800">{successMessage}</span>
+          <div className="mb-6 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg p-4 flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+            <span className="text-green-800 dark:text-green-200">{successMessage}</span>
           </div>
         )}
 
         {/* Grid de Integrações */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card ZapSign */}
-          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
             {/* Header do Card */}
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6">
               <div className="flex items-center justify-between">
@@ -450,20 +529,20 @@ export default function IntegracoesPage() {
 
             {/* Conteúdo do Card */}
             <div className="p-6">
-              <p className="text-gray-600 text-sm mb-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                 Integre com o ZapSign para enviar documentos para assinatura digital automaticamente.
               </p>
 
               {!editingZapSign ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Status:</span>
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
                     {isZapSignConfigured() ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                         Configurado
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
                         Não configurado
                       </span>
                     )}
@@ -471,15 +550,15 @@ export default function IntegracoesPage() {
 
                   {isZapSignConfigured() && (
                     <>
-                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Token:</span>
-                        <span className="text-sm text-gray-900 font-mono">
+                      <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Token:</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
                           {credentials.zapsign.token.substring(0, 20)}...
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-gray-600">Modelos:</span>
-                        <span className="text-sm text-gray-900 font-semibold">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Modelos:</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-semibold">
                           {credentials.zapsign.modelos.length} {credentials.zapsign.modelos.length === 1 ? 'modelo' : 'modelos'}
                         </span>
                       </div>
@@ -496,7 +575,7 @@ export default function IntegracoesPage() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Token da API *
                     </label>
                     <input
@@ -504,21 +583,21 @@ export default function IntegracoesPage() {
                       value={zapSignForm.token}
                       onChange={(e) => setZapSignForm({ ...zapSignForm, token: e.target.value })}
                       placeholder="Digite o token da API do ZapSign"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Encontre seu token nas configurações da sua conta ZapSign
                     </p>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Modelos de Documentos *
                       </label>
                       <button
                         onClick={addZapSignModelo}
-                        className="flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+                        className="flex items-center text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
                       >
                         <Plus className="h-3 w-3 mr-1" />
                         Adicionar Modelo
@@ -526,12 +605,12 @@ export default function IntegracoesPage() {
                     </div>
 
                     {zapSignForm.modelos.length === 0 ? (
-                      <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
-                        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">Nenhum modelo configurado</p>
+                      <div className="text-center py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <FileText className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum modelo configurado</p>
                         <button
                           onClick={addZapSignModelo}
-                          className="mt-2 text-sm text-purple-600 hover:text-purple-700"
+                          className="mt-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
                         >
                           Adicionar primeiro modelo
                         </button>
@@ -539,12 +618,12 @@ export default function IntegracoesPage() {
                     ) : (
                       <div className="space-y-3">
                         {zapSignForm.modelos.map((modelo, index) => (
-                          <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-semibold text-gray-600">Modelo {index + 1}</span>
+                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Modelo {index + 1}</span>
                               <button
                                 onClick={() => removeZapSignModelo(index)}
-                                className="text-red-600 hover:text-red-700 p-1"
+                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
                                 title="Remover modelo"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -557,7 +636,7 @@ export default function IntegracoesPage() {
                                 value={modelo.nome}
                                 onChange={(e) => updateZapSignModelo(index, 'nome', e.target.value)}
                                 placeholder="Nome do modelo (ex: Contrato de Prestação)"
-                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100"
                               />
 
                               <input
@@ -565,14 +644,14 @@ export default function IntegracoesPage() {
                                 value={modelo.id}
                                 onChange={(e) => updateZapSignModelo(index, 'id', e.target.value)}
                                 placeholder="ID do modelo no ZapSign"
-                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100"
                               />
 
                               <textarea
                                 value={modelo.descricao}
                                 onChange={(e) => updateZapSignModelo(index, 'descricao', e.target.value)}
                                 placeholder="Descrição do modelo (ex: Usado para contratos de serviços recorrentes)"
-                                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100"
                                 rows={2}
                               />
                             </div>
@@ -592,7 +671,7 @@ export default function IntegracoesPage() {
                           modelos: credentials.zapsign.modelos || []
                         })
                       }}
-                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                      className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                       disabled={saving}
                     >
                       Cancelar
@@ -621,7 +700,7 @@ export default function IntegracoesPage() {
           </div>
 
           {/* Card Google Calendar */}
-          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
             {/* Header do Card */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
               <div className="flex items-center justify-between">
@@ -644,28 +723,28 @@ export default function IntegracoesPage() {
 
             {/* Conteúdo do Card */}
             <div className="p-6">
-              <p className="text-gray-600 text-sm mb-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                 Conecte sua conta Google para sincronizar agendamentos automaticamente.
               </p>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-600">Status:</span>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
                   {isGoogleCalendarConfigured() ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                       Conectado
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
                       Não conectado
                     </span>
                   )}
                 </div>
 
                 {isGoogleCalendarConfigured() && (
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Email:</span>
-                    <span className="text-sm text-gray-900">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Email:</span>
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
                       {credentials.google_calendar.email}
                     </span>
                   </div>
@@ -694,7 +773,7 @@ export default function IntegracoesPage() {
           </div>
 
           {/* Card Asaas */}
-          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
             {/* Header do Card */}
             <div className="bg-gradient-to-r from-green-600 to-green-700 p-6">
               <div className="flex items-center justify-between">
@@ -717,29 +796,29 @@ export default function IntegracoesPage() {
 
             {/* Conteúdo do Card */}
             <div className="p-6">
-              <p className="text-gray-600 text-sm mb-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                 Integre com o Asaas para gerenciar cobranças e pagamentos automaticamente.
               </p>
 
               {!editingAsaas ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Status:</span>
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
                     {isAsaasConfigured() ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                         Configurado
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
                         Não configurado
                       </span>
                     )}
                   </div>
 
                   {isAsaasConfigured() && (
-                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-600">Token:</span>
-                      <span className="text-sm text-gray-900 font-mono">
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Token:</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
                         {credentials.asaas.access_token.substring(0, 20)}...
                       </span>
                     </div>
@@ -755,7 +834,7 @@ export default function IntegracoesPage() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Access Token *
                     </label>
                     <input
@@ -763,9 +842,9 @@ export default function IntegracoesPage() {
                       value={asaasForm.access_token}
                       onChange={(e) => setAsaasForm({ access_token: e.target.value })}
                       placeholder="$aact_prod_..."
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Encontre seu token nas configurações da sua conta Asaas
                     </p>
                   </div>
@@ -779,7 +858,7 @@ export default function IntegracoesPage() {
                           access_token: credentials.asaas.access_token || ''
                         })
                       }}
-                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                      className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                       disabled={saving}
                     >
                       Cancelar
@@ -788,6 +867,120 @@ export default function IntegracoesPage() {
                       onClick={saveAsaasCredentials}
                       disabled={saving || !asaasForm.access_token}
                       className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Salvar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Card Mercado Pago */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+            {/* Header do Card */}
+            <div className="bg-gradient-to-r from-sky-500 to-sky-600 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
+                    <CreditCard className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-bold text-white">Mercado Pago</h3>
+                    <p className="text-sky-100 text-sm">Pagamentos</p>
+                  </div>
+                </div>
+                {isMercadoPagoConfigured() ? (
+                  <CheckCircle className="h-6 w-6 text-green-300" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-red-300" />
+                )}
+              </div>
+            </div>
+
+            {/* Conteúdo do Card */}
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Integre com o Mercado Pago para receber pagamentos via PIX, cartão e boleto.
+              </p>
+
+              {!editingMercadoPago ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+                    {isMercadoPagoConfigured() ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                        Configurado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                        Não configurado
+                      </span>
+                    )}
+                  </div>
+
+                  {isMercadoPagoConfigured() && (
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Token:</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                        {credentials.mercadopago.access_token.substring(0, 20)}...
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setEditingMercadoPago(true)}
+                    className="w-full mt-4 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors flex items-center justify-center"
+                  >
+                    {isMercadoPagoConfigured() ? 'Editar Configuração' : 'Configurar Mercado Pago'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Access Token *
+                    </label>
+                    <input
+                      type="text"
+                      value={mercadoPagoForm.access_token}
+                      onChange={(e) => setMercadoPagoForm({ access_token: e.target.value })}
+                      placeholder="APP_USR-..."
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Encontre seu Access Token em Seu negócio → Configurações → Gestão e administração → Credenciais
+                    </p>
+                  </div>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      onClick={() => {
+                        setEditingMercadoPago(false)
+                        // Resetar para valores salvos
+                        setMercadoPagoForm({
+                          access_token: credentials.mercadopago.access_token || ''
+                        })
+                      }}
+                      className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                      disabled={saving}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={saveMercadoPagoCredentials}
+                      disabled={saving || !mercadoPagoForm.access_token}
+                      className="flex-1 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saving ? (
                         <>

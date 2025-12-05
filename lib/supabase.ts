@@ -477,6 +477,7 @@ export interface ExtracaoProfile {
 export interface UserAgentVectorStore {
   id: number
   user_id: number
+  workspace_id: string // UUID do workspace
   agent_id: number
   vectorstore_id: string // ID do vector store na OpenAI
   is_active: boolean

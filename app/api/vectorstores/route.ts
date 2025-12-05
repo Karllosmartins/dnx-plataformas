@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { workspaceId, agentId, vectorStoreName } = body
+    const { workspaceId, userId, agentId, vectorStoreName } = body
 
     if (!workspaceId || !agentId || !vectorStoreName) {
       return NextResponse.json({
@@ -91,22 +91,61 @@ export async function POST(request: NextRequest) {
 
     const vectorStoreData = await openaiResponse.json()
 
-    // 3. Salvar no banco usando upsert para evitar conflito de constraint unique
-    const { data: savedData, error: saveError } = await supabase
+    // 3. Verificar se já existe um registro para esse workspace/agent
+    const { data: existingRecord } = await supabase
       .from('user_agent_vectorstore')
-      .upsert({
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('agent_id', parseInt(agentId))
+      .maybeSingle()
+
+    let savedData
+    let saveError
+
+    if (existingRecord) {
+      // Atualizar registro existente
+      const result = await supabase
+        .from('user_agent_vectorstore')
+        .update({
+          vectorstore_id: vectorStoreData.id,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('agent_id', parseInt(agentId))
+        .select()
+        .maybeSingle()
+
+      savedData = result.data
+      saveError = result.error
+    } else {
+      // Inserir novo registro
+      const insertData: Record<string, unknown> = {
         workspace_id: workspaceId,
         agent_id: parseInt(agentId),
         vectorstore_id: vectorStoreData.id,
         is_active: true,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'workspace_id,agent_id,vectorstore_id'
-      })
-      .select()
-      .maybeSingle()
+      }
+
+      // Adicionar user_id se fornecido
+      if (userId) {
+        insertData.user_id = userId
+      }
+
+      const result = await supabase
+        .from('user_agent_vectorstore')
+        .insert(insertData)
+        .select()
+        .maybeSingle()
+
+      savedData = result.data
+      saveError = result.error
+    }
 
     if (saveError) {
+      console.error('Erro ao salvar no banco:', JSON.stringify(saveError, null, 2))
       // Se falhou ao salvar, tentar deletar o vector store da OpenAI
       try {
         await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreData.id}`, {
@@ -117,22 +156,31 @@ export async function POST(request: NextRequest) {
           }
         })
       } catch (cleanupError) {
-
+        console.error('Erro ao limpar vector store da OpenAI:', cleanupError)
       }
-      throw saveError
+      return NextResponse.json({
+        error: 'Erro ao salvar no banco de dados',
+        details: saveError.message || saveError.code || JSON.stringify(saveError)
+      }, { status: 500 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       vectorStore: savedData,
       openaiData: vectorStoreData
     })
 
   } catch (error) {
+    console.error('Erro na criação de vector store:', error)
+    const errorMessage = error instanceof Error
+      ? error.message
+      : (typeof error === 'object' && error !== null)
+        ? JSON.stringify(error)
+        : String(error)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Erro interno do servidor',
-      details: error instanceof Error ? error.message : String(error)
+      details: errorMessage
     }, { status: 500 })
   }
 }

@@ -69,6 +69,15 @@ export default function AgentesIAPage() {
 
       if (data) {
         setAgentes(data)
+        // Inicializar estados dos Collapsibles para evitar erro controlled/uncontrolled
+        const toolsState: {[key: number]: boolean} = {}
+        const instanceState: {[key: number]: boolean} = {}
+        data.forEach((agente: AgenteIA) => {
+          toolsState[agente.id] = false
+          instanceState[agente.id] = false
+        })
+        setShowAgentTools(prev => ({ ...toolsState, ...prev }))
+        setShowAgentInstance(prev => ({ ...instanceState, ...prev }))
       }
     } catch (error) {
       console.error('Erro ao carregar agentes:', error)
@@ -251,7 +260,7 @@ export default function AgentesIAPage() {
   }
 
   const deleteAgent = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este agente? Isso também removerá o Vector Store e ferramentas associadas.')) return
+    if (!confirm('Tem certeza que deseja excluir este agente? Isso também removerá a Base de consulta IA e ferramentas associadas.')) return
 
     try {
       // 1. Deletar ferramentas do agente (user_tools)
@@ -269,29 +278,29 @@ export default function AgentesIAPage() {
         console.warn('Erro ao processar ferramentas, mas continuando:', toolsError)
       }
 
-      // 2. Deletar o vector store associado (se existir)
+      // 2. Deletar a base de consulta IA associada (se existir)
       try {
-        const vectorStoreResponse = await fetch(`/api/vectorstores?userId=${currentUser?.id}&agentId=${id}`)
+        const vectorStoreResponse = await fetch(`/api/vectorstores?workspaceId=${workspaceId}&agentId=${id}`)
         const vectorStoreData = await vectorStoreResponse.json()
 
         if (vectorStoreData.hasVectorStore && vectorStoreData.vectorStore) {
-          // Deletar vector store da OpenAI e do banco
+          // Deletar base de consulta IA da OpenAI e do banco
           const deleteResponse = await fetch('/api/vectorstores', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: currentUser?.id,
+              workspaceId: workspaceId,
               agentId: id,
               vectorStoreId: vectorStoreData.vectorStore.vectorstore_id
             })
           })
 
           if (!deleteResponse.ok) {
-            console.warn('Erro ao deletar vector store, mas continuando com exclusão do agente')
+            console.warn('Erro ao deletar base de consulta IA, mas continuando com exclusão do agente')
           }
         }
       } catch (vectorStoreError) {
-        console.warn('Erro ao processar vector store, mas continuando com exclusão do agente:', vectorStoreError)
+        console.warn('Erro ao processar base de consulta IA, mas continuando com exclusão do agente:', vectorStoreError)
       }
 
       // 3. Deletar o agente
@@ -362,11 +371,11 @@ export default function AgentesIAPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-xl">
-                <Bot className="h-8 w-8 text-purple-600" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
+                <Bot className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Agentes IA</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Agentes IA</h1>
                 <p className="text-sm text-muted-foreground">
                   Gerencie seus agentes de inteligência artificial para automação
                 </p>
@@ -386,8 +395,8 @@ export default function AgentesIAPage() {
                   <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
-                          <Bot className="h-6 w-6 text-purple-600" />
+                        <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/50 dark:to-purple-800/30 rounded-xl">
+                          <Bot className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -454,7 +463,7 @@ export default function AgentesIAPage() {
 
                     <Separator />
 
-                    {/* Vector Store Manager */}
+                    {/* Base de consulta IA */}
                     <VectorStoreManager agentId={agente.id} />
 
                     {/* Seção WhatsApp - Collapsible */}
@@ -470,8 +479,8 @@ export default function AgentesIAPage() {
                           <CardHeader className="py-3 cursor-pointer hover:bg-green-100/50 dark:hover:bg-green-900/30 transition-colors">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <MessageCircle className="h-5 w-5 text-green-600" />
-                                <span className="font-medium text-sm">Instância WhatsApp</span>
+                                <MessageCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Instância WhatsApp</span>
                                 {getAgentInstance(agente.id) && (
                                   <Badge variant="outline" className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
                                     Conectado
@@ -479,9 +488,9 @@ export default function AgentesIAPage() {
                                 )}
                               </div>
                               {showAgentInstance[agente.id] ? (
-                                <ChevronUp className="h-4 w-4 text-green-600" />
+                                <ChevronUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                               ) : (
-                                <ChevronDown className="h-4 w-4 text-green-600" />
+                                <ChevronDown className="h-4 w-4 text-green-600 dark:text-green-400" />
                               )}
                             </div>
                           </CardHeader>
@@ -491,7 +500,7 @@ export default function AgentesIAPage() {
                           <CardContent className="pt-0 pb-4">
                             <div className="space-y-3">
                               <div>
-                                <Label className="text-xs">Selecionar Instância WhatsApp:</Label>
+                                <Label className="text-xs text-gray-700 dark:text-gray-300">Selecionar Instância WhatsApp:</Label>
                                 <Select
                                   value={getAgentInstance(agente.id)?.id?.toString() || 'none'}
                                   onValueChange={(value) => {
@@ -550,16 +559,16 @@ export default function AgentesIAPage() {
                           <CardHeader className="py-3 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Wrench className="h-5 w-5 text-blue-600" />
-                                <span className="font-medium text-sm">Ferramentas do Agente</span>
+                                <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Ferramentas do Agente</span>
                                 <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700">
                                   {userTools.filter(ut => ut.agente_id === agente.id && ut.is_active).length} ativas
                                 </Badge>
                               </div>
                               {showAgentTools[agente.id] ? (
-                                <ChevronUp className="h-4 w-4 text-blue-600" />
+                                <ChevronUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                               ) : (
-                                <ChevronDown className="h-4 w-4 text-blue-600" />
+                                <ChevronDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                               )}
                             </div>
                           </CardHeader>
@@ -582,7 +591,11 @@ export default function AgentesIAPage() {
                                     <div className="min-w-0 flex-1 mr-3">
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <h6 className="text-sm font-medium truncate cursor-help">
+                                          <h6 className={`text-sm font-medium truncate cursor-help ${
+                                            isActive
+                                              ? 'text-gray-900 dark:text-gray-100'
+                                              : 'text-gray-500 dark:text-gray-400'
+                                          }`}>
                                             {tool.nome}
                                           </h6>
                                         </TooltipTrigger>
@@ -590,7 +603,11 @@ export default function AgentesIAPage() {
                                           <p className="max-w-xs">{tool.nome}</p>
                                         </TooltipContent>
                                       </Tooltip>
-                                      <p className="text-xs text-muted-foreground truncate">{tool.type}</p>
+                                      <p className={`text-xs truncate ${
+                                        isActive
+                                          ? 'text-gray-600 dark:text-gray-300'
+                                          : 'text-gray-400 dark:text-gray-500'
+                                      }`}>{tool.type}</p>
                                     </div>
 
                                     <Switch
@@ -613,10 +630,10 @@ export default function AgentesIAPage() {
             /* Empty State */
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="p-4 bg-purple-100 rounded-full mb-6">
-                  <Bot className="h-12 w-12 text-purple-600" />
+                <div className="p-4 bg-purple-100 dark:bg-purple-900/50 rounded-full mb-6">
+                  <Bot className="h-12 w-12 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Nenhum agente configurado</h3>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Nenhum agente configurado</h3>
                 <p className="text-muted-foreground text-center max-w-md mb-8">
                   Crie seu primeiro agente IA para começar a automatizar suas tarefas.
                   Agentes podem ser usados para vendas, suporte, qualificação de leads e muito mais.
@@ -681,8 +698,8 @@ function AgentModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Bot className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+              <Bot className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <DialogTitle className="text-xl">

@@ -96,6 +96,7 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: workspaceId,
+          userId: user.id,
           agentId: agentId,
           vectorStoreName: vectorStoreName.trim()
         })
@@ -104,20 +105,20 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
       const data = await response.json()
       
       if (data.success) {
-        alert('Vector Store criado com sucesso!')
+        alert('Base de consulta IA criada com sucesso!')
         setVectorStoreName('')
         setShowCreateForm(false)
         checkVectorStore()
       } else {
-        const errorMessage = data.details 
-          ? `${data.error}: ${data.details}` 
-          : data.error || 'Erro ao criar Vector Store'
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : data.error || 'Erro ao criar Base de consulta IA'
         alert(errorMessage)
         console.error('Erro detalhado:', data)
       }
     } catch (error) {
-      console.error('Erro ao criar vector store:', error)
-      alert('Erro ao criar Vector Store')
+      console.error('Erro ao criar base de consulta IA:', error)
+      alert('Erro ao criar Base de consulta IA')
     } finally {
       setCreating(false)
     }
@@ -142,11 +143,11 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
       if (data.success) {
         setVectorStore({ ...vectorStore, is_active: !vectorStore.is_active })
       } else {
-        alert(data.error || 'Erro ao alterar status do Vector Store')
+        alert(data.error || 'Erro ao alterar status da Base de consulta IA')
       }
     } catch (error) {
-      console.error('Erro ao alterar vector store:', error)
-      alert('Erro ao alterar Vector Store')
+      console.error('Erro ao alterar base de consulta IA:', error)
+      alert('Erro ao alterar Base de consulta IA')
     }
   }
 
@@ -216,21 +217,21 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
 
   if (loading) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <div className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
-          <span className="text-sm text-gray-600">Verificando Vector Store...</span>
+          <RefreshCw className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+          <span className="text-sm text-gray-600 dark:text-gray-300">Verificando Base de consulta IA...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-blue-600" />
-          <h4 className="text-sm font-medium text-gray-900">Vector Store</h4>
+          <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Base de consulta IA</h4>
         </div>
         
         {vectorStore && (
@@ -242,13 +243,13 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
               className="sr-only"
             />
             <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              vectorStore.is_active ? 'bg-green-600' : 'bg-gray-300'
+              vectorStore.is_active ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
             }`}>
               <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
                 vectorStore.is_active ? 'translate-x-5' : 'translate-x-1'
               }`} />
             </div>
-            <span className="ml-2 text-xs text-gray-600">
+            <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
               {vectorStore.is_active ? 'Ativo' : 'Inativo'}
             </span>
           </label>
@@ -257,18 +258,18 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
 
       {!vectorStore ? (
         <div className="text-center py-4">
-          <Database className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600 mb-4">
-            Nenhum Vector Store configurado para este agente
+          <Database className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Nenhuma Base de consulta IA configurada para este agente
           </p>
-          
+
           {!showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
-              Criar Vector Store
+              Criar Base de consulta IA
             </button>
           ) : (
             <div className="space-y-3">
@@ -276,8 +277,8 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
                 type="text"
                 value={vectorStoreName}
                 onChange={(e) => setVectorStoreName(e.target.value)}
-                placeholder="Nome do Vector Store"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nome da Base de consulta IA"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 maxLength={255}
               />
               <div className="flex gap-2">
@@ -294,7 +295,7 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
                     setShowCreateForm(false)
                     setVectorStoreName('')
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -306,8 +307,8 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span className="text-sm text-gray-900">Vector Store ativo</span>
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm text-gray-900 dark:text-gray-100">Base de consulta IA ativa</span>
             </div>
             
             <div className="flex items-center gap-2">
@@ -340,24 +341,24 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
           </div>
 
           {showFiles && (
-            <div className="border-t pt-3 mt-3">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
               {files.length > 0 ? (
                 <div className="space-y-2">
                   {files.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <div key={file.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-gray-900 truncate">{file.filename}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{file.filename}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {(file.bytes / 1024).toFixed(1)} KB • {file.status}
                           </p>
                         </div>
                       </div>
-                      
+
                       <button
                         onClick={() => deleteFile(file.id)}
-                        className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                        className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                         title="Remover arquivo"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -367,18 +368,18 @@ export default function VectorStoreManager({ agentId }: VectorStoreManagerProps)
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <FileText className="h-6 w-6 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">Nenhum arquivo enviado</p>
+                  <FileText className="h-6 w-6 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum arquivo enviado</p>
                 </div>
               )}
             </div>
           )}
 
           {!vectorStore.is_active && (
-            <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-              <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
-              <p className="text-xs text-yellow-700">
-                Vector Store desativado. Ative para usar upload de arquivos.
+            <div className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded">
+              <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+              <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                Base de consulta IA desativada. Ative para usar upload de arquivos.
               </p>
             </div>
           )}
