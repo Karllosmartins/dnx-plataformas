@@ -9,11 +9,20 @@ interface TokenPayload {
 }
 
 /**
- * Verifica o token JWT do cookie e retorna o payload
+ * Verifica o token JWT do cookie ou header Authorization e retorna o payload
  */
 export async function verifyAuthToken(request: NextRequest): Promise<TokenPayload | null> {
   try {
-    const token = request.cookies.get('auth-token')?.value
+    // Tentar pegar do cookie primeiro
+    let token = request.cookies.get('auth-token')?.value
+
+    // Se não tiver no cookie, tentar pegar do header Authorization
+    if (!token) {
+      const authHeader = request.headers.get('Authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+      }
+    }
 
     if (!token) {
       return null

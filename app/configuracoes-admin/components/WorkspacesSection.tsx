@@ -144,10 +144,17 @@ export default function WorkspacesSection() {
     fetchAllTools()
   }, [])
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('auth_token')
+    return token ? { 'Authorization': `Bearer ${token}` } : {}
+  }
+
   const fetchWorkspaces = async () => {
     try {
       // Usar API local para buscar todos os workspaces
-      const response = await fetch('/api/admin/workspaces')
+      const response = await fetch('/api/admin/workspaces', {
+        headers: getAuthHeaders()
+      })
       const data = await response.json()
 
       if (data.success && data.data) {
@@ -180,7 +187,9 @@ export default function WorkspacesSection() {
   const fetchAllUsers = async () => {
     try {
       // Usar API local para buscar todos os usuários
-      const response = await fetch('/api/admin/users')
+      const response = await fetch('/api/admin/users', {
+        headers: getAuthHeaders()
+      })
       const data = await response.json()
       if (data.success && data.data) {
         setAllUsers(data.data as Usuario[])
@@ -195,7 +204,9 @@ export default function WorkspacesSection() {
   const fetchAllTools = async () => {
     try {
       // Usar API local para buscar todas as tools
-      const response = await fetch('/api/admin/tools')
+      const response = await fetch('/api/admin/tools', {
+        headers: getAuthHeaders()
+      })
       const data = await response.json()
       if (data.success && data.data) {
         setAllTools(data.data as Tool[])
@@ -228,7 +239,10 @@ export default function WorkspacesSection() {
         // Criar usuário via API (sem workspace, será adicionado depois)
         const createUserResponse = await fetch('/api/admin/users', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+          },
           body: JSON.stringify({
             name: workspaceData.dono_nome,
             email: workspaceData.dono_email,
