@@ -11,19 +11,19 @@ export interface DatecodeCredentials {
 }
 
 /**
- * Busca credenciais Datecode do usuário na tabela credencias_diversas
+ * Busca credenciais Datecode do workspace na tabela credencias_diversas
  * NÃO utiliza fallback para variáveis de ambiente
  *
- * @param userId - ID do usuário
+ * @param workspaceId - ID do workspace (UUID)
  * @returns Credenciais Datecode ou null se não encontradas
  */
-export async function getDatecodeCredentials(userId: number): Promise<DatecodeCredentials | null> {
+export async function getDatecodeCredentials(workspaceId: string): Promise<DatecodeCredentials | null> {
   try {
-    // Buscar credenciais do usuário na tabela credencias_diversas
+    // Buscar credenciais do workspace na tabela credencias_diversas
     const { data, error } = await getSupabaseAdmin()
       .from('credencias_diversas')
       .select('datecode')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (error) {
@@ -31,19 +31,19 @@ export async function getDatecodeCredentials(userId: number): Promise<DatecodeCr
       return null
     }
 
-    // Se encontrou credenciais do usuário e estão válidas
+    // Se encontrou credenciais do workspace e estão válidas
     if (data && data.datecode) {
       const { username, password } = data.datecode as DatecodeCredentials
 
       // Validar se as credenciais estão preenchidas
       if (username && password && username.trim() !== '' && password.trim() !== '') {
-        console.log(`Usando credenciais Datecode do usuário ${userId}`)
+        console.log(`Usando credenciais Datecode do workspace ${workspaceId}`)
         return { username, password }
       }
     }
 
     // Credenciais não encontradas ou vazias
-    console.error(`Credenciais Datecode não encontradas ou vazias para usuário ${userId}`)
+    console.error(`Credenciais Datecode não encontradas ou vazias para workspace ${workspaceId}`)
     return null
 
   } catch (error) {

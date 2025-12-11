@@ -12,15 +12,15 @@ interface GoogleCalendarCredentials {
  * Se o access token estiver expirado, renova automaticamente usando o refresh token
  */
 export async function getGoogleCalendarAccessToken(
-  userId: number,
+  workspaceId: string,
   clientId: string,
   clientSecret: string
 ): Promise<string> {
-  // Buscar credenciais do usuário
+  // Buscar credenciais do workspace
   const { data, error } = await supabase
     .from('credencias_diversas')
     .select('google_calendar')
-    .eq('user_id', userId)
+    .eq('workspace_id', workspaceId)
     .single()
 
   if (error || !data) {
@@ -64,7 +64,7 @@ export async function getGoogleCalendarAccessToken(
  * Cria um evento no Google Calendar
  */
 export async function createCalendarEvent(
-  userId: number,
+  workspaceId: string,
   clientId: string,
   clientSecret: string,
   eventData: {
@@ -75,7 +75,7 @@ export async function createCalendarEvent(
     attendees?: string[] // Array de emails
   }
 ) {
-  const accessToken = await getGoogleCalendarAccessToken(userId, clientId, clientSecret)
+  const accessToken = await getGoogleCalendarAccessToken(workspaceId, clientId, clientSecret)
 
   const event = {
     summary: eventData.summary,
@@ -123,7 +123,7 @@ export async function createCalendarEvent(
  * Lista eventos do Google Calendar
  */
 export async function listCalendarEvents(
-  userId: number,
+  workspaceId: string,
   clientId: string,
   clientSecret: string,
   options?: {
@@ -132,7 +132,7 @@ export async function listCalendarEvents(
     maxResults?: number
   }
 ) {
-  const accessToken = await getGoogleCalendarAccessToken(userId, clientId, clientSecret)
+  const accessToken = await getGoogleCalendarAccessToken(workspaceId, clientId, clientSecret)
 
   const params = new URLSearchParams({
     singleEvents: 'true',
@@ -165,12 +165,12 @@ export async function listCalendarEvents(
  * Deleta um evento do Google Calendar
  */
 export async function deleteCalendarEvent(
-  userId: number,
+  workspaceId: string,
   clientId: string,
   clientSecret: string,
   eventId: string
 ) {
-  const accessToken = await getGoogleCalendarAccessToken(userId, clientId, clientSecret)
+  const accessToken = await getGoogleCalendarAccessToken(workspaceId, clientId, clientSecret)
 
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,

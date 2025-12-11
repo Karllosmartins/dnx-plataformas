@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
     // Remover caracteres especiais do CPF
     const cpfLimpo = cpf.replace(/[^\d]/g, '')
 
-    // Obter credenciais Datecode do usuário
-    const credentials = userId ? await getDatecodeCredentials(userId) : null
+    // Obter credenciais Datecode do workspace
+    const credentials = workspaceId ? await getDatecodeCredentials(workspaceId) : null
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(

@@ -303,6 +303,14 @@ export const leadsApi = {
 
   moveToStage(id: string, estagioId: string) {
     return apiClient.patch(`/leads/${id}/stage`, { estagioId })
+  },
+
+  toggleAtendimento(id: string, atendimentofinalizado: boolean) {
+    return apiClient.patch(`/leads/${id}`, { atendimentofinalizado })
+  },
+
+  patch(id: string, data: Record<string, unknown>) {
+    return apiClient.patch(`/leads/${id}`, data)
   }
 }
 
@@ -543,5 +551,17 @@ export const adminWorkspacesApi = {
 
   addMember(workspaceId: string, data: { user_id: number; role?: string }) {
     return apiClient.post(`/admin/workspaces/${workspaceId}/members`, data)
+  }
+}
+
+// API para agentes (lista de agentes para consulta)
+export const agentesApi = {
+  list(workspaceId: string) {
+    return apiClient.get<Array<{
+      id: number
+      agente_id: string
+      nome: string
+      ativo: boolean
+    }>>('/agentes', { workspaceId })
   }
 }

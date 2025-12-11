@@ -67,12 +67,12 @@ export async function verifyUserPlanAccess(
 }
 
 /**
- * Validates and gets datecode credentials for a user
+ * Validates and gets datecode credentials for a workspace
  */
 export async function getValidatedCredentials(
-  userId: string | number
+  workspaceId: string
 ): Promise<{ valid: boolean; credentials?: any; error?: string }> {
-  const credentials = await getDatecodeCredentials(Number(userId))
+  const credentials = await getDatecodeCredentials(workspaceId)
 
   if (!validateDatecodeCredentials(credentials)) {
     return {
@@ -163,6 +163,7 @@ export async function consumeAndGetUsage(
  */
 export async function handleDatecodeConsulta(
   userId: string | number,
+  workspaceId: string,
   params: DatecodeRequestParams,
   options: { checkAccess?: boolean } = { checkAccess: true }
 ): Promise<DatecodeResult> {
@@ -179,8 +180,8 @@ export async function handleDatecodeConsulta(
       }
     }
 
-    // Step 2: Get and validate credentials
-    const credentialsResult = await getValidatedCredentials(userId)
+    // Step 2: Get and validate credentials from workspace
+    const credentialsResult = await getValidatedCredentials(workspaceId)
     if (!credentialsResult.valid) {
       return {
         success: false,

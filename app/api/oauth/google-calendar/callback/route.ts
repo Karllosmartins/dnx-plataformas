@@ -31,7 +31,13 @@ export async function GET(request: NextRequest) {
 
     // Parse do state que contém as credenciais OAuth2
     const stateData = JSON.parse(decodeURIComponent(state))
-    const { user_id, client_id, client_secret } = stateData
+    const { user_id, workspace_id, client_id, client_secret } = stateData
+
+    if (!workspace_id) {
+      return NextResponse.redirect(
+        `${baseUrl}/integracoes?error=missing_workspace_id`
+      )
+    }
 
     // Trocar código de autorização por access_token e refresh_token
     const redirectUri = `${baseUrl}/api/oauth/google-calendar/callback`
@@ -92,7 +98,7 @@ export async function GET(request: NextRequest) {
     const { data: existing } = await supabaseAdmin
       .from('credencias_diversas')
       .select('id')
-      .eq('user_id', parseInt(user_id))
+      .eq('workspace_id', workspace_id)
       .single()
 
     const googleCalendarData = {
@@ -109,7 +115,7 @@ export async function GET(request: NextRequest) {
         .update({
           google_calendar: googleCalendarData,
         })
-        .eq('user_id', parseInt(user_id))
+        .eq('workspace_id', workspace_id)
 
       if (updateError) throw updateError
     } else {
@@ -119,6 +125,7 @@ export async function GET(request: NextRequest) {
         .insert([
           {
             user_id: parseInt(user_id),
+            workspace_id: workspace_id,
             google_calendar: googleCalendarData,
             zapsign: { token: '', modelos: [] },
             asaas: { access_token: '' },

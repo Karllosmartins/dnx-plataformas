@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/components/shared/AuthWrapper'
-import { leadsApi, funisApi, camposApi } from '@/lib/api-client'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
+import { leadsApi, funisApi, camposApi, agentesApi } from '@/lib/api-client'
+import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +38,7 @@ import {
   RefreshCw,
   Filter,
   Loader2,
+  Bot,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -70,6 +73,16 @@ interface Lead {
   created_at: string
   updated_at?: string
   dados_personalizados?: Record<string, unknown>
+  atendimentofinalizado?: boolean
+  Agente_ID?: string
+  nome_agente?: string
+}
+
+interface Agente {
+  id: number
+  agente_id: string
+  nome: string
+  ativo: boolean
 }
 
 interface CampoPersonalizado {
@@ -89,11 +102,14 @@ type ViewMode = 'list' | 'kanban'
 
 export default function LeadsPage() {
   const { user } = useAuth()
+  const { workspaceId } = useWorkspaceContext()
 
   // Estados de dados
   const [leads, setLeads] = useState<Lead[]>([])
   const [funis, setFunis] = useState<Funil[]>([])
   const [campos, setCampos] = useState<CampoPersonalizado[]>([])
+  const [agentes, setAgentes] = useState<Agente[]>([])
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null)
 
   // Estados de filtros
   const [selectedFunilId, setSelectedFunilId] = useState<string>('')
@@ -154,6 +170,18 @@ export default function LeadsPage() {
     }
   }, [])
 
+  const fetchAgentes = useCallback(async () => {
+    if (!workspaceId) return
+    try {
+      const response = await agentesApi.list(workspaceId)
+      if (response.success && response.data) {
+        setAgentes(response.data as Agente[])
+      }
+    } catch (err) {
+      console.error('Erro ao carregar agentes:', err)
+    }
+  }, [workspaceId])
+
   const fetchLeads = useCallback(async (page: number = currentPage) => {
     try {
       setLoading(true)
@@ -194,7 +222,8 @@ export default function LeadsPage() {
   useEffect(() => {
     fetchFunis()
     fetchCampos()
-  }, [fetchFunis, fetchCampos])
+    fetchAgentes()
+  }, [fetchFunis, fetchCampos, fetchAgentes])
 
   useEffect(() => {
     fetchLeads()
@@ -286,9 +315,39 @@ export default function LeadsPage() {
     setCurrentPage(1) // Resetar pagina ao limpar filtros
   }
 
+  const handleToggleAtendimento = async (lead: Lead) => {
+    setToggleLoading(lead.id)
+    try {
+      const newValue = !lead.atendimentofinalizado
+      const response = await leadsApi.toggleAtendimento(lead.id, newValue)
+      if (response.success) {
+        // Atualizar lead localmente
+        setLeads(prev =>
+          prev.map(l =>
+            l.id === lead.id
+              ? { ...l, atendimentofinalizado: newValue }
+              : l
+          )
+        )
+      } else {
+        console.error('Erro ao atualizar atendimento:', response.error)
+      }
+    } catch (err) {
+      console.error('Erro ao toggle atendimento:', err)
+    } finally {
+      setToggleLoading(null)
+    }
+  }
+
   // =============================================================================
   // HELPERS
   // =============================================================================
+
+  const getAgenteName = (agenteId?: string) => {
+    if (!agenteId) return null
+    const agente = agentes.find(a => a.agente_id === agenteId)
+    return agente?.nome || null
+  }
 
   const selectedFunil = funis.find((f) => f.id === selectedFunilId)
   const estagios = selectedFunil?.estagios || []
@@ -536,6 +595,12 @@ export default function LeadsPage() {
                     Estagio
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Agente
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    IA Ativa
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Data
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -546,7 +611,7 @@ export default function LeadsPage() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {leads.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <User className="mb-4 h-12 w-12 text-gray-300" />
                         <p className="text-gray-500">Nenhum lead encontrado</p>
@@ -606,6 +671,29 @@ export default function LeadsPage() {
                         >
                           {getEstagioName(lead.estagio_id)}
                         </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        {getAgenteName(lead.Agente_ID) ? (
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+                            <Bot className="h-4 w-4 text-blue-500" />
+                            <span>{getAgenteName(lead.Agente_ID)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-center">
+                        <div
+                          className="flex items-center justify-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Switch
+                            checked={!lead.atendimentofinalizado}
+                            onCheckedChange={() => handleToggleAtendimento(lead)}
+                            disabled={toggleLoading === lead.id}
+                            className="data-[state=checked]:bg-green-500"
+                          />
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">

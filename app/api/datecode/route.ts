@@ -12,8 +12,23 @@ export async function POST(request: NextRequest) {
       throw ApiError.badRequest('CNPJ e obrigatorio', 'MISSING_CNPJ')
     }
 
-    // Se userId foi fornecido, verificar limites do usuário
+    let workspaceId: string | null = null
+
+    // Se userId foi fornecido, verificar limites do usuário e obter workspace
     if (userId) {
+      // Buscar workspace do usuário
+      const { data: userData, error: userError } = await getSupabaseAdmin()
+        .from('users')
+        .select('current_workspace_id')
+        .eq('id', userId)
+        .single()
+
+      if (userError || !userData || !userData.current_workspace_id) {
+        throw ApiError.notFound('Usuario nao encontrado ou sem workspace ativo', 'USER_NOT_FOUND')
+      }
+
+      workspaceId = userData.current_workspace_id
+
       const { data: userPlan, error: planError } = await getSupabaseAdmin()
         .from('view_usuarios_planos')
         .select('*')
@@ -38,8 +53,8 @@ export async function POST(request: NextRequest) {
     // Remover caracteres especiais do CNPJ
     const cnpjLimpo = cnpj.replace(/[^\d]/g, '')
 
-    // Obter credenciais Datecode do usuário
-    const credentials = userId ? await getDatecodeCredentials(userId) : null
+    // Obter credenciais Datecode do workspace
+    const credentials = workspaceId ? await getDatecodeCredentials(workspaceId) : null
 
     if (!validateDatecodeCredentials(credentials)) {
       throw ApiError.forbidden(

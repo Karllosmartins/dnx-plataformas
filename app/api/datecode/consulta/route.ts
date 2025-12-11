@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
       documentoLimpo = document.replace(/[^\d]/g, '')
     }
 
-    // Obter credenciais Datecode do usuário
-    const credentials = await getDatecodeCredentials(userId)
+    // Obter credenciais Datecode do workspace
+    const credentials = await getDatecodeCredentials(workspaceId)
 
     if (!validateDatecodeCredentials(credentials)) {
       return NextResponse.json(
