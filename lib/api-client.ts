@@ -305,8 +305,22 @@ export const leadsApi = {
     return apiClient.patch(`/leads/${id}/stage`, { estagioId })
   },
 
-  toggleAtendimento(id: string, atendimentofinalizado: boolean) {
-    return apiClient.patch(`/leads/${id}`, { atendimentofinalizado })
+  async toggleAtendimento(id: string, atendimentofinalizado: boolean) {
+    // Usa API local do Next.js para toggle de atendimento
+    try {
+      const response = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ atendimentofinalizado }),
+      })
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error('Erro ao toggle atendimento:', error)
+      return { success: false, error: 'Erro ao atualizar atendimento' }
+    }
   },
 
   patch(id: string, data: Record<string, unknown>) {
@@ -554,14 +568,16 @@ export const adminWorkspacesApi = {
   }
 }
 
-// API para agentes (lista de agentes para consulta)
+// API para agentes (lista de agentes para consulta) - usa API local do Next.js
 export const agentesApi = {
-  list(workspaceId: string) {
-    return apiClient.get<Array<{
-      id: number
-      agente_id: string
-      nome: string
-      ativo: boolean
-    }>>('/agentes', { workspaceId })
+  async list(workspaceId: string) {
+    try {
+      const response = await fetch(`/api/agentes?workspaceId=${workspaceId}`)
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error('Erro ao buscar agentes:', error)
+      return { success: false, error: 'Erro ao buscar agentes', data: [] }
+    }
   }
 }
