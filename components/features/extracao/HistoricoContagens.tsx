@@ -409,18 +409,25 @@ export default function HistoricoContagens({
                               {extracao.status === 'concluida' && extracao.id_extracao_api && (
                                 <button
                                   onClick={async () => {
-                                    // Buscar configurações do usuário para pegar apiKey
-                                    const { data: config } = await supabase
-                                      .from('configuracoes_credenciais')
-                                      .select('apikeydados')
-                                      .eq('user_id', extracao.user_id)
-                                      .single()
-                                    
-                                    if (config?.apikeydados) {
-                                      const downloadUrl = `/api/extracoes/download?idExtracao=${extracao.id_extracao_api}&apiKey=${encodeURIComponent(config.apikeydados)}`
-                                      window.open(downloadUrl, '_blank')
-                                    } else {
-                                      alert('API Key não encontrada. Verifique suas configurações.')
+                                    try {
+                                      // Buscar API Key da variável de ambiente via endpoint
+                                      const response = await fetch('/api/profile/get-api-key')
+
+                                      if (!response.ok) {
+                                        throw new Error('Erro ao buscar API Key')
+                                      }
+
+                                      const { apiKey } = await response.json()
+
+                                      if (apiKey) {
+                                        const downloadUrl = `/api/extracoes/download?idExtracao=${extracao.id_extracao_api}&apiKey=${encodeURIComponent(apiKey)}`
+                                        window.open(downloadUrl, '_blank')
+                                      } else {
+                                        alert('API Key não encontrada. Verifique suas configurações.')
+                                      }
+                                    } catch (error) {
+                                      console.error('Erro ao buscar API Key:', error)
+                                      alert('Erro ao buscar API Key. Verifique suas configurações.')
                                     }
                                   }}
                                   className="text-green-600 hover:text-green-800"
