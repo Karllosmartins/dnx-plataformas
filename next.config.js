@@ -2,14 +2,34 @@ const path = require('path')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Webpack config para garantir path alias
-  webpack: (config) => {
+  // Transpile Supabase packages to fix ESM import issues
+  transpilePackages: [
+    '@supabase/supabase-js',
+    '@supabase/auth-helpers-nextjs',
+    '@supabase/ssr',
+    '@supabase/postgrest-js',
+    '@supabase/realtime-js',
+    '@supabase/storage-js',
+    '@supabase/functions-js',
+    '@supabase/gotrue-js'
+  ],
+
+  // Webpack config para garantir path alias e resolver ESM
+  webpack: (config, { isServer }) => {
     config.resolve.alias['@'] = path.resolve(__dirname)
+
+    // Fix for Supabase ESM module resolution
+    config.resolve.extensionAlias = {
+      '.js': ['.js', '.ts', '.tsx'],
+      '.mjs': ['.mjs', '.mts']
+    }
+
     return config
   },
-  // Configuração para deploy em VPS
+
+  // Configuração para deploy em VPS (Next.js 14.0.0 still uses experimental)
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js', 'bcrypt', 'pino', 'pino-pretty']
+    serverComponentsExternalPackages: ['bcrypt', 'pino', 'pino-pretty']
   },
   
   // Output standalone para Docker
