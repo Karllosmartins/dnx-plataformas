@@ -154,6 +154,11 @@ function UserMenuContent({
           <span>Minha Conta</span>
         </DropdownMenuItem>
 
+        <DropdownMenuItem className="cursor-pointer" onClick={onOpenMembers}>
+          <Users className="mr-2 h-4 w-4" />
+          <span>Gerenciar Membros</span>
+        </DropdownMenuItem>
+
         {isAdmin && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="cursor-pointer">
@@ -168,23 +173,12 @@ function UserMenuContent({
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>Workspaces</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={onOpenMembers}>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Gerenciar Membros</span>
-              </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer"
                 onClick={() => router.push('/dashboard/planos')}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Planos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push('/dashboard/admin')}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Workspaces</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
