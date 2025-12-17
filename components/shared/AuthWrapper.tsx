@@ -1,10 +1,14 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { authService, User } from '../../lib/auth'
 import { WorkspaceProvider } from '../../contexts/WorkspaceContext'
 import Sidebar from '../layout/Sidebar'
 import LoginForm from '../layout/LoginForm'
+
+// Rotas públicas que não precisam de autenticação
+const PUBLIC_ROUTES = ['/esqueci-senha', '/auth/callback', '/login']
 
 interface AuthContextType {
   user: User | null
@@ -24,9 +28,13 @@ export function useAuth() {
 }
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Verificar se é uma rota pública
+  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname?.startsWith(route))
 
   useEffect(() => {
     // Verificar se há usuário logado
@@ -55,13 +63,18 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     setUser(null)
   }
 
-  // Se ainda está carregando
-  if (loading) {
+  // Se ainda está carregando (exceto em rotas públicas)
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  // Se é uma rota pública, renderizar o conteúdo diretamente
+  if (isPublicRoute) {
+    return <>{children}</>
   }
 
   // Se não está logado, mostrar tela de login
