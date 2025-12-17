@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           authSession = authData.session
         }
       } catch (authError) {
-        console.log('Supabase Auth falhou, tentando bcrypt...')
+        // Supabase Auth falhou, tentar bcrypt
       }
     }
 
@@ -83,12 +83,9 @@ export async function POST(request: NextRequest) {
                 .from('users')
                 .update({ auth_id: newAuthUser.user.id })
                 .eq('id', userData.id)
-
-              console.log(`Usuário ${email} migrado para Supabase Auth`)
             }
           } catch (migrationError) {
             // Não falhar o login se a migração falhar
-            console.error('Erro ao migrar usuário para Supabase Auth:', migrationError)
           }
         }
       }

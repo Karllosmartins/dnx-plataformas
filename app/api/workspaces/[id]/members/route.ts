@@ -106,7 +106,6 @@ export async function POST(
         })
 
         if (inviteError) {
-          console.error('Erro ao enviar convite:', inviteError)
           throw ApiError.badRequest('Erro ao enviar convite: ' + inviteError.message, 'INVITE_ERROR')
         }
 

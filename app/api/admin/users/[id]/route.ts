@@ -63,7 +63,6 @@ export async function GET(
       }
     })
   } catch (error) {
-    console.error('Erro ao buscar usuário:', error)
     return NextResponse.json(
       { success: false, error: 'Erro ao buscar usuário' },
       { status: 500 }
@@ -187,7 +186,6 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: userWithoutPassword })
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error)
     return NextResponse.json(
       { success: false, error: 'Erro ao atualizar usuário' },
       { status: 500 }
@@ -237,7 +235,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    console.error('Erro ao excluir usuário:', error)
     return NextResponse.json(
       { success: false, error: 'Erro ao excluir usuário' },
       { status: 500 }

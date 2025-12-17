@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: usuariosComWorkspaces })
   } catch (error) {
-    console.error('Erro ao listar usuários:', error)
     return NextResponse.json(
       { success: false, error: 'Erro ao listar usuários' },
       { status: 500 }
@@ -156,7 +155,6 @@ export async function POST(request: NextRequest) {
           })
 
           if (inviteError) {
-            console.error('Erro ao enviar convite:', inviteError)
             throw new Error(`Erro ao enviar convite: ${inviteError.message}`)
           }
 
@@ -188,7 +186,6 @@ export async function POST(request: NextRequest) {
           })
 
           if (createError) {
-            console.error('Erro ao criar usuário no Auth:', createError)
             throw new Error(`Erro ao criar usuário: ${createError.message}`)
           }
 
@@ -209,7 +206,6 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (authError: any) {
-        console.error('Erro no Supabase Auth, usando método legado:', authError)
         // Fallback para método legado se Supabase Auth falhar
         newUser = null
       }
@@ -260,7 +256,7 @@ export async function POST(request: NextRequest) {
         .eq('id', newUser.id)
 
       if (updateError) {
-        console.error('Erro ao atualizar campos extras:', updateError)
+        // Erro ao atualizar campos extras - continuar mesmo assim
       }
 
       // Atualizar objeto local
@@ -287,8 +283,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (memberError) {
-          console.error('Erro ao adicionar membro:', memberError)
-          // Não falhar toda a operação, apenas logar
+          // Erro ao adicionar membro - não falhar toda a operação
         }
       }
     }
@@ -309,7 +304,6 @@ export async function POST(request: NextRequest) {
         : 'Usuário criado com sucesso!'
     }, { status: 201 })
   } catch (error: any) {
-    console.error('Erro ao criar usuário:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Erro ao criar usuário' },
       { status: 500 }
