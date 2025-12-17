@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -103,12 +104,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Senha</Label>
-                  <Link
-                    href="/esqueci-senha"
+                  <button
+                    type="button"
+                    onClick={() => router.push('/esqueci-senha')}
                     className="text-sm text-primary hover:underline"
                   >
                     Esqueci minha senha
-                  </Link>
+                  </button>
                 </div>
                 <div className="relative">
                   <Input
