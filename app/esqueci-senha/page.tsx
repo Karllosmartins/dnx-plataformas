@@ -9,11 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState('')
@@ -27,12 +22,16 @@ export default function EsqueciSenhaPage() {
     setLoading(true)
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
       })
 
-      if (resetError) {
-        setError(resetError.message || 'Erro ao enviar email de recuperação')
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Erro ao enviar email de recuperação')
       } else {
         setSuccess(true)
       }
