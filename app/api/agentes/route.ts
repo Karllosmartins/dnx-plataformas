@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const { data: agentes, error } = await supabase
       .from('agentes_ia')
-      .select('id, agente_id, nome, ativo')
+      .select('id, agente_id, nome, funcao, estagio')
       .eq('workspace_id', workspaceId)
       .order('nome', { ascending: true })
 

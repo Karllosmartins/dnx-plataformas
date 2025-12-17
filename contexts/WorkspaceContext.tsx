@@ -76,6 +76,20 @@ export function WorkspaceProvider({ children, userId }: WorkspaceProviderProps) 
       setLoading(true)
       setError(null)
 
+      // Verificar se há workspace pendente do switch (evita race condition)
+      const pendingWorkspace = sessionStorage.getItem('pending_workspace')
+      if (pendingWorkspace) {
+        try {
+          const workspaceData = JSON.parse(pendingWorkspace)
+          sessionStorage.removeItem('pending_workspace')
+          setCurrentWorkspace(workspaceData)
+          setLoading(false)
+          return
+        } catch {
+          sessionStorage.removeItem('pending_workspace')
+        }
+      }
+
       const response = await fetch(`/api/workspaces/current?userId=${userId}`)
       const result = await response.json()
 
@@ -105,6 +119,11 @@ export function WorkspaceProvider({ children, userId }: WorkspaceProviderProps) 
       const result = await response.json()
 
       if (result.success) {
+        // Se a API retornou os dados do workspace, salvamos em sessionStorage
+        // para evitar race condition de replicação no banco
+        if (result.data) {
+          sessionStorage.setItem('pending_workspace', JSON.stringify(result.data))
+        }
         // Recarregar a página para atualizar todos os dados
         window.location.reload()
         return true
