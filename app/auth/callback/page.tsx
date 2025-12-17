@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -16,7 +16,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
@@ -49,7 +49,6 @@ export default function AuthCallbackPage() {
           })
 
           if (sessionError) {
-            console.error('Erro ao definir sessão:', sessionError)
             setTokenError(true)
           }
         } else {
@@ -60,7 +59,6 @@ export default function AuthCallbackPage() {
           }
         }
       } catch (err) {
-        console.error('Erro na verificação:', err)
         setTokenError(true)
       } finally {
         setVerifying(false)
@@ -376,5 +374,24 @@ export default function AuthCallbackPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+// Loading fallback para o Suspense
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="mt-4 text-muted-foreground">Carregando...</p>
+    </div>
+  )
+}
+
+// Componente principal com Suspense
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }
