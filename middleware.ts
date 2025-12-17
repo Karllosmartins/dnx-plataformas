@@ -47,7 +47,11 @@ const ROUTE_PRIORITY = [
 ]
 
 // Rotas públicas (sem autenticação necessária)
-const PUBLIC_ROUTES: string[] = []
+const PUBLIC_ROUTES: string[] = [
+  '/login',
+  '/esqueci-senha',
+  '/auth/callback'
+]
 
 // Rotas de admin que sempre passam
 const ADMIN_ROUTES = ['/admin', '/dashboard/admin']

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -100,7 +101,15 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link
+                    href="/esqueci-senha"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Esqueci minha senha
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
