@@ -4,25 +4,38 @@ import { getSupabaseAdmin } from '../../../../lib/supabase'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const timestamp = new Date().toISOString()
+
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
+    console.log(`[${timestamp}] 🔵 [workspace-current] Recebido: userId=${userId}`)
+
     if (!userId) {
+      console.log(`[${timestamp}] 🔴 [workspace-current] userId não fornecido`)
       return NextResponse.json(
         { error: 'userId é obrigatório' },
         { status: 400 }
       )
     }
 
+    // Converter userId para número se necessário (tabela users.id é INTEGER)
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId
+
+    console.log(`[${timestamp}] 🔵 [workspace-current] userId convertido: ${userIdNum}`)
+
     // Buscar usuário para obter current_workspace_id
     const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('current_workspace_id')
-      .eq('id', userId)
+      .eq('id', userIdNum)
       .single()
 
+    console.log(`[${timestamp}] 🔵 [workspace-current] User query: data=${JSON.stringify(userData)}, error=${userError?.message || 'none'}`)
+
     if (userError || !userData) {
+      console.log(`[${timestamp}] 🔴 [workspace-current] Usuário não encontrado`)
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
@@ -30,6 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     const currentWorkspaceId = userData.current_workspace_id
+    console.log(`[${timestamp}] 🔵 [workspace-current] current_workspace_id=${currentWorkspaceId}`)
 
     if (!currentWorkspaceId) {
       // Buscar primeiro workspace do usuário se não tiver um definido
