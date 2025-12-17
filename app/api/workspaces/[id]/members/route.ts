@@ -1,7 +1,19 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '../../../../../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { supabase, getSupabaseAdmin } from '../../../../../lib/supabase'
 import { ApiResponse, ApiError, handleApiError } from '../../../../../lib/api-utils'
-import bcrypt from 'bcryptjs'
+
+// Cliente Supabase Admin para operações de autenticação
+const supabaseAuthAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export const dynamic = 'force-dynamic'
 
@@ -81,29 +93,44 @@ export async function POST(
       .eq('email', email)
       .single()
 
-    // Se usuário não existe e temos name e password, criar novo usuário
-    if (!user && name && password) {
-      const hashedPassword = await bcrypt.hash(password, 10)
-
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          name,
-          email,
-          password: hashedPassword,
-          role: 'user',
-          active: true
+    // Se usuário não existe e temos name, criar novo usuário via Supabase Auth
+    if (!user && name) {
+      try {
+        // Enviar convite por email - usuário define própria senha
+        const { data: inviteData, error: inviteError } = await supabaseAuthAdmin.auth.admin.inviteUserByEmail(email, {
+          data: {
+            name,
+            role: 'user'
+          },
+          redirectTo: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/callback?type=invite`
         })
-        .select('id')
-        .single()
 
-      if (createError) {
-        throw ApiError.badRequest('Erro ao criar usuário: ' + createError.message, 'CREATE_USER_ERROR')
+        if (inviteError) {
+          console.error('Erro ao enviar convite:', inviteError)
+          throw ApiError.badRequest('Erro ao enviar convite: ' + inviteError.message, 'INVITE_ERROR')
+        }
+
+        // Aguardar um pouco para o trigger sincronizar
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Buscar usuário criado pelo trigger
+        const { data: syncedUser } = await getSupabaseAdmin()
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .single()
+
+        if (syncedUser) {
+          user = syncedUser
+        } else {
+          throw ApiError.badRequest('Erro ao sincronizar usuário', 'SYNC_ERROR')
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) throw error
+        throw ApiError.badRequest('Erro ao criar usuário: ' + (error.message || 'Erro desconhecido'), 'CREATE_USER_ERROR')
       }
-
-      user = newUser
     } else if (!user) {
-      throw ApiError.notFound('Usuário não encontrado. Forneça nome e senha para criar novo usuário.', 'USER_NOT_FOUND')
+      throw ApiError.notFound('Usuário não encontrado. Forneça o nome para criar e enviar convite por email.', 'USER_NOT_FOUND')
     }
 
     // Verificar se já é membro

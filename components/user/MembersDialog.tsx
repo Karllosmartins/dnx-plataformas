@@ -42,7 +42,6 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Lock,
   User,
 } from 'lucide-react'
 
@@ -75,7 +74,6 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName, setInviteName] = useState('')
-  const [invitePassword, setInvitePassword] = useState('')
   const [inviteRole, setInviteRole] = useState<string>('member')
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
@@ -126,7 +124,6 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
           email: inviteEmail,
           role: inviteRole,
           name: inviteName || undefined,
-          password: invitePassword || undefined,
         }),
       })
 
@@ -136,7 +133,6 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
         setInviteSuccess(true)
         setInviteEmail('')
         setInviteName('')
-        setInvitePassword('')
         setInviteRole('member')
         loadMembers(currentWorkspace.id)
         setTimeout(() => {
@@ -220,7 +216,7 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
               <SheetHeader>
                 <SheetTitle>Convidar Novo Membro</SheetTitle>
                 <SheetDescription>
-                  Envie um convite por email para adicionar um novo membro ao workspace.
+                  O usuário receberá um email para definir sua senha e acessar o sistema.
                 </SheetDescription>
               </SheetHeader>
 
@@ -239,7 +235,7 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Obrigatório para criar novo usuário
+                    Obrigatório para novos usuários
                   </p>
                 </div>
 
@@ -256,24 +252,6 @@ export function MembersDialog({ open, onOpenChange }: MembersDialogProps) {
                       onChange={(e) => setInviteEmail(e.target.value)}
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="invite-password">Senha</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="invite-password"
-                      type="password"
-                      placeholder="Senha do usuário"
-                      className="pl-10"
-                      value={invitePassword}
-                      onChange={(e) => setInvitePassword(e.target.value)}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Obrigatório para criar novo usuário
-                  </p>
                 </div>
 
                 <div className="space-y-2">
