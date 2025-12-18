@@ -29,7 +29,10 @@ const nextConfig = {
 
   // Configuração para deploy em VPS (Next.js 14.0.0 still uses experimental)
   experimental: {
-    serverComponentsExternalPackages: ['bcrypt', 'pino', 'pino-pretty']
+    serverComponentsExternalPackages: ['bcrypt', 'pino', 'pino-pretty'],
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
   },
   
   // Output standalone para Docker

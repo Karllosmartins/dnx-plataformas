@@ -3,6 +3,10 @@ import { getSupabaseAdmin } from '../../../../lib/supabase'
 import axios from 'axios'
 import crypto from 'crypto'
 
+// Configuração para permitir uploads de até 20MB
+export const runtime = 'nodejs'
+export const maxDuration = 60 // 60 segundos de timeout
+
 // Cache do token de autorização B2
 let b2AuthCache: {
   token: string
