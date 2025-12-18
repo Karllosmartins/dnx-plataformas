@@ -28,8 +28,7 @@ import {
   Wrench,
   User,
   Mail,
-  Phone,
-  Lock
+  Phone
 } from 'lucide-react'
 
 interface Plano {
@@ -223,7 +222,7 @@ export default function WorkspacesSection() {
       let ownerId: number | null = null
 
       // Se for criar novo usuário dono
-      if (workspaceData.criar_novo_dono && workspaceData.dono_nome && workspaceData.dono_email && workspaceData.dono_senha) {
+      if (workspaceData.criar_novo_dono && workspaceData.dono_nome && workspaceData.dono_email) {
         // Verificar se email já existe
         const { data: existingUser } = await supabase
           .from('users')
@@ -236,7 +235,7 @@ export default function WorkspacesSection() {
           return
         }
 
-        // Criar usuário via API (sem workspace, será adicionado depois)
+        // Criar usuário via API usando Supabase Auth (envia convite por email)
         const createUserResponse = await fetch('/api/admin/users', {
           method: 'POST',
           headers: {
@@ -246,11 +245,12 @@ export default function WorkspacesSection() {
           body: JSON.stringify({
             name: workspaceData.dono_nome,
             email: workspaceData.dono_email,
-            password: workspaceData.dono_senha,
             telefone: workspaceData.dono_telefone || null,
             role: 'user',
             active: true,
-            skip_workspace: true // Pular criação de membership, será feito após criar o workspace
+            skip_workspace: true, // Pular criação de membership, será feito após criar o workspace
+            use_supabase_auth: true, // Usar Supabase Auth
+            send_invite: true // Enviar email de convite para definir senha
           })
         })
 
@@ -346,7 +346,12 @@ export default function WorkspacesSection() {
       await fetchWorkspaces()
       await fetchAllUsers() // Atualizar lista de usuários
       setShowNewWorkspace(false)
-      alert('Workspace criado com sucesso!' + (ownerId ? ' Usuário dono adicionado.' : ''))
+
+      if (workspaceData.criar_novo_dono && ownerId) {
+        alert('Workspace criado com sucesso! Um email de convite foi enviado para o dono definir sua senha.')
+      } else {
+        alert('Workspace criado com sucesso!' + (ownerId ? ' Usuário dono adicionado.' : ''))
+      }
     } catch (error) {
       console.error('Erro ao criar workspace:', error)
       alert(error instanceof Error ? error.message : 'Erro ao criar workspace')
@@ -1391,7 +1396,6 @@ function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspace
     dono_nome: '',
     dono_email: '',
     dono_telefone: '',
-    dono_senha: '',
     dono_existente_id: ''
   })
 
@@ -1407,12 +1411,8 @@ function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspace
 
     // Validar dados do dono
     if (criarNovoDono) {
-      if (!formData.dono_nome.trim() || !formData.dono_email.trim() || !formData.dono_senha.trim()) {
-        alert('Para criar novo dono, preencha Nome, Email e Senha')
-        return
-      }
-      if (formData.dono_senha.length < 6) {
-        alert('A senha deve ter pelo menos 6 caracteres')
+      if (!formData.dono_nome.trim() || !formData.dono_email.trim()) {
+        alert('Para criar novo dono, preencha Nome e Email')
         return
       }
     }
@@ -1431,12 +1431,11 @@ function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspace
       elevenlabs_voice_id: formData.elevenlabs_voice_id || undefined,
       datecode_username: formData.datecode_username || undefined,
       datecode_password: formData.datecode_password || undefined,
-      // Dados do dono
+      // Dados do dono - sem senha, usuário recebe convite por email
       criar_novo_dono: criarNovoDono,
       dono_nome: formData.dono_nome || undefined,
       dono_email: formData.dono_email || undefined,
       dono_telefone: formData.dono_telefone || undefined,
-      dono_senha: formData.dono_senha || undefined,
       dono_existente_id: formData.dono_existente_id || undefined
     })
   }
@@ -1511,8 +1510,7 @@ function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspace
                         ...formData,
                         dono_nome: '',
                         dono_email: '',
-                        dono_telefone: '',
-                        dono_senha: ''
+                        dono_telefone: ''
                       })
                     }}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
@@ -1570,34 +1568,14 @@ function NovoWorkspaceCard({ planos, allUsers, onSave, onCancel }: NovoWorkspace
                         placeholder="(11) 99999-9999"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <Lock className="inline h-4 w-4 mr-1" />
-                        Senha *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPasswords.dono_senha ? 'text' : 'password'}
-                          value={formData.dono_senha}
-                          onChange={(e) => setFormData({ ...formData, dono_senha: e.target.value })}
-                          className="w-full text-sm border border-gray-300 rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Mínimo 6 caracteres"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => togglePasswordVisibility('dono_senha')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showPasswords.dono_senha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-2">
-                    * Este usuário será criado automaticamente e terá acesso total ao workspace como Dono.
-                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                    <p className="text-sm text-blue-800">
+                      <Mail className="inline h-4 w-4 mr-1" />
+                      O usuário receberá um email de convite para definir sua própria senha.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
